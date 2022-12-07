@@ -1,4 +1,4 @@
-name: climnet
+name: geoutils
 channels:
   - conda-forge
   - defaults
@@ -10,7 +10,7 @@ dependencies:
   - pandas
   - ipython
   - xarray
-  - numpy=1.20.2
+  - numpy
   - tqdm
   - multiprocess
   - mypy
