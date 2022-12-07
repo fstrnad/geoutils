@@ -37,7 +37,7 @@ class BaseDataset():
         detrend=False,
         month_range=None,
         lsm_file=None,
-        dc_times=True,
+        decode_times=True,
         **kwargs,
     ):
         """Initializes a BaseDataset object with an nc file provided.
@@ -56,7 +56,7 @@ class BaseDataset():
             detrend (bool, optional): Detrend the data. Defaults to False.
             month_range (tuple(str, str), optional): Month range of data.  Defaults to None.
             lsm_file (str, optional): additional land sea mask file. Defaults to None.
-            dc_times (bool, optional): decode times if in nc file np.datetime64 format is provided. Defaults to True.
+            decode_times (bool, optional): decode times if in nc file np.datetime64 format is provided. Defaults to True.
         """
         self.grid_type = 'rectangular'
         if data_nc is not None and load_nc is not None:
@@ -77,7 +77,7 @@ class BaseDataset():
                 time_range=time_range,
                 grid_step=grid_step,
                 large_ds=large_ds,
-                dc_times=dc_times,
+                decode_times=decode_times,
                 **kwargs,
             )
             (
@@ -119,7 +119,7 @@ class BaseDataset():
         lon_range=[-180, 180],
         lat_range=[-90, 90],
         use_ds_grid=False,
-        dc_times=True,
+        decode_times=True,
         **kwargs,
     ):
         gut.myprint("Start processing data!")
@@ -127,8 +127,8 @@ class BaseDataset():
         if large_ds:
             ds = xr.open_dataset(nc_file, chunks={"time": 100})
         else:
-            ds = xr.open_dataset(nc_file, decode_times=dc_times)
-        ds = self.check_dimensions(ds, ts_days=dc_times, **kwargs)
+            ds = xr.open_dataset(nc_file, decode_times=decode_times)
+        ds = self.check_dimensions(ds, ts_days=decode_times, **kwargs)
         ds = self.rename_var(ds)
         dims = self.get_dims(ds=ds)
         # da = ds[var_name]

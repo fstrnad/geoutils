@@ -284,9 +284,8 @@ def make_colorbar(ax, im, fig=None, **kwargs):
         ticks = (
             ticks[::tick_step]
             if round_dec is None
-            else np.round_(ticks[::tick_step], round_dec)
+            else np.around(ticks[::tick_step], round_dec)
         )
-
     if fig is None:
         fig = ax.get_figure()
 

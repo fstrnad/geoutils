@@ -57,15 +57,12 @@ def set_extent(da, ax, **kwargs):
     max_ext_lat = float(np.max(da.coords["lat"]))
 
     set_global = kwargs.pop('set_global', False)
-    # if set_global is None:
-    #     if abs(min_ext_lon) > 179 or abs(max_ext_lon) > 179:
-    #         min_ext_lon = -179.9
-    #         max_ext_lon = 179.9
-    #         set_global = True
-    #     if abs(min_ext_lat) > 89 or abs(max_ext_lat) > 89:
-    #         min_ext_lat = -89.9
-    #         max_ext_lat = 89.9
-    #         set_global = True
+    if not set_global:
+        if abs(min_ext_lon) > 179 or abs(max_ext_lon) > 179:
+            set_global = True
+        if abs(min_ext_lat) > 89 or abs(max_ext_lat) > 89:
+            set_global = True
+
     if set_global:
         ax.set_global()
     else:
@@ -367,8 +364,8 @@ def plot_2D(
             raise ValueError(
                 f'Vmax has to be of type float or int but is of type {type(vmax)}!')
 
-    vmin = np.nanquantile(z, q=0.05) if vmin is None else vmin
-    vmax = np.nanquantile(z, q=0.95) if vmax is None else vmax
+    vmin = np.nanquantile(z, q=0.1) if vmin is None else vmin
+    vmax = np.nanquantile(z, q=0.9) if vmax is None else vmax
 
     if set_norm == 'log':
         base = kwargs.pop('base', 2)
@@ -376,6 +373,8 @@ def plot_2D(
         levels = np.logspace(vmin, vmax, levels + 1, base=base)
     elif levels is not None:
         levels = np.linspace(vmin, vmax, levels + 1, endpoint=True)
+    round_dec = kwargs.pop("round_dec", None)
+    levels = np.around(levels, round_dec) if round_dec is not None else levels
 
     if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
         # norm = mpl.colors.LogNorm(levels=levels)

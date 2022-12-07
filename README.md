@@ -2,6 +2,11 @@
 
 This is a useful package for processing and plotting geodata provided as nc-files and preprocessing them accordingly.
 
+### 1. Clone repository:
+```
+git clone git@github.com:fstrnad/geoutils.git
+```
+
 ### 2. Installing packages
 The following packages are required for running the package:
 - xarray 
@@ -12,10 +17,11 @@ The following packages are required for running the package:
 - cartopy
 - scipy
 - scikit-learn
-
+The required packages are provided by the condaEnv.yml file.	
 
 To install the package and all its dependencies, we recommend the following steps:
-We recommend to create a new environment and install all required packages by running: 
+
+Create a new environment and install all required packages by running: 
 ```
 conda env create -f condaEnv.yml 
 conda activate geoutils 
@@ -25,7 +31,8 @@ conda activate geoutils
 Download climate data, e.g. from [ERA5](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-pressure-levels?tab=overview) server and store the merged files in the data folder.
 ## Using the package
 
-A tutorial will soon be added to this documentation.
+A tutorial for reading, processing and plotting data can be found at this![tutorial](tutorials/plotting_tutorial.ipynb) .
+
 
 
 

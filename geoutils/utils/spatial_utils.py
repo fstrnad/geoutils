@@ -330,7 +330,7 @@ def compute_zonal_mean(ds, ):
 def compute_meridional_mean(ds, return_std=False):
     lats_rad = np.deg2rad(ds['lat'])
     weighted_meridional_mean = ds.mean(
-        dim='lon', skipna=True)  # * np.cos(lats_rad)
+        dim='lon', skipna=True) * np.cos(lats_rad)
 
     if return_std:
         weighted_meridional_std = ds.std(

@@ -494,7 +494,7 @@ def get_mean_time_series(da, lon_range, lat_range, time_roll=0):
     return ts_mean, ts_std
 
 
-def apply_timemean(ds, timemean, sm=None, em=None, dropna=True):
+def compute_timemean(ds, timemean, sm=None, em=None, dropna=True):
     """Computes the monmean average on a given xr.dataset
 
     Args:
