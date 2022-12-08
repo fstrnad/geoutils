@@ -212,19 +212,20 @@ class BaseDataset():
 
         return None
 
-    def save_mask(self, set_nan=False, filepath):
+    def save_mask(self, filepath, set_nan=False):
         """Save the dataset class object to file.
         Args:
         ----
         filepath: str
+        set_nan: bool  Set if mask should contain 1 and nans.
         """
         param_class = {
             "grid_step": self.grid_step,
         }
         ds_temp = self.mask
         if set_nan:
-            gut.myprint(f'0 in Mask are set to nan for storing in array!')
-            ds_temp = xr.where(self.mask, 1, np.nan))
+            gut.myprint('0 in Mask are set to nan for storing in array!')
+            ds_temp = xr.where(self.mask, 1, np.nan)
         ds_temp.attrs = param_class
 
         gut.save_ds(ds=ds_temp, filepath=filepath)
@@ -317,7 +318,8 @@ class BaseDataset():
         self.vars = self.get_vars(ds=self.ds)
         self.var_name = var_name if var_name is not None else self.vars[0]
         if self.var_name not in self.vars:
-            raise ValueError(f'{var_name} not in variables available {self.vars}!')
+            raise ValueError(
+                f'{var_name} not in variables available {self.vars}!')
         gut.myprint(f'Set variable name to {self.var_name}!')
 
     def init_mask(self, da, lsm_file=None, mask_ds=None):
@@ -335,13 +337,13 @@ class BaseDataset():
         if lsm_file is not None or mask_ds is not None:
             if mask_ds is None:
                 mask_ds = self.open_ds(nc_file=lsm_file,
-                                    time_range=None,
-                                    grid_step=self.grid_step,
-                                    lon_range=self.lon_range,
-                                    lat_range=self.lat_range,
-                                    use_ds_grid=True,
-                                    large_ds=False
-                                    )
+                                       time_range=None,
+                                       grid_step=self.grid_step,
+                                       lon_range=self.lon_range,
+                                       lat_range=self.lat_range,
+                                       use_ds_grid=True,
+                                       large_ds=False
+                                       )
             mask_name = self.get_vars(ds=mask_ds)[0]
             mask_ds = mask_ds[mask_name]
             if not mask.shape == mask_ds.shape:
@@ -379,8 +381,6 @@ class BaseDataset():
         self.ds = sput.da_lon2_180(da=self.ds)
 
         return self.ds
-
-
 
     def get_da(self, ds=None):
         if ds is None:

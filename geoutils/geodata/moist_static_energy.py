@@ -14,7 +14,7 @@ from importlib import reload
 import numpy as np
 import xarray as xr
 import copy
-import climnet.utils.general_utils as gut
+import geoutils.utils.general_utils as gut
 reload(mp)
 
 

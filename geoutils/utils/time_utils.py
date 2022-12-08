@@ -1025,10 +1025,12 @@ def get_quantile_progression_arr(ds, tps, start,
         mean_ts = progression_arr.sel(day=day)
         th_mask = xr.ones_like(mean_ts)
         if th is not None:
-            th_mask = xr.where(mean_ts <= th, 1, 0) if q_th < 0.5 else xr.where(
+            th_mask = xr.where(mean_ts <= th, 1, 0) if th < 0 else xr.where(
                 mean_ts >= th, 1, 0)
-        q_val = mean_ts.quantile(q=q_th)
-        q_mask = xr.where(mean_ts <= q_val, 1, 0)
+        q_mask = xr.ones_like(mean_ts)
+        if q_th is not None:
+            q_val = mean_ts.quantile(q=q_th)
+            q_mask = xr.where(mean_ts <= q_val, 1, 0) if q_th < 0.5 else xr.where(mean_ts > q_val, 1, 0)
         mask = q_mask * th_mask
 
         # This overwrites old values

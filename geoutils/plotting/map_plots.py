@@ -374,7 +374,8 @@ def plot_2D(
     elif levels is not None:
         levels = np.linspace(vmin, vmax, levels + 1, endpoint=True)
     round_dec = kwargs.pop("round_dec", None)
-    levels = np.around(levels, round_dec) if round_dec is not None else levels
+    if levels is not None:
+        levels = np.around(levels, round_dec) if round_dec is not None else levels
 
     if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
         # norm = mpl.colors.LogNorm(levels=levels)
