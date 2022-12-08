@@ -8,13 +8,13 @@ from joblib import Parallel, delayed
 import scipy.stats as st
 from itertools import product
 import pandas as pd
-import climnet.tsa.event_synchronization as es
+import geoutils.tsa.event_synchronization as es
 import numpy as np
 import xarray as xr
 from importlib import reload
 import copy
-import climnet.utils.time_utils as tu
-import climnet.utils.general_utils as gut
+import geoutils.utils.time_utils as tu
+import geoutils.utils.general_utils as gut
 from tqdm import tqdm
 reload(tu)
 reload(gut)

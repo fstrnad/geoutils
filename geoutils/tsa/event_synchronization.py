@@ -5,21 +5,17 @@ Created on Tue Oct 20 11:09:03 2020
 
 @author: Felix Strnad
 """
-import climnet.utils.general_utils as gut
+import geoutils.utils.general_utils as gut
 from importlib import reload
-import sys
 import os
 import numpy as np
-from math import ceil
-from numpy.lib.npyio import save
-import xarray as xr
 import multiprocessing as mpi
 import time
 from joblib import Parallel, delayed
 from tqdm import tqdm
 import scipy.stats as st
 from itertools import product
-import climnet.tsa.time_series_analysis as tsa
+import geoutils.tsa.time_series_analysis as tsa
 
 
 def event_synchronization(event_data, taumax=10, min_num_sync_events=2):

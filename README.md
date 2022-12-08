@@ -1,6 +1,6 @@
 # Geoutils
 
-This is a useful package for processing and plotting geodata provided as nc-files and preprocessing them accordingly.
+This is a useful package for processing and plotting geodata provided as nc-files and pre- and postprocessing them accordingly.
 
 ### 1. Clone repository:
 ```
@@ -42,7 +42,7 @@ A tutorial for reading, processing and plotting data can be found at this![tutor
 
 ## Contributing 
 
-Any feedback is very welcome. Useful extensions are as well very much appreciated. 
+Any feedback is very welcome. Useful extension proposals are very much appreciated as well. 
 
 
 

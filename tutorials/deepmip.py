@@ -15,7 +15,7 @@ hadcm_file = f'{data_folder}/HadCM3B_M2.1aN-deepmip_sens_1xCO2-mlotst-v1.0.mean_
 hadcm_mask_file_pi = f'{data_folder}/mask_1_Preindustrial_.nc'
 mask_file_eocene = f'{data_folder}/mask_1_Eocene_.nc'
 cesm_file = f'{data_folder}/CESM1.2_CAM5-deepmip_sens_1xCO2-mlotst-v1.0.mean_r360x180.nc'
-
+ocean_file = f'{data_folder}/ocean_r360x180_jan.nc'
 grid_step = 1
 
 ds_hadcm = bds.BaseDataset(data_nc=hadcm_file,
@@ -30,6 +30,34 @@ ds_cesm = bds.BaseDataset(data_nc=cesm_file,
                           decode_times=False,
                           lsm_file=mask_file_eocene
                           )
+ds_ocean = bds.BaseDataset(data_nc=ocean_file,
+                           var_name='temp_mm_dpth',
+                           grid_step=grid_step,
+                           decode_times=False,
+                        #    lsm_file=mask_file_eocene
+                           )
+
+# %%
+da = ds_ocean.get_da()
+da = ds_ocean.ds['temp_mm_dpth']
+im_comp = gplt.plot_map(dmap=xr.where(ds_ocean.mask, 1, np.nan),
+                        plot_type='contourf',
+                        cmap='cividis',
+                        # levels=12,
+                        vmin=0,
+                        # vmax=200,
+                        title=f"Ocean",
+                        bar=True,
+                        plt_grid=True,
+                        label=f'mixed-layer depth [m]',
+                        orientation='horizontal',
+                        tick_step=2,
+                        round_dec=2,
+                        set_map=False,
+                        )
+
+
+
 # %%
 ds = ds_hadcm.get_da()
 ds_month = {}

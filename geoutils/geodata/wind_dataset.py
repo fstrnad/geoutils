@@ -13,8 +13,8 @@ import numpy as np
 import xarray as xr
 from windspharm.xarray import VectorWind
 import copy
-import climnet.utils.time_utils as tu
-import climnet.utils.general_utils as gut
+import geoutils.utils.time_utils as tu
+import geoutils.utils.general_utils as gut
 reload(mp)
 
 
