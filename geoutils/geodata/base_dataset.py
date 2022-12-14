@@ -107,8 +107,17 @@ class BaseDataset():
                                               start_month=month_range[0],
                                               end_month=month_range[1])
         # Init Mask
-        self.init_mask(da=self.ds[self.var_name], lsm_file=lsm_file)
-        self.indices_flat, self.idx_map = self.init_map_indices()
+        init_mask = kwargs.pop('init_mask', True)
+        if init_mask:
+            self.init_mask(da=self.ds[self.var_name], lsm_file=lsm_file)
+            init_indices = kwargs.pop('init_indices', True)
+            if init_indices:
+                self.indices_flat, self.idx_map = self.init_map_indices()
+            else:
+                gut.myprint('WARNING! Index dictionaries not initialized!')
+        else:
+            gut.myprint('WARNING! No mask initialized!')
+            self.mask = None
 
     def open_ds(
         self,
@@ -168,6 +177,7 @@ class BaseDataset():
 
         gut.myprint(f"Load Dataset: {load_nc}")
         ds = xr.open_dataset(load_nc)
+        ds = self.check_dimensions(ds)
         ds = self.cut_map(ds=ds, lon_range=lon_range, lat_range=lat_range)
         self.time_range, self.lon_range, self.lat_range = self.get_spatio_temp_range(
             ds)
@@ -176,23 +186,21 @@ class BaseDataset():
             self.grid_step = ds.attrs["grid_step"]
         self.info_dict = ds.attrs  # TODO
         # Read and create grid class
-        ds = self.rename_var(ds)
+        self.ds = self.rename_var(ds)
+        self.get_vars(verbose=True)
 
-        for name, da in ds.data_vars.items():
-            gut.myprint(f"Variables in dataset: {name}")
+        # mask = np.ones_like(ds[name][0].data, dtype=bool)
+        # for idx, t in enumerate(ds.time):
+        #     mask *= np.isnan(ds[name].sel(time=t).data)
 
-        mask = np.ones_like(ds[name][0].data, dtype=bool)
-        for idx, t in enumerate(ds.time):
-            mask *= np.isnan(ds[name].sel(time=t).data)
-
-        self.mask = xr.DataArray(
-            data=xr.where(mask == 0, 1, np.NaN),
-            dims=da.sel(time=da.time[0]).dims,
-            coords=da.sel(time=da.time[0]).coords,
-            name="mask",
-        )
-
+        # self.mask = xr.DataArray(
+        #     data=xr.where(mask == 0, 1, np.NaN),
+        #     dims=da.sel(time=da.time[0]).dims,
+        #     coords=da.sel(time=da.time[0]).coords,
+        #     name="mask",
+        # )
         self.ds = self.check_time(ds)
+        # self.init_mask(da=ds)
 
         return None
 
@@ -304,13 +312,15 @@ class BaseDataset():
             ds['olr'] *= -1
         return ds
 
-    def get_vars(self, ds=None):
+    def get_vars(self, ds=None, verbose=False):
         # vars = []
         # for name, da in self.ds.data_vars.items():
         #     vars.append(name)
         if ds is None:
             ds = self.ds
         vars = gut.get_vars(ds=ds)
+        if verbose:
+            gut.myprint(f'Variables in dataset: {vars}!')
         return vars
 
     def set_var(self, var_name=None):
@@ -326,10 +336,12 @@ class BaseDataset():
         dims = self.get_dims()
         # if len(dims) > 2 or dims == ['time', 'points'] or dims == ['points', 'time']:
         if 'time' in dims:
+            gut.myprint(f'Init spatial mask for shape: {da.shape}')
             num_non_nans = xr.where(~np.isnan(da), 1, 0).sum(dim='time')
             mask = xr.where(num_non_nans == len(da.time), 1, 0)
             mask_dims = da.sel(time=da.time[0]).dims
             mask_coords = da.sel(time=da.time[0]).coords
+            gut.myprint(f'Initialized spatial mask...')
         else:
             mask = xr.where(~np.isnan(da), 1, 0)
             mask_dims = da.dims
@@ -1236,3 +1248,13 @@ class BaseDataset():
         nids = self.get_n_ids(loc=loc, nid=nid, num_nn=num_nn)
         locs = self.get_locs_for_indices(idx_lst=nids)
         return locs
+
+    def make_derivative(self, dx='time', var_name=None, group='JJAS'):
+        if var_name is None:
+            var_name = self.var_name
+
+        da = self.ds[var_name]
+        self.w_grad = da.differentiate(dx).rename(f'{var_name}_grad_{dx}')
+        self.w_grad_an = tu.compute_anomalies(
+            dataarray=self.w_grad, group=group)
+        return self.w_grad, self.w_grad_an

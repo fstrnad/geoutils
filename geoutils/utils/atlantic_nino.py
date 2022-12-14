@@ -18,11 +18,11 @@ reload(tut)
 
 
 # ======================================================================================
-# IOD specific functions
+# ani specific functions
 # ======================================================================================
 
 
-def get_iod_index(ssta, monthly=False, time_range=None):
+def get_ani_index(ssta, monthly=False, time_range=None):
     """Returns the time series of the Nino 1+2, 3, 3.4, 4 from SSTA dataset.
 
     Args:
@@ -33,88 +33,78 @@ def get_iod_index(ssta, monthly=False, time_range=None):
             Defauts to None
 
     Returns:
-        iod_index (xr.Dataset): Nino indices.
+        ani_index (xr.Dataset): Nino indices.
     """
     da = ssta.copy()
-    box_west, box_west_std = tut.get_mean_time_series(
-        da, lon_range=[50, 70],
-        lat_range=[-10, 10],
+    box_ani, _ = tut.get_mean_time_series(
+        da, lon_range=[-20, 0],
+        lat_range=[-3, 3],
         time_roll=0
     )
-    box_west.name = 'west'
-    box_east, box_east_std = tut.get_mean_time_series(
-        da, lon_range=[90, 110],
-        lat_range=[-10, 0],
-        time_roll=0
-    )
-    box_east.name = 'east'
+    box_ani.name = 'ani'
 
-    iod = box_west - box_east
-    iod.name = 'dmi'  # Dipole Mode Index
-
-    iod_idx = xr.merge([iod, box_west, box_east])
+    ani_idx = box_ani.to_dataset()
 
     if monthly:
-        # iod_idx = iod_idx.resample(time='M', label='left').mean()
-        iod_idx = tut.compute_timemean(iod_idx, timemean='month')
-        iod_idx = iod_idx.assign_coords(
-            dict(time=iod_idx['time'].data + np.timedelta64(1, 'D'))
+        ani_idx = tut.compute_timemean(ani_idx, timemean='month')
+        ani_idx = ani_idx.assign_coords(
+            dict(time=ani_idx['time'].data + np.timedelta64(1, 'D'))
         )
 
     if time_range is not None:
-        # iod_idx = iod_idx.sel(time=slice(np.datetime64(time_range[0], "M"),
+        # ani_idx = ani_idx.sel(time=slice(np.datetime64(time_range[0], "M"),
         #                                    np.datetime64(time_range[1], "M")))
-        iod_idx = tut.get_sel_time_range(
-            ds=iod_idx, time_range=time_range, freq='M',
+        ani_idx = tut.get_sel_time_range(
+            ds=ani_idx, time_range=time_range, freq='M',
             verbose=False)
 
-    return iod_idx
+    return ani_idx
 
 
-def get_iod_strength(enso_val=0):
+def get_ani_strength(enso_val=0):
     strength = 'Normal'
     if enso_val < -0.5:
-        strength = 'Weak_nIOD'
+        strength = 'Weak_anina'
     if enso_val <= -1:
-        strength = 'Moderate_nIOD'
+        strength = 'Moderate_anina'
     if enso_val <= -1.5:
-        strength = 'Strong_nIOD'
+        strength = 'Strong_nanina'
     if enso_val > 0.5:
-        strength = 'Weak_pIOD'
+        strength = 'Weak_anino'
     if enso_val >= 1:
-        strength = 'Moderate_pIOD'
+        strength = 'Moderate_anino'
     if enso_val >= 1.5:
-        strength = 'Strong_pIOD'
+        strength = 'Strong_anino'
     if enso_val > 2:
-        strength = 'Very_Strong_pIOD'
+        strength = 'Very_Strong_anino'
 
     return strength
 
 
-def get_iod_flavors(iod_index,
-                    month_range=['Dec', 'Feb'],
+def get_ani_flavors(ani_index,
+                    month_range=['Jun', 'Sep'],
                     mean=True, threshold=0.5,
                     drop_volcano_year=False):
-    """Get IOD flavors.
+    """Get ani flavors.
 
     Parameters:
     -----------
         min_diff (float): min_diff between nino3 and nino4 to get only the
                             extreme EP or CP
-        threshold (float, str): Threshold to define winter as El Nino or La nIOD,
+        threshold (float, str): Threshold to define winter as El Nino or La nani,
                                 A float or 'std' are possible.
                                 Default: 0.5.
     """
 
     if threshold == 'std':
-        threshold_iod = float(iod_index['dmi'].std(skipna=True))
+        threshold_ani = float(ani_index['ani'].std(skipna=True))
     else:
-        threshold_iod = float(threshold)
+        threshold_ani = float(threshold)
 
-    # Identify El Nino and La nIOD types
-    iod_classes = []
-    sd, ed = tut.get_start_end_date(data=iod_index)
-    if tut.is_datetime360(iod_index.time.data[0]):
+    # Identify El Nino and La nani types
+    ani_classes = []
+    sd, ed = tut.get_start_end_date(data=ani_index)
+    if tut.is_datetime360(ani_index.time.data[0]):
         times = xr.cftime_range(start=sd,
                                 end=ed,
                                 freq='Y')
@@ -126,9 +116,9 @@ def get_iod_flavors(iod_index,
     for yr in times:
         sm = tut.get_month_number(month_range[0])
         em = tut.get_month_number(month_range[1])
-        y = yr.year if tut.is_datetime360(iod_index.time.data[0]) else yr
+        y = yr.year if tut.is_datetime360(ani_index.time.data[0]) else yr
         y_end = y+1 if em < sm else y
-        if tut.is_datetime360(iod_index.time.data[0]):
+        if tut.is_datetime360(ani_index.time.data[0]):
             time_range = [cftime.Datetime360Day(y, sm, 1),
                           cftime.Datetime360Day(y_end, em+1, 1)]
         else:
@@ -136,51 +126,51 @@ def get_iod_flavors(iod_index,
                           np.datetime64(f"{y_end}-{em+1:02d}-01", "D")-1]
 
         # Select time window
-        iod = tut.get_sel_time_range(
-            ds=iod_index['dmi'], time_range=time_range, verbose=False,
+        ani = tut.get_sel_time_range(
+            ds=ani_index['ani'], time_range=time_range, verbose=False,
             freq='M')
 
         # Choose mean or min
         if mean:
-            iod = iod.mean(dim='time', skipna=True)
+            ani = ani.mean(dim='time', skipna=True)
         else:
-            iod = iod.min(dim='time', skipna=True)
+            ani = ani.min(dim='time', skipna=True)
 
         buff_dic = {'start': time_range[0], 'end': time_range[1],
-                    'dmi': float(iod)}
-        buff_dic['strength'] = get_iod_strength(iod)
+                    'ani': float(ani)}
+        buff_dic['strength'] = get_ani_strength(ani)
 
-        # pIOD
-        if (iod.data >= threshold_iod):
-            buff_dic['type'] = 'pIOD'
-        # nIOD years
-        elif (iod.data <= -threshold_iod):
-            buff_dic['type'] = 'nIOD'
+        # pani
+        if (ani.data >= threshold_ani):
+            buff_dic['type'] = 'pani'
+        # nani years
+        elif (ani.data <= -threshold_ani):
+            buff_dic['type'] = 'nani'
         # standard years
         else:
             buff_dic['type'] = 'Normal'
 
-        iod_classes.append(buff_dic)
+        ani_classes.append(buff_dic)
 
-    iod_classes = pd.DataFrame(iod_classes)
+    ani_classes = pd.DataFrame(ani_classes)
 
     # Years of strong volcanic erruptions followed by an El Nino
     if drop_volcano_year:
-        volcano_years_idx = iod_classes.loc[
-            (iod_classes['start'] == '1955-12-01') |
-            (iod_classes['start'] == '1956-12-01') |
-            (iod_classes['start'] == '1957-12-01') |
-            (iod_classes['start'] == '1963-12-01') |
-            (iod_classes['start'] == '1980-12-01') |
-            (iod_classes['start'] == '1982-12-01') |
-            (iod_classes['start'] == '1991-12-01')
+        volcano_years_idx = ani_classes.loc[
+            (ani_classes['start'] == '1955-12-01') |
+            (ani_classes['start'] == '1956-12-01') |
+            (ani_classes['start'] == '1957-12-01') |
+            (ani_classes['start'] == '1963-12-01') |
+            (ani_classes['start'] == '1980-12-01') |
+            (ani_classes['start'] == '1982-12-01') |
+            (ani_classes['start'] == '1991-12-01')
         ].index
-        iod_classes = iod_classes.drop(index=volcano_years_idx)
+        ani_classes = ani_classes.drop(index=volcano_years_idx)
 
-    return iod_classes
+    return ani_classes
 
 
-def get_iod_flavors_obs(definition='box',
+def get_ani_flavors_obs(definition='box',
                         fname=None,
                         ssta=None,
                         vname='sst',
@@ -206,14 +196,14 @@ def get_iod_flavors_obs(definition='box',
         climatology (str, optional): Climatology to compute anomalies.
             Only required for 'N3N4' and 'EC'. Defaults to 'month'.
         month_range (list, optional): Month range. Defaults to [11,1].
-        time_range (list, optional): Time period of interest.
+        time_range (list, optional): Time perani of interest.
             Defaults to None.
 
     Raises:
         ValueError: If wrong definition is defined.
 
     Returns:
-        (pd.Dataframe) Containing the classification including the time-period.
+        (pd.Dataframe) Containing the classification including the time-perani.
     """
     if definition in ['box', 'EC']:
         if fname is None:
@@ -230,33 +220,33 @@ def get_iod_flavors_obs(definition='box',
             ssta = tut.compute_anomalies(da_sst, group=climatology)
 
     if definition == 'box':
-        iod_index = get_iod_index(ssta, time_range=time_range)
-        iod_classes = get_iod_flavors_obs(
-            iod_index,
+        ani_index = get_ani_index(ssta, time_range=time_range)
+        ani_classes = get_ani_flavors_obs(
+            ani_index,
             month_range=month_range,
             mean=True,
             threshold=0.5,
             drop_volcano_year=False
         )
 
-    return iod_classes
+    return ani_classes
 
 
-def get_iod_years(iod_classes, season_types, class_type='type'):
-    iod_years = []
+def get_ani_years(ani_classes, season_types, class_type='type'):
+    ani_years = []
     for season_type in season_types:
         try:
-            iod_years_season = np.array(
-                [iod_classes.loc[iod_classes[class_type] == season_type]['start'],
-                 iod_classes.loc[iod_classes[class_type] == season_type]['end']]
+            ani_years_season = np.array(
+                [ani_classes.loc[ani_classes[class_type] == season_type]['start'],
+                 ani_classes.loc[ani_classes[class_type] == season_type]['end']]
             ).T
         except:
             raise ValueError("No valid season_type chosen!")
 
-        if len(iod_years_season) == 0:
+        if len(ani_years_season) == 0:
             gut.myprint(
                 f'No Enso years for {class_type} of this season type {season_type}!')
 
-        iod_years.append(iod_years_season)
+        ani_years.append(ani_years_season)
 
-    return np.concatenate(iod_years, axis=0)
+    return np.concatenate(ani_years, axis=0)

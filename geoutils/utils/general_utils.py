@@ -110,7 +110,8 @@ def check_dimensions(ds, ts_days=True, sort=True):
                 f"The dimension {dims} not consistent with required dims {clim_dims}!")
 
     if dim3:
-        ds = ds.transpose("lat", "lon", "time")
+        ds = ds.transpose("lat", "lon", 'time').compute()  # Actually change location in memory if necessary!
+        myprint('Transposed to lat-lon-time!')
     else:
         ds = ds.transpose('lat', 'lon')
 
@@ -417,6 +418,15 @@ def find_roots(y, x=None, y_0=0):
     return np.unique(x_roots)
 
 
+def get_exponent10(x):
+    if not isinstance(x, int) and not isinstance(x, float):
+        raise ValueError(f'Input {x} has to be int or float!')
+    if np.abs(x) == 0:
+        raise ValueError(f'Error: input {x} is zero!')
+    exp = int(np.floor(np.log10(np.abs(x))))
+    return exp
+
+
 def get_quantile_of_ts(ts, q=0.95, verbose=False):
     q_value = np.quantile(ts, q)
     if q >= 0.5:
@@ -622,6 +632,18 @@ def get_random_numbers_no_neighboring_elems(min_num, max_num, amount):
         if not {a-1, a, a+1} & rnd_set:  # set intersection: empty == False == no commons
             rnd_set.add(a)
     return np.array(sorted(rnd_set))
+
+
+def get_a_not_b(a, b):
+    """Returns the elements that are in a but not in b.
+
+    Args:
+        a (np.array): array of elements
+        b (np.array): array of elements
+    """
+    a = np.array(a)
+    b = np.array(b)
+    return a[~np.in1d(a, b)]
 
 
 def get_job_array_ids(def_id=0):

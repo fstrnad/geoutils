@@ -231,7 +231,7 @@ def plot_map(
         kwargs_cb["ticks"] = normticks + 0.5
 
     # interpolate grid of points to regular grid
-    grid_step = kwargs.pop('grid_step', 2.5)  # by default 2.5 grid
+    grid_step = kwargs.pop('grid_step', 1)  # by default 1 grid
 
     if 'points' in list(dmap.dims):
         if plot_type != 'points':
@@ -298,7 +298,8 @@ def plot_map(
             mask = significance_mask
 
         if mask.shape != z.shape:
-            raise ValueError('Significance mask not of same dimension as data input dimension!')
+            raise ValueError(
+                'Significance mask not of same dimension as data input dimension!')
 
         plot_2D(x=x, y=y, z=mask, ax=im['ax'],
                 plot_type='hatch', alpha=0.0,
@@ -374,8 +375,17 @@ def plot_2D(
     elif levels is not None:
         levels = np.linspace(vmin, vmax, levels + 1, endpoint=True)
     round_dec = kwargs.pop("round_dec", None)
+    expo = gut.get_exponent10(vmin) if vmin != 0 else gut.get_exponent10(vmax)
+    if round_dec is None:
+        round_dec = np.abs(expo)+1
+    if round_dec < np.abs(expo):
+        raise ValueError(
+            f'Vmin {vmin} smaller than decimal to round {round_dec}!')
+    if sci is None:
+        sci = expo if np.abs(expo) > 1 else None
     if levels is not None:
-        levels = np.around(levels, round_dec) if round_dec is not None else levels
+        levels = np.around(
+            levels, round_dec) if round_dec is not None else levels
 
     if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
         # norm = mpl.colors.LogNorm(levels=levels)
@@ -576,12 +586,14 @@ def plot_edges(
 ):
 
     plt_grid = kwargs.pop("plt_grid", False)
+    set_map = kwargs.pop("set_map", False)
     ax, fig = create_map(
-        da=ds.ds,  # needs the xr.dataset, not the BaseDataset
+        da=ds.ds,
         ax=ax,
         projection=projection,
         central_longitude=central_longitude,
         plt_grid=plt_grid,
+        set_map=set_map,
         **kwargs
     )
 

@@ -111,47 +111,6 @@ def set_antimeridian2zero(ds, roll=True):
     return ds
 
 
-def check_dimensions(ds, sort=True):
-    """
-    Checks whether the dimensions are the correct ones for xarray!
-    """
-    lon_lat_names = ['longitude', 'latitude']
-    xr_lon_lat_names = ['lon', 'lat']
-    dims = list(ds.dims)
-
-    for idx, lon_lat in enumerate(lon_lat_names):
-        if lon_lat in dims:
-            print(dims)
-            print(f'Rename:{lon_lat} : {xr_lon_lat_names[idx]} ')
-            ds = ds.rename({lon_lat: xr_lon_lat_names[idx]})
-            dims = list(ds.dims)
-            print(dims)
-    clim_dims = ['time', 'lat', 'lon']
-    for dim in clim_dims:
-        if dim not in dims:
-            raise ValueError(
-                f"The dimension {dim} not consistent with required dims {clim_dims}!")
-
-    # If lon from 0 to 360 shift to -180 to 180
-    if max(ds.lon) > 180:
-        print("Shift longitude!")
-        ds = ds.assign_coords(lon=(((ds.lon + 180) % 360) - 180))
-
-    if sort:
-        print('Sort longitudes and latitudes in ascending order, respectively')
-        ds = ds.sortby('lon')
-        ds = ds.sortby('lat')
-
-    if 'time' in ds.dims:
-        if gut.is_datetime360(time=ds.time.data[0]):
-            ds = ds
-        else:
-            ds = ds.assign_coords(time=np.array(
-                ds['time'].data, dtype='datetime64[s]'))
-            # ds = ds.transpose('time', 'lat', 'lon')
-
-    return ds
-
 # ======================================================================================
 # ENSO specific functions
 # ======================================================================================
@@ -670,7 +629,7 @@ def get_enso_flavors_obs(definition='N3N4',
             da_sst = xr.open_dataset(fname)[vname]
 
             # Check dimensions
-            da_sst = check_dimensions(da_sst, sort=True)
+            da_sst = gut.check_dimensions(da_sst, sort=True)
             # Detrend data
             da_sst = tut.detrend_dim(da_sst, freq='M')
             # Anomalies
@@ -759,7 +718,7 @@ def get_enso_flavors_cmip(fname_sst, vname='ts', land_area_mask=None, climatolog
         da_sst = da_sst.where(land_area_mask == 0.0)
 
     # Check dimensions
-    da_sst = check_dimensions(da_sst, sort=True)
+    da_sst = gut.check_dimensions(da_sst, sort=True)
     # Detrend data
     da_sst = tut.detrend_dim(da_sst, startyear=detrend_from)
     # Anomalies
