@@ -1,4 +1,5 @@
 """General Util functions."""
+from collections import Counter
 import pickle
 import cftime
 from itertools import combinations_with_replacement
@@ -48,29 +49,49 @@ def is_datetime360(time):
     return isinstance(time, cftime._cftime.Datetime360Day)
 
 
+def compare_lists(*lists):
+    counters = map(Counter, lists)
+
+    try:
+        first_counter = next(counters)
+    except StopIteration:
+        return True
+
+    return all(first_counter == counter for counter in counters)
+
+
 def get_vars(ds):
     vars = list(ds.keys())
     return vars
 
 
 def get_dims(ds):
-    vars = list(ds.dims.keys())
+    vars = list(ds.dims)  # works for xr.dataset and xr.dataarray
     return vars
 
 
 def remove_useless_variables(ds):
-    list_useless_vars = ['bnds', 'time_bnds']
-    dims = get_dims(ds=ds)
-    for var in list_useless_vars:
-        if var in dims:
-            ds = ds.drop_dims(var)
-            myprint(f'Remove dim {var}!')
 
     vars = get_vars(ds=ds)
-    for var in list_useless_vars:
-        if var in vars:
+    for var in vars:
+        this_dims = get_dims(ds[var])
+        if(
+            (compare_lists(this_dims, ['lat', 'lon', 'time'])) or
+            (compare_lists(this_dims, ['lat', 'lon'])) or
+            (compare_lists(this_dims, ['lat', 'lon', 'time', 'plevel'])) or
+            (compare_lists(this_dims, ['lat', 'lon', 'plevel']))
+        ):
+            continue
+        else:
             ds = ds.drop(var)
             myprint(f'Remove variable {var}!')
+
+    dims = get_dims(ds=ds)
+    for dim in dims:
+        if dim not in ['time', 'lat', 'lon', 'plevel']:
+            ds = ds.drop_dims(dim)
+            myprint(f'Remove dim {dim}!')
+
     return ds
 
 
@@ -83,12 +104,21 @@ def remove_single_dim(ds):
     return ds
 
 
-def check_dimensions(ds, ts_days=True, sort=True):
+def da_lon2_180(da):
+    return da.assign_coords(lon=(((da.lon + 180) % 360) - 180))
+
+
+def da_lon2_360(da):
+    da = da.assign_coords(lon=(((da.lon) % 360)))
+
+    return da
+
+
+def check_dimensions(ds, ts_days=True, sort=True, lon360=False):
     """
     Checks whether the dimensions are the correct ones for xarray!
     """
-    ds = remove_single_dim(ds=ds)
-    ds = remove_useless_variables(ds=ds)
+
     lon_lat_names = ['longitude', 'latitude', 't', 'month', 'time_counter']
     xr_lon_lat_names = ['lon', 'lat', 'time', 'time', 'time']
     dims = list(ds.dims)
@@ -101,24 +131,33 @@ def check_dimensions(ds, ts_days=True, sort=True):
             dims = list(ds.dims)
             myprint(dims)
     if dim3:
-        clim_dims = ['time', 'lat', 'lon']
+        clim_dims = ['time', 'lon', 'lat']
     else:
-        clim_dims = ['lat', 'lon']
+        clim_dims = ['lon', 'lat']
+    ds = remove_single_dim(ds=ds)
+    ds = remove_useless_variables(ds=ds)
+
     for dim in clim_dims:
         if dim not in dims:
             raise ValueError(
                 f"The dimension {dims} not consistent with required dims {clim_dims}!")
 
     if dim3:
-        ds = ds.transpose("lat", "lon", 'time').compute()  # Actually change location in memory if necessary!
+        # Actually change location in memory if necessary!
+        ds = ds.transpose("lat", "lon", "time").compute()
         myprint('Transposed to lat-lon-time!')
     else:
-        ds = ds.transpose('lat', 'lon')
+        ds = ds.transpose('lon', 'lat').compute()
 
     # If lon from 0 to 360 shift to -180 to 180
-    if max(ds.lon) > 180:
-        myprint("Shift longitude!")
-        ds = ds.assign_coords(lon=(((ds.lon + 180) % 360) - 180))
+    if lon360:
+        myprint('Longitudes 0 - 360!')
+        if max(ds.lon) < 180:
+            ds = da_lon2_360(da=ds)
+    else:
+        if max(ds.lon) > 180:
+            myprint("Shift longitude -180 - 180!")
+            ds = da_lon2_180(da=ds)
 
     if sort:
         myprint('Sort longitudes and latitudes in ascending order, respectively')
@@ -418,11 +457,13 @@ def find_roots(y, x=None, y_0=0):
     return np.unique(x_roots)
 
 
-def get_exponent10(x):
+def get_exponent10(x, verbose=False):
     if not isinstance(x, int) and not isinstance(x, float):
-        raise ValueError(f'Input {x} has to be int or float!')
-    if np.abs(x) == 0:
-        raise ValueError(f'Error: input {x} is zero!')
+        ValueError(f'Input {x} has to be int or float!')
+    if np.abs(x) == 0.:
+        if verbose:
+            myprint(f'WARNING: input {x} is zero!')
+        return 0
     exp = int(np.floor(np.log10(np.abs(x))))
     return exp
 

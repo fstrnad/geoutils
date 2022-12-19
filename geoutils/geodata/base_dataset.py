@@ -31,7 +31,7 @@ class BaseDataset():
         time_range=None,
         lon_range=[-180, 180],
         lat_range=[-90, 90],
-        grid_step=1,
+        grid_step=None,
         large_ds=False,
         can=False,
         detrend=False,
@@ -123,7 +123,7 @@ class BaseDataset():
         self,
         nc_file,
         time_range=None,
-        grid_step=1,
+        grid_step=None,
         large_ds=False,
         lon_range=[-180, 180],
         lat_range=[-90, 90],
@@ -138,17 +138,15 @@ class BaseDataset():
         else:
             ds = xr.open_dataset(nc_file, decode_times=decode_times)
         ds = self.check_dimensions(ds, ts_days=decode_times, **kwargs)
-        ds = self.rename_var(ds)
+        ds = self.rename_var_era5(ds)
         dims = self.get_dims(ds=ds)
         # da = ds[var_name]
         if len(dims) > 2:
             ds = self.get_data_timerange(ds, time_range)
-        if max(ds.lon) > 180:
-            gut.myprint("Shift longitude in Preprocessing!")
-            # da = da.assign_coords(lon=(((da.lon + 180) % 360) - 180))
-            ds = sput.da_lon2_180(da=ds)
-        ds = self.common_grid(dataarray=ds, grid_step=grid_step,
-                              use_ds_grid=use_ds_grid)
+
+        if grid_step is not None:
+            ds = self.common_grid(dataarray=ds, grid_step=grid_step,
+                                  use_ds_grid=use_ds_grid)
         if large_ds:
             ds.unify_chunks()
         if lon_range != [-180, 180] and lat_range != [-90, 90]:
@@ -186,7 +184,7 @@ class BaseDataset():
             self.grid_step = ds.attrs["grid_step"]
         self.info_dict = ds.attrs  # TODO
         # Read and create grid class
-        self.ds = self.rename_var(ds)
+        self.ds = self.rename_var_era5(ds)
         self.get_vars(verbose=True)
 
         # mask = np.ones_like(ds[name][0].data, dtype=bool)
@@ -204,17 +202,18 @@ class BaseDataset():
 
         return None
 
-    def save(self, filepath):
+    def save(self, filepath, save_params=True):
         """Save the dataset class object to file.
         Args:
         ----
         filepath: str
         """
-        param_class = {
-            "grid_step": self.grid_step,
-        }
         ds_temp = self.ds
-        ds_temp.attrs = param_class
+        if save_params and self.grid_step is not None:
+            param_class = {
+                "grid_step": self.grid_step,
+            }
+            ds_temp.attrs = param_class
 
         gut.save_ds(ds=ds_temp, filepath=filepath)
 
@@ -247,9 +246,11 @@ class BaseDataset():
         """
         reload(gut)
         sort = kwargs.pop('sort', True)
+        lon360 = kwargs.pop('lon360', False)
         ts_days = kwargs.pop('ts_days', True)
         ds = gut.check_dimensions(ds=ds,
                                   ts_days=ts_days,
+                                  lon360=lon360,
                                   sort=sort)
         # Set time series to days
         if len(list(ds.dims)) > 2:
@@ -278,7 +279,17 @@ class BaseDataset():
             self.calender360 = False
         return ds
 
-    def rename_var(self, ds):
+    def rename_var(self, new_var_name):
+        """Renames the dataset's variable name in self.ds and self.var_name
+
+        Args:
+            var_name (str): string of new var name
+        """
+        self.ds = self.ds.rename({self.var_name: new_var_name})
+        gut.myprint(f"Rename {self.var_name} to {new_var_name}!")
+        self.var_name = new_var_name
+
+    def rename_var_era5(self, ds):
         names = []
         for name, da in ds.data_vars.items():
             names.append(name)

@@ -58,11 +58,9 @@ def set_extent(da, ax, **kwargs):
 
     set_global = kwargs.pop('set_global', False)
     if not set_global:
-        if abs(min_ext_lon) > 179 or abs(max_ext_lon) > 179:
+        if abs(min_ext_lon) > 179 and abs(max_ext_lon) > 179 and abs(min_ext_lat) > 89 and abs(max_ext_lat) > 89:
             set_global = True
-        if abs(min_ext_lat) > 89 or abs(max_ext_lat) > 89:
-            set_global = True
-
+            gut.myprint('WARNING! Set global map!')
     if set_global:
         ax.set_global()
     else:
@@ -118,10 +116,10 @@ def create_map(
         ax.coastlines(alpha=alpha,
                       #   color=coast_color
                       )
-        ax.add_feature(ctp.feature.BORDERS,
-                       linestyle=":",
-                       #    color="grey",
-                       alpha=alpha)
+        # ax.add_feature(ctp.feature.BORDERS,
+        #                linestyle=":",
+        #                #    color="grey",
+        #                alpha=alpha)
         land_ocean = kwargs.pop("land_ocean", False)
         if land_ocean:
             ax.add_feature(ctp.feature.OCEAN, alpha=alpha, zorder=-1)
@@ -375,12 +373,12 @@ def plot_2D(
     elif levels is not None:
         levels = np.linspace(vmin, vmax, levels + 1, endpoint=True)
     round_dec = kwargs.pop("round_dec", None)
-    expo = gut.get_exponent10(vmin) if vmin != 0 else gut.get_exponent10(vmax)
-    if round_dec is None:
+    expo = gut.get_exponent10(vmin) if float(vmin) != 0. else gut.get_exponent10(vmax)
+    if round_dec is None or expo > 0:
         round_dec = np.abs(expo)+1
     if round_dec < np.abs(expo):
         raise ValueError(
-            f'Vmin {vmin} smaller than decimal to round {round_dec}!')
+            f'Exponent {expo} smaller than decimal to round {round_dec}!')
     if sci is None:
         sci = expo if np.abs(expo) > 1 else None
     if levels is not None:

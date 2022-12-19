@@ -66,7 +66,7 @@ class HelmholtzDecomposition(wds.Wind_Dataset):
                                 dataarray=self.ds[vname],
                                 group=an_type)
 
-            self.load_dataset_attributes(base_ds=ds_wind)
+            # self.load_dataset_attributes(base_ds=ds_wind)
 
         else:
             self.load(load_nc=load_nc)

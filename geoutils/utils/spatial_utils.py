@@ -795,16 +795,6 @@ def lon2_180(lon3):
     return lon1
 
 
-def da_lon2_180(da):
-    return da.assign_coords(lon=(((da.lon + 180) % 360) - 180))
-
-
-def da_lon2_360(da):
-    da = da.assign_coords(lon=(((da.lon) % 360)))
-
-    return da
-
-
 def sum_eres(data):
     """Gives sum of EREs per point over the whole dataset provided.
 

@@ -79,7 +79,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             self.ds = self.get_ds(u=u, v=v, w=w, windspeed=windspeed)
 
             # ds_uwind would be possible as well
-            self.load_dataset_attributes(base_ds=ds_vwind)
+            init_mask = kwargs.pop('init_mask', True)
+            self.load_dataset_attributes(base_ds=ds_vwind, init_mask=init_mask)
 
             self.vars = self.get_vars()
             an_types = kwargs.pop('an_types', ['dayofyear'])

@@ -43,10 +43,12 @@ class MultiPressureLevelDataset(bds.BaseDataset):
 
             all_ds = []
             gut.myprint(f'Load Pressure levels {plevels}!')
+            init_mask = kwargs.pop('init_mask', True)
             for idx, plevel in enumerate(plevels):
                 load_nc_file = load_nc_arr[idx]
                 single_pl_ds = bds.BaseDataset(load_nc=load_nc_file,
                                                can=can,
+                                               init_mask=init_mask,
                                                **kwargs)
                 all_ds.append(single_pl_ds.ds.expand_dims(
                     {'plevel': 1}).assign_coords({'plevel': [plevel]}))
@@ -56,20 +58,24 @@ class MultiPressureLevelDataset(bds.BaseDataset):
             gut.myprint(
                 f'Plevels {plevels}, now merge all single datasets into one!')
             self.ds = xr.merge(all_ds)
-            self.load_dataset_attributes(base_ds=single_pl_ds)
+            self.load_dataset_attributes(base_ds=single_pl_ds, init_mask=init_mask)
 
         else:
             self.load(load_nc)
 
-    def load_dataset_attributes(self, base_ds):
+    def load_dataset_attributes(self, base_ds, **kwargs):
+
         self.grid_step = base_ds.grid_step
         self.var_name = base_ds.var_name
-        self.def_locs = base_ds.def_locs
-        self.key_val_idx_point_dict = base_ds.key_val_idx_point_dict
         self.grid_type = base_ds.grid_type
-        self.mask = base_ds.mask
-        self.indices_flat = base_ds.indices_flat
-        self.idx_map = base_ds.idx_map
+        # Init Mask
+        init_mask = kwargs.pop('init_mask', True)
+        if init_mask:
+            self.def_locs = base_ds.def_locs
+            self.key_val_idx_point_dict = base_ds.key_val_idx_point_dict
+            self.mask = base_ds.mask
+            self.indices_flat = base_ds.indices_flat
+            self.idx_map = base_ds.idx_map
 
     def cut_map(self,  lon_range=[-180, 180], lat_range=[-90, 90]):
         ds = self.ds
