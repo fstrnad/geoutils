@@ -201,7 +201,7 @@ class BaseDataset():
 
         return None
 
-    def save(self, filepath, save_params=True):
+    def save(self, filepath, save_params=True, unlimited_dim=None):
         """Save the dataset class object to file.
         Args:
         ----
@@ -214,7 +214,7 @@ class BaseDataset():
             }
             ds_temp.attrs = param_class
 
-        gut.save_ds(ds=ds_temp, filepath=filepath)
+        gut.save_ds(ds=ds_temp, filepath=filepath, unlimited_dim=unlimited_dim)
 
         return None
 
@@ -343,7 +343,7 @@ class BaseDataset():
                 f'{var_name} not in variables available {self.vars}!')
         gut.myprint(f'Set variable name to {self.var_name}!')
         self.get_source_attrs()
-        
+
     def get_source_attrs(self):
         self.source_attrs = self.ds.attrs
         self.var_attrs = self.ds[self.var_name].attrs

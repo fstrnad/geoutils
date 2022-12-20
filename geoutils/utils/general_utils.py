@@ -506,7 +506,7 @@ def exist_file(filepath, verbose=True):
         return False
 
 
-def save_ds(ds, filepath):
+def save_ds(ds, filepath, unlimited_dim=None):
     if os.path.exists(filepath):
         print("File" + filepath + " already exists!")
         os.rename(filepath, filepath + "_backup")
@@ -514,8 +514,8 @@ def save_ds(ds, filepath):
     dirname = os.path.dirname(filepath)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
+    ds.to_netcdf(filepath, unlimited_dims=unlimited_dim)
 
-    ds.to_netcdf(filepath)
     print(f"File {filepath} written!", flush=True)
 
     return None
