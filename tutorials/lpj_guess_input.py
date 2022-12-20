@@ -68,13 +68,17 @@ cesm_file_new = f'{data_folder}/CESM1.2_CAM5-deepmip_stand_3xCO2-pr-v1.0.time_se
 
 grid_step = None
 
-ds_cesm = bds.BaseDataset(data_nc=cesm_file,
-                          var_name=None,
-                          grid_step=grid_step,
-                          lsm_file=None,
-                          sort=False,
-                          lon360=True,
-                          init_mask=True,
-                          )
-ds_cesm.rename_var(new_var_name='pr')
+ds_cesm_pr = bds.BaseDataset(data_nc=cesm_file,
+                             var_name=None,
+                             grid_step=grid_step,
+                             lsm_file=None,
+                             sort=False,
+                             lon360=True,
+                             init_mask=True,
+                             )
+ds_cesm_pr.rename_var(new_var_name='prec')
+prec = ds_cesm_pr.ds['prec']
+ds_cesm_pr.ds['prec'] = xr.where(prec < 0, 0, prec)
+ds_cesm_pr.set_source_attrs()
 # ds_cesm.save(filepath=cesm_file_new)
+

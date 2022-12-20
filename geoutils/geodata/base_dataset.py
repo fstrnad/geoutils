@@ -290,6 +290,7 @@ class BaseDataset():
         self.ds = self.ds.rename({self.var_name: new_var_name})
         gut.myprint(f"Rename {self.var_name} to {new_var_name}!")
         self.var_name = new_var_name
+        self.vars = self.get_vars()
 
     def rename_var_era5(self, ds):
         names = gut.get_vars(ds=ds)
