@@ -6,6 +6,7 @@ import geoutils.geodata.base_dataset as bds
 import geoutils.plotting.plots as gplt
 import geoutils.utils.time_utils as tu
 import geoutils.utils.general_utils as gut
+
 from importlib import reload
 
 # %%
@@ -27,10 +28,13 @@ ds_cesm = bds.BaseDataset(data_nc=cesm_file,
                           lsm_file=None,
                           sort=False,
                           lon360=True,
+                          init_mask=True,
                           )
-ds_cesm.rename_var(new_var_name='temp')
-ds_cesm.ds['temp'].attrs['standard_name'] = 'air_temperature'
-ds_cesm.save(filepath=cesm_file_new)
+# ds_cesm.rename_var(new_var_name='temp')
+# ds_cesm.add_var_attribute({'standard_name': 'air_temperature'})
+lpj_ds = xr.open_dataset(lpj_file)
+full_ds = xr.open_dataset(cesm_file)
+# ds_cesm.save(filepath=cesm_file_new)
 # %%
 
 im_comp = gplt.plot_map(dmap=ds_cesm.get_da().mean(dim='time'),
@@ -55,8 +59,8 @@ im_comp = gplt.plot_map(dmap=ds_cesm.get_da().mean(dim='time'),
 # Read files
 reload(bds)
 data_folder = '/home/strnad/data/lpjguess-input/prec/'
-cesm_file = f'{data_folder}/CESM1.2_CAM5-deepmip_stand_3xCO2-prec-v1.0.time_series.nc'
-lpj_file = f'{data_folder}/CESM1.2_CAM5-deepmip_stand_3xCO2-pr-v1.0.time_series.nc'
+lpj_file = f'{data_folder}/CESM1.2_CAM5-deepmip_stand_3xCO2-prec-v1.0.time_series.nc'
+cesm_file = f'{data_folder}/CESM1.2_CAM5-deepmip_stand_3xCO2-pr-v1.0.time_series.nc'
 cesm_file_new = f'{data_folder}/CESM1.2_CAM5-deepmip_stand_3xCO2-pr-v1.0.time_series_new.nc'
 
 # lpj_mask_file_pi = f'{data_folder}/mask_1_Preindustrial_.nc'
@@ -70,6 +74,7 @@ ds_cesm = bds.BaseDataset(data_nc=cesm_file,
                           lsm_file=None,
                           sort=False,
                           lon360=True,
+                          init_mask=True,
                           )
 ds_cesm.rename_var(new_var_name='pr')
 # ds_cesm.save(filepath=cesm_file_new)

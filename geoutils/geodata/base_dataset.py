@@ -5,13 +5,11 @@ Base class for the geodata datasets with lon-lat resolution.
 
 import os
 import numpy as np
-import xarray as xr
-import copy
 import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
 from importlib import reload
-from tqdm import tqdm
+import xarray as xr
 
 PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -108,6 +106,7 @@ class BaseDataset():
                                               end_month=month_range[1])
         # Init Mask
         init_mask = kwargs.pop('init_mask', True)
+        print(self.ds.attrs)
         if init_mask:
             self.init_mask(da=self.ds[self.var_name], lsm_file=lsm_file)
             init_indices = kwargs.pop('init_indices', True)
@@ -118,6 +117,9 @@ class BaseDataset():
         else:
             gut.myprint('WARNING! No mask initialized!')
             self.mask = None
+        self.set_source_attrs()
+
+        print(self.ds.attrs)
 
     def open_ds(
         self,
@@ -137,11 +139,12 @@ class BaseDataset():
             ds = xr.open_dataset(nc_file, chunks={"time": 100})
         else:
             ds = xr.open_dataset(nc_file, decode_times=decode_times)
+
         ds = self.check_dimensions(ds, ts_days=decode_times, **kwargs)
         ds = self.rename_var_era5(ds)
-        dims = self.get_dims(ds=ds)
+        self.dims = self.get_dims(ds=ds)
         # da = ds[var_name]
-        if len(dims) > 2:
+        if len(self.dims) > 2:
             ds = self.get_data_timerange(ds, time_range)
 
         if grid_step is not None:
@@ -198,7 +201,6 @@ class BaseDataset():
         #     name="mask",
         # )
         self.ds = self.check_time(ds)
-        # self.init_mask(da=ds)
 
         return None
 
@@ -290,9 +292,7 @@ class BaseDataset():
         self.var_name = new_var_name
 
     def rename_var_era5(self, ds):
-        names = []
-        for name, da in ds.data_vars.items():
-            names.append(name)
+        names = gut.get_vars(ds=ds)
 
         if "precipitation" in names:
             ds = ds.rename({"precipitation": "pr"})
@@ -342,6 +342,15 @@ class BaseDataset():
             raise ValueError(
                 f'{var_name} not in variables available {self.vars}!')
         gut.myprint(f'Set variable name to {self.var_name}!')
+        self.source_attrs = self.ds.attrs
+        self.var_attrs = self.ds[self.var_name].attrs
+
+    def set_source_attrs(self):
+        if self.source_attrs is None:
+            raise ValueError('Source attributes is not set yet!')
+        self.ds.attrs.update(self.source_attrs)
+        for var in self.vars:
+            self.ds[var].attrs.update(self.var_attrs)
 
     def add_var_attribute(self, var_dict):
         for key, val in var_dict.items():
