@@ -114,7 +114,7 @@ def da_lon2_360(da):
     return da
 
 
-def check_dimensions(ds, ts_days=True, sort=True, lon360=False):
+def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False):
     """
     Checks whether the dimensions are the correct ones for xarray!
     """
@@ -166,9 +166,10 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False):
 
     if 'time' in dims:
         if ts_days:
-            if is_datetime360(time=ds.time.data[0]):
+            if is_datetime360(time=ds.time.data[0]) or keep_time:
                 ds = ds
             else:
+                myprint('Set time to np.datetime time format!')
                 ds = ds.assign_coords(
                     time=ds.time.data.astype("datetime64[D]"))
                 # ds = ds.transpose('time', 'lat', 'lon')

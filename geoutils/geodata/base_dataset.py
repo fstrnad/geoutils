@@ -106,7 +106,6 @@ class BaseDataset():
                                               end_month=month_range[1])
         # Init Mask
         init_mask = kwargs.pop('init_mask', True)
-        print(self.ds.attrs)
         if init_mask:
             self.init_mask(da=self.ds[self.var_name], lsm_file=lsm_file)
             init_indices = kwargs.pop('init_indices', True)
@@ -118,8 +117,6 @@ class BaseDataset():
             gut.myprint('WARNING! No mask initialized!')
             self.mask = None
         self.set_source_attrs()
-
-        print(self.ds.attrs)
 
     def open_ds(
         self,
@@ -250,10 +247,12 @@ class BaseDataset():
         sort = kwargs.pop('sort', True)
         lon360 = kwargs.pop('lon360', False)
         ts_days = kwargs.pop('ts_days', True)
+        keep_time = kwargs.pop('keep_time', False)
         ds = gut.check_dimensions(ds=ds,
                                   ts_days=ts_days,
                                   lon360=lon360,
-                                  sort=sort)
+                                  sort=sort,
+                                  keep_time=keep_time)
         # Set time series to days
         if len(list(ds.dims)) > 2:
             ds = self.check_time(ds, **kwargs)
@@ -343,8 +342,15 @@ class BaseDataset():
             raise ValueError(
                 f'{var_name} not in variables available {self.vars}!')
         gut.myprint(f'Set variable name to {self.var_name}!')
+        self.get_source_attrs()
+        
+    def get_source_attrs(self):
         self.source_attrs = self.ds.attrs
         self.var_attrs = self.ds[self.var_name].attrs
+        self.lon_attrs = self.ds.lon.attrs
+        self.lat_attrs = self.ds.lat.attrs
+        if 'time' in self.dims:
+            self.time_attrs = self.ds.time.attrs
 
     def set_source_attrs(self):
         if self.source_attrs is None:
@@ -352,6 +358,10 @@ class BaseDataset():
         self.ds.attrs.update(self.source_attrs)
         for var in self.vars:
             self.ds[var].attrs.update(self.var_attrs)
+        self.ds.lon.attrs.update(self.lon_attrs)
+        self.ds.lat.attrs.update(self.lat_attrs)
+        if 'time' in self.dims:
+            self.ds.time.attrs.update(self.time_attrs)
 
     def add_var_attribute(self, var_dict):
         for key, val in var_dict.items():

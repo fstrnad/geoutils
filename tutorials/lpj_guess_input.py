@@ -29,12 +29,15 @@ ds_cesm = bds.BaseDataset(data_nc=cesm_file,
                           sort=False,
                           lon360=True,
                           init_mask=True,
+                          decode_times=True,
+                          keep_time=True,
                           )
-# ds_cesm.rename_var(new_var_name='temp')
+# %%
+ds_cesm.rename_var(new_var_name='temp')
 # ds_cesm.add_var_attribute({'standard_name': 'air_temperature'})
 lpj_ds = xr.open_dataset(lpj_file)
 full_ds = xr.open_dataset(cesm_file)
-# ds_cesm.save(filepath=cesm_file_new)
+ds_cesm.save(filepath=cesm_file_new)
 # %%
 
 im_comp = gplt.plot_map(dmap=ds_cesm.get_da().mean(dim='time'),
