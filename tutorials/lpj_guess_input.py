@@ -29,6 +29,7 @@ ds_cesm = bds.BaseDataset(data_nc=cesm_file,
                           lon360=True,
                           )
 ds_cesm.rename_var(new_var_name='temp')
+ds_cesm.ds['temp'].attrs['standard_name'] = 'air_temperature'
 ds_cesm.save(filepath=cesm_file_new)
 # %%
 

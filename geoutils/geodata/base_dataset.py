@@ -343,6 +343,11 @@ class BaseDataset():
                 f'{var_name} not in variables available {self.vars}!')
         gut.myprint(f'Set variable name to {self.var_name}!')
 
+    def add_var_attribute(self, var_dict):
+        for key, val in var_dict.items():
+            gut.myprint(f'Added {key}: {val} to {self.var_name} attributes!')
+            self.ds[self.var_name].attrs[key] = val
+
     def init_mask(self, da, lsm_file=None, mask_ds=None):
         dims = self.get_dims()
         # if len(dims) > 2 or dims == ['time', 'points'] or dims == ['points', 'time']:
