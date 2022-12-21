@@ -350,11 +350,11 @@ class BaseDataset():
         self.lon_attrs = self.ds.lon.attrs
         self.lat_attrs = self.ds.lat.attrs
         self.time_attrs = None
+        self.lon_attrs['standard_name'] = 'longitude'
+        self.lat_attrs['standard_name'] = 'latitude'
         if 'time' in self.dims:
             self.time_attrs = self.ds.time.attrs
-            self.time_attrs['standard_name'] = self.time_attrs['long_name']
-        for dim_dict in [self.lon_attrs, self.lat_attrs]:
-            dim_dict['standard_name'] = dim_dict['long_name']
+            self.time_attrs['standard_name'] = 'time'
 
     def set_source_attrs(self):
         if self.source_attrs is None:
