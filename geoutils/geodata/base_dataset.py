@@ -186,6 +186,7 @@ class BaseDataset():
         # Read and create grid class
         self.ds = self.rename_var_era5(ds)
         self.get_vars(verbose=True)
+        self.dims = self.get_dims(ds=ds)
 
         # mask = np.ones_like(ds[name][0].data, dtype=bool)
         # for idx, t in enumerate(ds.time):
@@ -381,7 +382,7 @@ class BaseDataset():
             mask = xr.where(num_non_nans == len(da.time), 1, 0)
             mask_dims = da.sel(time=da.time[0]).dims
             mask_coords = da.sel(time=da.time[0]).coords
-            gut.myprint(f'Initialized spatial mask...')
+            gut.myprint(f'... Finished Initialization spatial mask')
         else:
             mask = xr.where(~np.isnan(da), 1, 0)
             mask_dims = da.dims
@@ -868,7 +869,9 @@ class BaseDataset():
                                               time=False,
                                               check=False) > 0)[0]  # TODO check for better solution!
 
-        return idx_lst, mmap
+        return {'idx': idx_lst,
+                'mmap': mmap,
+                }
 
     def get_coord_for_idx(self, idx):
         map_dict = self.get_map_index(idx)
@@ -1031,7 +1034,7 @@ class BaseDataset():
                 td[-1] < np.datetime64(time_range[1])
             ):
                 raise ValueError(
-                    f"Please select time array within {td[0]} - {td[-1]}!")
+                    f"Chosen time {time_range} out of range. Please select times within {td[0]} - {td[-1]}!")
             else:
                 gut.myprint(f"Time steps within {time_range} selected!")
             # da = data.interp(time=t, method='nearest')
@@ -1191,10 +1194,12 @@ class BaseDataset():
 
         lon_range = region_dict["lon_range"]
         lat_range = region_dict["lat_range"]
-        ids, mmap = self.get_locations_in_range(
+        loc_dict = self.get_locations_in_range(
             lon_range=lon_range, lat_range=lat_range, def_map=def_map,
             dateline=dateline,
         )
+        ids = loc_dict['idx']
+        mmap = loc_dict['mmap']
         return ids, mmap
 
     def get_loc_for_idx(self, idx):

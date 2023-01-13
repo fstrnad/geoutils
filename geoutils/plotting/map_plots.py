@@ -373,24 +373,27 @@ def plot_2D(
     elif levels is not None:
         levels = np.linspace(vmin, vmax, levels + 1, endpoint=True)
     round_dec = kwargs.pop("round_dec", None)
-    expo = gut.get_exponent10(vmin) if float(vmin) != 0. else gut.get_exponent10(vmax)
-    if round_dec is None or expo > 0:
-        round_dec = np.abs(expo)+1
-    if round_dec < np.abs(expo):
-        raise ValueError(
-            f'Exponent {expo} smaller than decimal to round {round_dec}!')
-    if sci is None:
-        sci = expo if np.abs(expo) > 1 else None
-    if levels is not None:
-        levels = np.around(
-            levels, round_dec) if round_dec is not None else levels
+    if plot_type != 'hatch':
+        expo = gut.get_exponent10(vmin) if float(
+            vmin) != 0. else gut.get_exponent10(vmax)
+        if round_dec is None or expo > 0:
+            round_dec = np.abs(expo)+1
+        if round_dec < np.abs(expo):
+            raise ValueError(
+                f'Exponent {expo} smaller than decimal to round {round_dec}!')
+        if sci is None:
+            sci = expo if np.abs(expo) > 1 else None
+        if levels is not None:
+            levels = np.around(
+                levels, round_dec) if round_dec is not None else levels
 
-    if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
-        # norm = mpl.colors.LogNorm(levels=levels)
-        norm = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)
-        # vmin = vmax = None
-    else:
-        norm = None
+        if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
+            # norm = mpl.colors.LogNorm(levels=levels)
+            norm = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)
+            # vmin = vmax = None
+        else:
+            norm = None
+
     ticks = None
     extend = put.set_cb_boundaries(data=z, im=None,
                                    vmin=vmin, vmax=vmax, **kwargs)

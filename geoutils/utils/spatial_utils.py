@@ -415,7 +415,7 @@ def get_locations_in_range(def_map,
     """
     if not dateline:
         if np.abs(np.max(lon_range) - np.min(lon_range)) > 180:
-            print(f'WARNING! Range larger 180° {lon_range} but not dateline!')
+            gut.myprint(f'WARNING! Range larger 180° {lon_range} but not dateline!')
         mask = (
             (def_map['lat'] >= np.min(lat_range))
             & (def_map['lat'] <= np.max(lat_range))
