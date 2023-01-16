@@ -235,16 +235,18 @@ class BaseDataset():
         """
         Checks whether the dimensions are the correct ones for xarray!
         """
-        reload(gut)
+        reload(sput)
         sort = kwargs.pop('sort', True)
         lon360 = kwargs.pop('lon360', False)
         ts_days = kwargs.pop('ts_days', True)
         keep_time = kwargs.pop('keep_time', False)
-        ds = gut.check_dimensions(ds=ds,
-                                  ts_days=ts_days,
-                                  lon360=lon360,
-                                  sort=sort,
-                                  keep_time=keep_time)
+        freq = kwargs.pop('freq', 'D')
+        ds = sput.check_dimensions(ds=ds,
+                                   ts_days=ts_days,
+                                   lon360=lon360,
+                                   sort=sort,
+                                   keep_time=keep_time,
+                                   freq=freq)
         # Set time series to days
         if len(list(ds.dims)) > 2:
             ds = self.check_time(ds, **kwargs)
@@ -329,7 +331,7 @@ class BaseDataset():
     def set_var(self, ds=None, var_name=None):
         # select a main var name
         self.vars = self.get_vars(ds=ds)
-        self.var_name = var_name if var_name is not None else self.vars[0]
+        var_name = var_name if var_name is not None else self.vars[0]
         self.var_name = 'evs' if 'evs' in self.vars else var_name
         if self.var_name not in self.vars:
             raise ValueError(
@@ -385,6 +387,8 @@ class BaseDataset():
                 mask = xr.where(~np.isnan(da), 1, 0)
                 mask_dims = da.dims
                 mask_coords = da.coords
+
+            # Optional Land Sea Mask File
             if lsm_file is not None or mask_ds is not None:
                 if mask_ds is None:
                     mask_ds = self.open_ds(nc_file=lsm_file,
@@ -421,10 +425,11 @@ class BaseDataset():
             self.mask = None
         return self.mask
 
-    def flatten_array(self, time=True, check=False):
+    def flatten_array(self, time=True, var_name=None, check=False):
         """Flatten and remove NaNs.
         """
-        dataarray = self.ds[self.var_name]
+        var_name = self.var_name if var_name is None else var_name
+        dataarray = self.ds[var_name]
 
         data = sput.flatten_array(dataarray=dataarray, mask=self.mask,
                                   time=time, check=check)
@@ -578,7 +583,8 @@ class BaseDataset():
             dims = ds.dims
         else:
             dtype = type(ds)
-            raise ValueError(f'ds needs to be of type xr.DataArray but is of type {dtype}!')
+            raise ValueError(
+                f'ds needs to be of type xr.DataArray but is of type {dtype}!')
         return dims
 
     def get_idx_for_loc(self, locs):
@@ -814,13 +820,19 @@ class BaseDataset():
             max_lat = float(np.max(dataarray["lat"]))
             max_lon = float(np.max(dataarray["lon"]))
             if np.abs(180 - max_lon)-0.01 > grid_step:  # To avoid scenarios with big gap
-                gut.myprint(f'WARNING: Max lon smaller than 180-{grid_step}!')
+                gut.myprint(f'WARNING: Max lon smaller than {180 - grid_step}!')
             if max_lon < 179 and max_lon > 175:  # To avoid scenarios with big gap
                 gut.myprint(f'WARNING! Set max lon from {max_lon} to 179.75!')
                 max_lon = 179.75
             if min_lon == -180 and max_lon == 180:  # To avoid scenarios with big gap
                 gut.myprint(f'WARNING! Set max lon from {max_lon} to 179.75')
                 max_lon = 179.75
+
+            if max_lat < 89 and max_lat > 85:  # To avoid scenarios with big gap
+                max_lat = 89.5
+            if min_lat > -89 and min_lat < -85:  # To avoid scenarios with big gap
+                min_lat = -89.5
+
 
             # init_lat = np.arange(min_lat, max_lat, grid_step, dtype=float)
             # init_lon = np.arange(min_lon, max_lon, grid_step, dtype=float)

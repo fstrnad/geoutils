@@ -15,6 +15,8 @@ hadcm_file = f'{data_folder}/HadCM3B_M2.1aN-deepmip_sens_1xCO2-mlotst-v1.0.mean_
 hadcm_mask_file_pi = f'{data_folder}/mask_1_Preindustrial_.nc'
 mask_file_eocene = f'{data_folder}/mask_1_Eocene_.nc'
 cesm_file = f'{data_folder}/CESM1.2_CAM5-deepmip_sens_1xCO2-mlotst-v1.0.mean_r360x180.nc'
+cosmos_file = f'{data_folder}/COSMOS-landveg_r2413-deepmip_stand_3xCO2-tas-v1.0.time_series.nc'
+
 ocean_file = f'{data_folder}/ocean_r360x180_jan.nc'
 grid_step = 1
 
@@ -30,12 +32,42 @@ ds_cesm = bds.BaseDataset(data_nc=cesm_file,
                           decode_times=False,
                           lsm_file=mask_file_eocene
                           )
+# %%
+reload(bds)
 ds_ocean = bds.BaseDataset(data_nc=ocean_file,
                            var_name='temp_mm_dpth',
                            grid_step=grid_step,
                            decode_times=False,
-                        #    lsm_file=mask_file_eocene
+                           #    lsm_file=mask_file_eocene
                            )
+# %%
+reload(bds)
+ds_cosmos = bds.BaseDataset(data_nc=cosmos_file,
+                            var_name=None,
+                            grid_step=grid_step,
+                            decode_times=False,
+                            lsm_file=mask_file_eocene,
+                            freq='M'
+                            )
+
+# %%
+reload(gplt)
+mean_t = ds_cosmos.get_da().mean(dim='time')
+im_comp = gplt.plot_map(dmap=mean_t,
+                        plot_type='contourf',
+                        cmap='cividis',
+                        levels=12,
+                        # vmin=290,
+                        # vmax=310,
+                        title=f"COSMOS ",
+                        label=f'Global Mean Temperature [K]',
+                        orientation='horizontal',
+                        tick_step=3,
+                        # round_dec=2,
+                        set_map=False,
+                        # sci=1,
+                        # central_longitude=180
+                        )
 
 # %%
 da = ds_ocean.get_da()
@@ -55,7 +87,6 @@ im_comp = gplt.plot_map(dmap=xr.where(ds_ocean.mask, 1, np.nan),
                         round_dec=2,
                         set_map=False,
                         )
-
 
 
 # %%

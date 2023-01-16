@@ -138,6 +138,7 @@ def parallel_event_synchronization(event_data,
                                    savepath=None,
                                    q_dict=None,
                                    q_min=0.5,  # minimum value that i-j is considered significant
+                                   num_cpus=None
                                    ):
     # Load and check null model:
     q_dict_keys = list(q_dict.keys())
@@ -159,7 +160,7 @@ def parallel_event_synchronization(event_data,
         f"Start computing event synchronization for event data from {start_arr_idx} to {end_arr_idx}!")
 
     # For parallel Programming
-    num_cpus_avail = mpi.cpu_count()
+    num_cpus_avail = mpi.cpu_count() if num_cpus is None else num_cpus
     print(f"Number of available CPUs: {num_cpus_avail}")
 
     parallelArray = []

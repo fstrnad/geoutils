@@ -840,6 +840,8 @@ def add_time_window(date, time_step=1, time_unit="D"):
     else:
         if isinstance(date, xr.DataArray):
             date = np.datetime64(date.time.data)
+        else:
+            date = np.datetime64(date)
         if time_unit == "D":
             next_date = (d + ad) + (date - d)
         elif time_unit == "M":
@@ -1030,7 +1032,8 @@ def get_quantile_progression_arr(ds, tps, start,
         q_mask = xr.ones_like(mean_ts)
         if q_th is not None:
             q_val = mean_ts.quantile(q=q_th)
-            q_mask = xr.where(mean_ts <= q_val, 1, 0) if q_th < 0.5 else xr.where(mean_ts > q_val, 1, 0)
+            q_mask = xr.where(mean_ts <= q_val, 1, 0) if q_th < 0.5 else xr.where(
+                mean_ts > q_val, 1, 0)
         mask = q_mask * th_mask
 
         # This overwrites old values
@@ -1204,6 +1207,22 @@ def get_dates_of_time_ranges(time_ranges, freq='D'):
 def get_dates_in_range(start_date, end_date, time_unit='D'):
     tps = np.arange(start_date, end_date, dtype=f'datetime64[{time_unit}]')
     return tps
+
+
+def get_dates_for_time_steps(start='0-01-01', num_steps=1, freq='D'):
+    """Computes an array of time steps for a number of steps starting from a
+    specified date.
+
+    Args:
+        start (str, optional): startpoint. Defaults to '0-01-01'.
+        num_steps (int, optional): number of steps. Defaults to 1.
+        freq (str, optional): frequency of timesteps (day, month, year...). Defaults to 'D'.
+    """
+    dates = []
+    for step in np.arange(num_steps):
+        dates.append(add_time_window(start, time_step=step,
+                                     time_unit=freq))
+    return dates
 
 
 def sliding_time_window(

@@ -376,17 +376,20 @@ def plot_2D(
     if plot_type != 'hatch':
         expo = gut.get_exponent10(vmin) if float(
             vmin) != 0. else gut.get_exponent10(vmax)
-        if round_dec is None or expo > 0:
-            round_dec = np.abs(expo)+1
-        if round_dec < np.abs(expo):
-            raise ValueError(
-                f'Exponent {expo} smaller than decimal to round {round_dec}!')
         if sci is None:
             sci = expo if np.abs(expo) > 1 else None
+        if sci < 0:
+            round_dec = abs(sci) + 1
+        elif sci > 0:
+            round_dec = -1*(sci-2)
+        else:
+            round_dec = 0
+
+        print(levels)
         if levels is not None:
             levels = np.around(
                 levels, round_dec) if round_dec is not None else levels
-
+        print(levels)
         if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
             # norm = mpl.colors.LogNorm(levels=levels)
             norm = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)

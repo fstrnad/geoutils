@@ -271,21 +271,22 @@ def add_colorbar(im, fig, label,
 def make_colorbar(ax, im, fig=None, **kwargs):
 
     ticks = kwargs.pop('ticks', None)
-    tick_step = int(kwargs.pop("tick_step", 1))
-    round_dec = kwargs.pop("round_dec", None)
     sci = kwargs.pop("sci", None)
 
-    if sci is not None:
-        if sci < 0:
-            round_dec = abs(sci) + 1
-        else:
-            round_dec = sci*-1
-    if ticks is not None:
-        ticks = (
-            ticks[::tick_step]
-            if round_dec is None
-            else np.around(ticks[::tick_step], round_dec)
-        )
+    tick_step = int(kwargs.pop("tick_step", 1))
+    ticks = ticks[::tick_step]
+    # if sci is not None:
+    #     if sci < 0:
+    #         round_dec = abs(sci) + 1
+    #     else:
+    #         round_dec = 0
+    # round_dec = kwargs.pop("round_dec", None)
+    # if ticks is not None:
+    #     ticks = (
+    #         ticks[::tick_step]
+    #         if round_dec is None
+    #         else np.around(ticks[::tick_step], round_dec)
+    #     )
     if fig is None:
         fig = ax.get_figure()
 

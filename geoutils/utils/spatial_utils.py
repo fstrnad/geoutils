@@ -415,7 +415,8 @@ def get_locations_in_range(def_map,
     """
     if not dateline:
         if np.abs(np.max(lon_range) - np.min(lon_range)) > 180:
-            gut.myprint(f'WARNING! Range larger 180° {lon_range} but not dateline!')
+            gut.myprint(
+                f'WARNING! Range larger 180° {lon_range} but not dateline!')
         mask = (
             (def_map['lat'] >= np.min(lat_range))
             & (def_map['lat'] <= np.max(lat_range))
@@ -820,3 +821,125 @@ def average_num_eres(data):
     N = len(data.points)
     num_eres = sum_eres(data=data)
     return num_eres/N
+
+
+def remove_useless_variables(ds):
+
+    vars = gut.get_vars(ds=ds)
+    for var in vars:
+        this_dims = gut.get_dims(ds[var])
+        if(
+            (gut.compare_lists(this_dims, ['lat', 'lon', 'time'])) or
+            (gut.compare_lists(this_dims, ['lat', 'lon'])) or
+            (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'plevel'])) or
+            (gut.compare_lists(this_dims, ['lat', 'lon', 'plevel']))
+        ):
+            continue
+        else:
+            ds = ds.drop(var)
+            gut.myprint(f'Remove variable {var}!')
+
+    dims = gut.get_dims(ds=ds)
+    for dim in dims:
+        if dim not in ['time', 'lat', 'lon', 'plevel']:
+            ds = ds.drop_dims(dim)
+            gut.myprint(f'Remove dim {dim}!')
+
+    return ds
+
+
+def remove_single_dim(ds):
+    dims = dict(ds.dims)
+    for dim, num in dims.items():
+        if num < 2:
+            ds = ds.mean(dim=dim)  # Removes the single variable axis
+            gut.myprint(f'Remove single value dimension {dim}!')
+    return ds
+
+
+def da_lon2_180(da):
+    return da.assign_coords(lon=(((da.lon + 180) % 360) - 180))
+
+
+def da_lon2_360(da):
+    da = da.assign_coords(lon=(((da.lon) % 360)))
+
+    return da
+
+
+def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
+                     freq='D'):
+    """
+    Checks whether the dimensions are the correct ones for xarray!
+    """
+    reload(tu)
+
+    ds = remove_single_dim(ds=ds)
+    ds = remove_useless_variables(ds=ds)
+
+    lon_lat_names = ['longitude', 'latitude', 't', 'month', 'time_counter']
+    xr_lon_lat_names = ['lon', 'lat', 'time', 'time', 'time']
+    dims = list(ds.dims)
+    dim3 = len(dims) > 2
+    for idx, lon_lat in enumerate(lon_lat_names):
+        if lon_lat in dims:
+            gut.myprint(dims)
+            gut.myprint(f'Rename:{lon_lat} : {xr_lon_lat_names[idx]} ')
+            ds = ds.rename({lon_lat: xr_lon_lat_names[idx]})
+            dims = list(ds.dims)
+            gut.myprint(dims)
+    if dim3:
+        clim_dims = ['time', 'lat', 'lon']
+    else:
+        clim_dims = ['lat', 'lon']
+    for dim in clim_dims:
+        if dim not in dims:
+            raise ValueError(
+                f"The dimension {dims} not consistent with required dims {clim_dims}!")
+
+    if dim3:
+        # Actually change location in memory if necessary!
+        ds = ds.transpose("lat", "lon", "time").compute()
+        gut.myprint('3d object transposed to lat-lon-time!')
+    else:
+        ds = ds.transpose('lat', 'lon').compute()
+        gut.myprint('2d oject transposed to lat-lon!')
+
+    # If lon from 0 to 360 shift to -180 to 180
+    if lon360:
+        gut.myprint('Longitudes 0 - 360!')
+        if max(ds.lon) < 180:
+            ds = da_lon2_360(da=ds)
+    else:
+        if max(ds.lon) > 180:
+            gut.myprint("Shift longitude -180 - 180!")
+            ds = da_lon2_180(da=ds)
+
+    if sort:
+        ds = ds.sortby('lon')
+        ds = ds.sortby('lat')
+        gut.myprint(
+            'Sorted longitudes and latitudes in ascending order, respectively')
+
+    if 'time' in dims:
+        if ts_days:
+            if gut.is_datetime360(time=ds.time.data[0]) or keep_time:
+                ds = ds
+            else:
+                gut.myprint('Set time to np.datetime time format!')
+                ds = ds.assign_coords(
+                    time=ds.time.data.astype("datetime64[D]"))
+                # ds = ds.transpose('time', 'lat', 'lon')
+        else:
+            time_ds = ds.time
+            num_steps = len(time_ds)
+            # Default start year set to 1900: https://docs.xarray.dev/en/stable/user-guide/time-series.html
+            dates = np.array(tu.get_dates_for_time_steps(start='1900-01-01',
+                                                         num_steps=num_steps,
+                                                         freq=freq),
+                             dtype="datetime64[D]")
+            print(dates)
+            ds = ds.assign_coords(
+                time=dates)
+
+    return ds

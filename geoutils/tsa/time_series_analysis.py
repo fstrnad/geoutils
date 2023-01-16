@@ -130,6 +130,7 @@ def get_evs_index_array(event_data, th=0, rcevs=True, verbose=False):
         np.array: array of event series.
     """
     extreme_event_index_matrix = []
+    gut.myprint('Compute Index Array')
     for i, e in enumerate(tqdm(event_data, disable=~verbose)):
         idx_lst = get_evs_index(evs=e, th=th, rcevs=rcevs)
         extreme_event_index_matrix.append(idx_lst)
