@@ -819,11 +819,17 @@ class BaseDataset():
 
             max_lat = float(np.max(dataarray["lat"]))
             max_lon = float(np.max(dataarray["lon"]))
-            if np.abs(180 - max_lon)-0.01 > grid_step:  # To avoid scenarios with big gap
-                gut.myprint(f'WARNING: Max lon smaller than {180 - grid_step}!')
+            diff_lon = np.abs(max_lon - min_lon)
+            if diff_lon-0.01 < 352:  # To avoid scenarios with big gap
+                gut.myprint(f'WARNING: Max lon smaller than {180}!')
             if max_lon < 179 and max_lon > 175:  # To avoid scenarios with big gap
                 gut.myprint(f'WARNING! Set max lon from {max_lon} to 179.75!')
                 max_lon = 179.75
+            if diff_lon > 352 and diff_lon < 360 and min_lon >= 0:
+                gut.myprint(f'WARNING! Set max lon from {max_lon} to 359.75 and {min_lon} to 0!')
+                min_lon = 0
+                max_lon = 359.75
+
             if min_lon == -180 and max_lon == 180:  # To avoid scenarios with big gap
                 gut.myprint(f'WARNING! Set min lon from {min_lon} to -179.75')
                 min_lon = 179.75
@@ -834,7 +840,6 @@ class BaseDataset():
             if min_lat > -89 and min_lat < -85:  # To avoid scenarios with big gap
                 gut.myprint(f'WARNING! Set min lat from {min_lat} to -89.5!')
                 min_lat = -89.5
-
 
             # init_lat = np.arange(min_lat, max_lat, grid_step, dtype=float)
             # init_lon = np.arange(min_lon, max_lon, grid_step, dtype=float)
