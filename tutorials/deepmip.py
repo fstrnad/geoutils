@@ -15,7 +15,7 @@ hadcm_file = f'{data_folder}/HadCM3B_M2.1aN-deepmip_sens_1xCO2-mlotst-v1.0.mean_
 hadcm_mask_file_pi = f'{data_folder}/mask_1_Preindustrial_.nc'
 mask_file_eocene = f'{data_folder}/mask_1_Eocene_.nc'
 cesm_file = f'{data_folder}/CESM1.2_CAM5-deepmip_sens_1xCO2-mlotst-v1.0.mean_r360x180.nc'
-cosmos_file = f'{data_folder}/COSMOS-landveg_r2413-deepmip_stand_3xCO2-tas-v1.0.time_series.nc'
+cosmos_file = f'{data_folder}/COSMOS-landveg_r2413-deepmip_stand_3xCO2-pr-v1.0.time_series.nc'
 
 ocean_file = f'{data_folder}/ocean_r360x180_jan.nc'
 grid_step = 1
@@ -60,7 +60,7 @@ im_comp = gplt.plot_map(dmap=mean_t,
                         # vmin=290,
                         # vmax=310,
                         title=f"COSMOS ",
-                        label=f'Global Mean Temperature [K]',
+                        label=f'Global Mean {ds_cosmos.var_name}',
                         orientation='horizontal',
                         tick_step=3,
                         # round_dec=2,

@@ -825,12 +825,14 @@ class BaseDataset():
                 gut.myprint(f'WARNING! Set max lon from {max_lon} to 179.75!')
                 max_lon = 179.75
             if min_lon == -180 and max_lon == 180:  # To avoid scenarios with big gap
-                gut.myprint(f'WARNING! Set max lon from {max_lon} to 179.75')
-                max_lon = 179.75
+                gut.myprint(f'WARNING! Set min lon from {min_lon} to -179.75')
+                min_lon = 179.75
 
             if max_lat < 89 and max_lat > 85:  # To avoid scenarios with big gap
+                gut.myprint(f'WARNING! Set max lat from {max_lat} to 89.5!')
                 max_lat = 89.5
             if min_lat > -89 and min_lat < -85:  # To avoid scenarios with big gap
+                gut.myprint(f'WARNING! Set min lat from {min_lat} to -89.5!')
                 min_lat = -89.5
 
 

@@ -837,7 +837,7 @@ def remove_useless_variables(ds):
             continue
         else:
             ds = ds.drop(var)
-            gut.myprint(f'Remove variable {var}!')
+            gut.myprint(f'Remove variable {var} with dims: {this_dims}!')
 
     dims = gut.get_dims(ds=ds)
     for dim in dims:
@@ -874,9 +874,6 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
     """
     reload(tu)
 
-    ds = remove_single_dim(ds=ds)
-    ds = remove_useless_variables(ds=ds)
-
     lon_lat_names = ['longitude', 'latitude', 't', 'month', 'time_counter']
     xr_lon_lat_names = ['lon', 'lat', 'time', 'time', 'time']
     dims = list(ds.dims)
@@ -888,6 +885,9 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
             ds = ds.rename({lon_lat: xr_lon_lat_names[idx]})
             dims = list(ds.dims)
             gut.myprint(dims)
+    ds = remove_single_dim(ds=ds)
+    ds = remove_useless_variables(ds=ds)
+
     if dim3:
         clim_dims = ['time', 'lat', 'lon']
     else:
@@ -934,11 +934,10 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
             time_ds = ds.time
             num_steps = len(time_ds)
             # Default start year set to 1900: https://docs.xarray.dev/en/stable/user-guide/time-series.html
-            dates = np.array(tu.get_dates_for_time_steps(start='1900-01-01',
+            dates = np.array(tu.get_dates_for_time_steps(start='1901-01-01',
                                                          num_steps=num_steps,
                                                          freq=freq),
                              dtype="datetime64[D]")
-            print(dates)
             ds = ds.assign_coords(
                 time=dates)
 
