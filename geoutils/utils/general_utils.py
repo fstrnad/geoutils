@@ -160,9 +160,9 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False)
             ds = da_lon2_180(da=ds)
 
     if sort:
-        myprint('Sort longitudes and latitudes in ascending order, respectively')
         ds = ds.sortby('lon')
         ds = ds.sortby('lat')
+        myprint('Sorted longitudes and latitudes in ascending order, respectively')
 
     if 'time' in dims:
         if ts_days:

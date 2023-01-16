@@ -5,6 +5,7 @@ Base class for the geodata datasets with lon-lat resolution.
 
 import os
 import numpy as np
+import copy
 import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
@@ -105,17 +106,7 @@ class BaseDataset():
                                               start_month=month_range[0],
                                               end_month=month_range[1])
         # Init Mask
-        init_mask = kwargs.pop('init_mask', True)
-        if init_mask:
-            self.init_mask(da=self.ds[self.var_name], lsm_file=lsm_file)
-            init_indices = kwargs.pop('init_indices', True)
-            if init_indices:
-                self.indices_flat, self.idx_map = self.init_map_indices()
-            else:
-                gut.myprint('WARNING! Index dictionaries not initialized!')
-        else:
-            gut.myprint('WARNING! No mask initialized!')
-            self.mask = None
+        self.init_mask(da=self.ds[self.var_name], lsm_file=lsm_file)
         self.set_source_attrs()
 
     def open_ds(
@@ -155,7 +146,7 @@ class BaseDataset():
         # ds = da.to_dataset(name=var_name)
 
         gut.myprint("Finished processing data")
-
+        self.info_dict = copy.deepcopy(ds.attrs)
         return ds
 
     def load(self, load_nc, lon_range=[-180, 180], lat_range=[-90, 90]):
@@ -182,7 +173,7 @@ class BaseDataset():
         ds_attrs = list(ds.attrs.keys())
         if "grid_step" in ds_attrs:
             self.grid_step = ds.attrs["grid_step"]
-        self.info_dict = ds.attrs  # TODO
+        self.info_dict = copy.deepcopy(ds.attrs)  # TODO
         # Read and create grid class
         self.ds = self.rename_var_era5(ds)
         self.get_vars(verbose=True)
@@ -335,26 +326,30 @@ class BaseDataset():
             gut.myprint(f'Variables in dataset: {vars}!')
         return vars
 
-    def set_var(self, var_name=None):
+    def set_var(self, ds=None, var_name=None):
         # select a main var name
-        self.vars = self.get_vars(ds=self.ds)
+        self.vars = self.get_vars(ds=ds)
         self.var_name = var_name if var_name is not None else self.vars[0]
+        self.var_name = 'evs' if 'evs' in self.vars else var_name
         if self.var_name not in self.vars:
             raise ValueError(
                 f'{var_name} not in variables available {self.vars}!')
         gut.myprint(f'Set variable name to {self.var_name}!')
-        self.get_source_attrs()
+        self.get_source_attrs(ds=ds)
 
-    def get_source_attrs(self):
-        self.source_attrs = self.ds.attrs
-        self.var_attrs = self.ds[self.var_name].attrs
-        self.lon_attrs = self.ds.lon.attrs
-        self.lat_attrs = self.ds.lat.attrs
+    def get_source_attrs(self, ds=None):
+        if ds is None:
+            ds = self.ds
+        self.source_attrs = ds.attrs
+        self.var_attrs = ds[self.var_name].attrs
+        self.lon_attrs = ds.lon.attrs
+        self.lat_attrs = ds.lat.attrs
         self.time_attrs = None
         self.lon_attrs['standard_name'] = self.lon_attrs['long_name'] = 'longitude'
         self.lat_attrs['standard_name'] = self.lat_attrs['long_name'] = 'latitude'
-        if 'time' in self.dims:
-            self.time_attrs = self.ds.time.attrs
+        dims = self.get_dims(ds=ds)
+        if 'time' in dims:
+            self.time_attrs = ds.time.attrs
             self.time_attrs['standard_name'] = self.time_attrs['long_name'] = 'time'
 
     def set_source_attrs(self):
@@ -373,44 +368,57 @@ class BaseDataset():
             gut.myprint(f'Added {key}: {val} to {self.var_name} attributes!')
             self.ds[self.var_name].attrs[key] = val
 
-    def init_mask(self, da, lsm_file=None, mask_ds=None):
-        dims = self.get_dims()
-        # if len(dims) > 2 or dims == ['time', 'points'] or dims == ['points', 'time']:
-        if 'time' in dims:
-            gut.myprint(f'Init spatial mask for shape: {da.shape}')
-            num_non_nans = xr.where(~np.isnan(da), 1, 0).sum(dim='time')
-            mask = xr.where(num_non_nans == len(da.time), 1, 0)
-            mask_dims = da.sel(time=da.time[0]).dims
-            mask_coords = da.sel(time=da.time[0]).coords
-            gut.myprint(f'... Finished Initialization spatial mask')
-        else:
-            mask = xr.where(~np.isnan(da), 1, 0)
-            mask_dims = da.dims
-            mask_coords = da.coords
-        if lsm_file is not None or mask_ds is not None:
-            if mask_ds is None:
-                mask_ds = self.open_ds(nc_file=lsm_file,
-                                       time_range=None,
-                                       grid_step=self.grid_step,
-                                       lon_range=self.lon_range,
-                                       lat_range=self.lat_range,
-                                       use_ds_grid=True,
-                                       large_ds=False
-                                       )
-            mask_name = self.get_vars(ds=mask_ds)[0]
-            mask_ds = mask_ds[mask_name]
-            if not mask.shape == mask_ds.shape:
-                raise ValueError(
-                    f'LSM Mask {mask_ds.shape} and input data {mask.shape} not of same shape')
-            mask = mask.data * mask_ds.data
+    def init_mask(self, da, lsm_file=None, mask_ds=None, **kwargs):
+        init_mask = kwargs.pop('init_mask', True)
 
-        self.mask = xr.DataArray(
-            data=mask,
-            dims=mask_dims,
-            coords=mask_coords,
-            name="mask",
-        )
-        self.ds = xr.where(self.mask, self.ds, np.nan)
+        if init_mask:
+            dims = self.get_dims(ds=da)
+            # if len(dims) > 2 or dims == ['time', 'points'] or dims == ['points', 'time']:
+            if 'time' in dims:
+                gut.myprint(f'Init spatial mask for shape: {da.shape}')
+                num_non_nans = xr.where(~np.isnan(da), 1, 0).sum(dim='time')
+                mask = xr.where(num_non_nans == len(da.time), 1, 0)
+                mask_dims = da.sel(time=da.time[0]).dims
+                mask_coords = da.sel(time=da.time[0]).coords
+                gut.myprint(f'... Finished Initialization spatial mask')
+            else:
+                mask = xr.where(~np.isnan(da), 1, 0)
+                mask_dims = da.dims
+                mask_coords = da.coords
+            if lsm_file is not None or mask_ds is not None:
+                if mask_ds is None:
+                    mask_ds = self.open_ds(nc_file=lsm_file,
+                                           time_range=None,
+                                           grid_step=self.grid_step,
+                                           lon_range=self.lon_range,
+                                           lat_range=self.lat_range,
+                                           use_ds_grid=True,
+                                           large_ds=False
+                                           )
+                mask_name = self.get_vars(ds=mask_ds)[0]
+                mask_ds = mask_ds[mask_name]
+                if not mask.shape == mask_ds.shape:
+                    raise ValueError(
+                        f'LSM Mask {mask_ds.shape} and input data {mask.shape} not of same shape')
+                mask = mask.data * mask_ds.data
+
+            self.mask = xr.DataArray(
+                data=mask,
+                dims=mask_dims,
+                coords=mask_coords,
+                name="mask",
+            )
+            self.ds = xr.where(self.mask, self.ds, np.nan)
+            self.ds = self.ds.assign_attrs(self.info_dict)
+            init_indices = kwargs.pop('init_indices', True)
+            if init_indices:
+                self.indices_flat, self.idx_map = self.init_map_indices()
+            else:
+                gut.myprint('WARNING! Index dictionaries not initialized!')
+                self.indices_flat = self.idx_map = None
+        else:
+            gut.myprint('WARNING! No mask initialized!')
+            self.mask = None
         return self.mask
 
     def flatten_array(self, time=True, check=False):
@@ -564,7 +572,14 @@ class BaseDataset():
     def get_dims(self, ds=None):
         if ds is None:
             ds = self.ds
-        return list(ds.dims.keys())
+        if isinstance(ds, xr.Dataset):
+            dims = list(ds.dims.keys())
+        elif isinstance(ds, xr.DataArray):
+            dims = ds.dims
+        else:
+            dtype = type(ds)
+            raise ValueError(f'ds needs to be of type xr.DataArray but is of type {dtype}!')
+        return dims
 
     def get_idx_for_loc(self, locs):
         """This is just a wrapper for self.get_index_for_coord.
