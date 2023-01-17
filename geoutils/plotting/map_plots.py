@@ -378,26 +378,23 @@ def plot_2D(
             vmin) != 0. else gut.get_exponent10(vmax)
         if sci is None:
             sci = expo if np.abs(expo) > 1 else None
-        if sci < 0:
-            round_dec = abs(sci) + 1
-        elif sci > 0:
-            round_dec = -1*(sci-2)
-        else:
-            round_dec = 0
+        if sci is not None:
+            if sci < 0:
+                round_dec = abs(sci) + 1
+            elif sci > 0:
+                round_dec = -1*(sci-2)
+            else:
+                round_dec = 0
 
-        print(levels)
         if levels is not None:
             levels = np.around(
                 levels, round_dec) if round_dec is not None else levels
-        print(levels)
         if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
             # norm = mpl.colors.LogNorm(levels=levels)
             norm = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)
             # vmin = vmax = None
         else:
             norm = None
-
-    ticks = None
     extend = put.set_cb_boundaries(data=z, im=None,
                                    vmin=vmin, vmax=vmax, **kwargs)
     if plot_type == "scatter":

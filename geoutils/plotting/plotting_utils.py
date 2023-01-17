@@ -274,7 +274,10 @@ def make_colorbar(ax, im, fig=None, **kwargs):
     sci = kwargs.pop("sci", None)
 
     tick_step = int(kwargs.pop("tick_step", 1))
-    ticks = ticks[::tick_step]
+    if ticks is not None:
+        ticks = ticks[::tick_step]
+    else:
+        ticks=None
     # if sci is not None:
     #     if sci < 0:
     #         round_dec = abs(sci) + 1

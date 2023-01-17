@@ -1,3 +1,4 @@
+import cftime
 import geoutils.utils.statistic_utils as sut
 from tqdm import tqdm
 import geoutils.utils.general_utils as gut
@@ -933,12 +934,31 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
         else:
             time_ds = ds.time
             num_steps = len(time_ds)
+            calendar = '365_day'
             # Default start year set to 1900: https://docs.xarray.dev/en/stable/user-guide/time-series.html
-            dates = np.array(tu.get_dates_for_time_steps(start='1901-01-01',
-                                                         num_steps=num_steps,
-                                                         freq=freq),
-                             dtype="datetime64[D]")
+            # dates = np.array(tu.get_dates_for_time_steps(start='0001-01-01',
+            #                                              num_steps=num_steps,
+            #                                              freq=freq),
+            #                  dtype="datetime64[D]")
+            # times = xr.DataArray(
+            #     data=np.arange(num_steps),
+            #     dims=['time'],
+            #     coords={'time': dates}
+            #     )
+            # units = 'days since 0001-01-01 00:00'
+            # times = times.convert_calendar(calendar='365_day', use_cftime=True)
+            if freq == 'M':
+                freq = '1MS'  # to start with month
+            cfdates = xr.cftime_range(start='0001-01-01',
+                                      periods=num_steps,
+                                      freq=freq,
+                                      calendar=calendar,
+                                      )
             ds = ds.assign_coords(
-                time=dates)
+                time=cfdates)
+
+            ds.time.attrs.pop('calendar', None)
+            # ds.time.attrs.update({'calendar': '365_day'})
+            ds.time.encoding['calendar'] = calendar
 
     return ds

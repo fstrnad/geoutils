@@ -145,11 +145,12 @@ def parallel_event_synchronization(event_data,
     if q_min not in q_dict_keys:
         raise ValueError(f'This q {q_min} is not in dictionary!')
     null_model = q_dict[q_min]
-
+    max_num_evs = null_model.shape[0]
     num_time_series = len(event_data)
     one_array_length = int(num_time_series/num_jobs) + 1
 
     extreme_event_index_matrix = tsa.get_evs_index_array(event_data=event_data,
+                                                         max_num_evs=max_num_evs,
                                                          rcevs=True)
 
     start_arr_idx = job_id*one_array_length
@@ -161,7 +162,7 @@ def parallel_event_synchronization(event_data,
 
     # For parallel Programming
     num_cpus_avail = mpi.cpu_count() if num_cpus is None else num_cpus
-    print(f"Number of available CPUs: {num_cpus_avail}")
+    print(f"Use {num_cpus_avail} CPUs in parallel!")
 
     parallelArray = []
 
@@ -189,6 +190,10 @@ def parallel_event_synchronization(event_data,
             j, num_events_i, num_events_j, num_sync_events_ij = sync_event
             thresh_null_model = null_model[num_events_i, num_events_j]
 
+            if max_num_evs < num_events_i or max_num_evs < num_events_j:
+                raise ValueError(
+                    f'Allowed are max. {max_num_evs}! Too many events in i {num_events_i} or j {num_events_j}')
+
             # Threshold needs to be larger (non >= !)
             if num_sync_events_ij > thresh_null_model:
                 adj_matrix_edge_list.append((int(i),
@@ -203,8 +208,8 @@ def parallel_event_synchronization(event_data,
     end = time.time()
     print(f'{end-start}', flush=True)
     # sys.exit(0)
-    np.save(savepath, adj_matrix_edge_list)
-    print(f'Finished for job ID {job_id}', flush=True)
+    gut.save_np_dict(arr_dict=adj_matrix_edge_list, sp=savepath)
+    gut.myprint(f'Finished for job ID {job_id}')
 
     return adj_matrix_edge_list
 
@@ -461,8 +466,10 @@ def null_model_one_series(i,
             if nnelems:
                 # ind_list_e1 = np.sort(rng.choice(le, size=i, replace=False))
                 # ind_list_e2 = np.sort(rng.choice(le, size=j, replace=False))
-                ind_list_e1 = gut.get_random_numbers_no_neighboring_elems(0, le, i)
-                ind_list_e2 = gut.get_random_numbers_no_neighboring_elems(0, le, j)
+                ind_list_e1 = gut.get_random_numbers_no_neighboring_elems(
+                    0, le, i)
+                ind_list_e2 = gut.get_random_numbers_no_neighboring_elems(
+                    0, le, j)
 
                 cor[k] = event_sync(ind_list_e1, ind_list_e2,
                                     taumax, double_taumax)

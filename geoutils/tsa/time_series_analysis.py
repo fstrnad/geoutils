@@ -118,7 +118,7 @@ def get_evs_index(evs, th=0, rcevs=True):
     return idx_lst
 
 
-def get_evs_index_array(event_data, th=0, rcevs=True, verbose=False):
+def get_evs_index_array(event_data, th=0, max_num_evs=None, rcevs=True, verbose=False):
     """Get an array of indices for time event time series.
 
     Args:
@@ -133,6 +133,13 @@ def get_evs_index_array(event_data, th=0, rcevs=True, verbose=False):
     gut.myprint('Compute Index Array')
     for i, e in enumerate(tqdm(event_data, disable=~verbose)):
         idx_lst = get_evs_index(evs=e, th=th, rcevs=rcevs)
+        num_evs = len(idx_lst)
+        # if num_evs < 1:
+        #     raise ValueError(f'Index {i} does not contain any events!')
+        if max_num_evs is not None:
+            if num_evs >= max_num_evs:
+                raise ValueError(
+                    f'Index {i} contains too many events ({num_evs}) than allowed ({max_num_evs})!')
         extreme_event_index_matrix.append(idx_lst)
     return np.array(extreme_event_index_matrix, dtype=object)
 
