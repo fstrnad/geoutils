@@ -193,7 +193,8 @@ class BaseDataset():
 
         return None
 
-    def save(self, filepath, save_params=True, unlimited_dim=None):
+    def save(self, filepath, save_params=True, unlimited_dim=None,
+             classic_nc=False):
         """Save the dataset class object to file.
         Args:
         ----
@@ -206,7 +207,9 @@ class BaseDataset():
             }
             ds_temp.attrs = param_class
 
-        gut.save_ds(ds=ds_temp, filepath=filepath, unlimited_dim=unlimited_dim)
+        gut.save_ds(ds=ds_temp, filepath=filepath,
+                    unlimited_dim=unlimited_dim,
+                    classic_nc=classic_nc)
 
         return None
 
