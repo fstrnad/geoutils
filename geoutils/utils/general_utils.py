@@ -581,6 +581,12 @@ def get_a_not_b(a, b):
     return a[~np.in1d(a, b)]
 
 
+def get_intersect_a_b(a, b):
+    a = np.array(a)
+    b = np.array(b)
+    return np.intersect1d(a, b)
+
+
 def get_job_array_ids(def_id=0):
     # for job array on slurm cluster
     try:

@@ -563,9 +563,9 @@ def get_kde_map(ds, data, nn_points=None, bandwidth='scott'):
 
     link_points = np.where(data > 0)[0]
     links_rad = coord_rad[link_points]
-    Z_kde = lb.spherical_kde(link_points=links_rad,
-                             coord_rad=coord_rad,
-                             bw_opt=bandwidth)
+    Z_kde = spherical_kde(link_points=links_rad,
+                          coord_rad=coord_rad,
+                          bw_opt=bandwidth)
 
     return ds.get_map(Z_kde)
 
