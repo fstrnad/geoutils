@@ -277,7 +277,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
     if ticks is not None:
         ticks = ticks[::tick_step]
     else:
-        ticks=None
+        ticks = None
     # if sci is not None:
     #     if sci < 0:
     #         round_dec = abs(sci) + 1
@@ -509,11 +509,11 @@ def plt_text(ax, text, xpos=0, ypos=0,
 
 
 def text_box(ax, text, pos="upper right", fsize=pst.MEDIUM_SIZE, **kwargs):
-    # fw = kwargs.pop('title_fontweight', "normal")
-    fw = kwargs.pop('fontweight', "bold")
+    fw = kwargs.pop('fw', "normal")
     fsize = kwargs.pop('fsize', pst.MEDIUM_SIZE)
     anchored_text = AnchoredText(text, loc=pos,
-                                 )
+                                 prop=dict(size=fsize,
+                                           fontweight=fw))
     ax.add_artist(anchored_text)
 
     return ax

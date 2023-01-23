@@ -106,7 +106,7 @@ class BaseDataset():
                                               start_month=month_range[0],
                                               end_month=month_range[1])
         # Init Mask
-        self.init_mask(da=self.ds[self.var_name], lsm_file=lsm_file)
+        self.init_mask(da=self.ds[self.var_name], lsm_file=lsm_file, **kwargs)
         self.set_source_attrs()
 
     def open_ds(

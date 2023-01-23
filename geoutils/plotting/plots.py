@@ -10,10 +10,10 @@ import geoutils.plotting.plot_settings
 import geoutils.plotting.map_plots
 import geoutils.plotting.xy_plots
 import geoutils.plotting.plotting_utils
-reload(geoutils.plotting.plot_settings)
 reload(geoutils.plotting.map_plots)
 reload(geoutils.plotting.xy_plots)
 reload(geoutils.plotting.plotting_utils)
+reload(geoutils.plotting.plot_settings)
 
 
 def create_twinaxis(ax):

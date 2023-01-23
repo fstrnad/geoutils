@@ -92,7 +92,9 @@ class MoistStaticEnergy(mp.MultiPressureLevelDataset):
                             dataarray=self.ds[vname],
                             group=an_type)
             # ds_q would be possible as well
-            self.load_dataset_attributes(base_ds=ds_t)
+            init_mask = kwargs.pop('init_mask', False)
+            self.load_dataset_attributes(base_ds=ds_t,
+                                         init_mask=init_mask,)
         else:
             self.load(load_nc)
 

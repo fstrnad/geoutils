@@ -44,7 +44,10 @@ def set_grid(ax, alpha=0.5, **kwargs):
     return ax
 
 
-def set_extent(da, ax, **kwargs):
+def set_extent(da, ax,
+               lat_range=None,
+               lon_range=None,
+               **kwargs):
     if not isinstance(ax, ctp.mpl.geoaxes.GeoAxesSubplot) and not isinstance(ax, ctp.mpl.geoaxes.GeoAxes):
         raise ValueError(
             f'Axis is not of type Geoaxis, but of type {type(ax)}!')
@@ -55,6 +58,13 @@ def set_extent(da, ax, **kwargs):
     max_ext_lon = float(np.max(da.coords["lon"]))
     min_ext_lat = float(np.min(da.coords["lat"]))
     max_ext_lat = float(np.max(da.coords["lat"]))
+    if lat_range is not None or lon_range is not None:
+        lat_range = lat_range if lat_range is not None else [-90, 90]
+        lon_range = lon_range if lon_range is not None else [-180, 180]
+        min_ext_lon = np.min(lon_range)
+        max_ext_lon = np.max(lon_range)
+        min_ext_lat = np.min(lat_range)
+        max_ext_lat = np.max(lon_range)
 
     set_global = kwargs.pop('set_global', False)
     if not set_global:
@@ -90,6 +100,8 @@ def create_map(
     central_longitude=None,
     alpha=1,
     plt_grid=False,
+    lat_range=None,
+    lon_range=None,
     **kwargs,
 ):
     proj = get_projection(projection, central_longitude)
@@ -108,7 +120,10 @@ def create_map(
 
     set_map = kwargs.pop('set_map', True)
     ax = set_extent(
-        da=da, ax=ax, **kwargs)
+        da=da, ax=ax,
+        lat_range=lat_range,
+        lon_range=lon_range,
+        **kwargs)
 
     if set_map:
         # axes properties
@@ -165,33 +180,11 @@ def plot_map(
     label=None,
     title=None,
     significance_mask=None,
+    lat_range=None,
+    lon_range=None,
     **kwargs,
 ):
-    """Plotting functions to plot an xarray dataarray as a map
-
-    Args:
-        dmap (xr.dataarray): dataarray to be plotted.
-        fig (mpl, optional): mpl object of the figure. Defaults to None.
-        ax (mpl.ax, optional): axis object of mpl. Defaults to None.
-        ds (climnet.dataset object, optional): climnet dataset object. Defaults to None.
-        plot_type (str, optional): Which plot interpolation. Defaults to "contourf".
-        central_longitude (int, optional): Central longitude. Defaults to 0.
-        vmin (float, optional): color bar minimum. Defaults to None.
-        vmax (float, optional): color bar maximum. Defaults to None.
-        cmap (str, optional): Color map. Defaults to 'coolwarm'.
-        bar (bool, optional): Plot as well color maps. Defaults to True.
-        projection (str, optional): Which map projection to use. Defaults to "PlateCarree".
-        label (str, optional): label of the colorbar. Defaults to None.
-        title (str, optional): title of the plot. Defaults to None.
-        significance_mask (xr.dataarray, optional): dataarray with the mask as 1. Defaults to None.
-        ds_mask (bool, optional): use the mask of the dataset as mask. Defaults to False.
-
-    Raises:
-        ValueError:
-
-    Returns:
-        dict: dictionary of ax, fig, colorbar object, ticks.
-    """
+    
     reload(put)
     reload(sput)
     plt.rcParams["pcolor.shading"] = "nearest"  # For pcolormesh
@@ -216,6 +209,8 @@ def plot_map(
         set_global=set_global,
         set_map=set_map,
         figsize=figsize,
+        lat_range=lat_range,
+        lon_range=lon_range,
         **kwargs
     )
 
@@ -276,34 +271,39 @@ def plot_map(
 
     # areas which are dotted are mask
     if significance_mask is not None:
-        if isinstance(significance_mask, bool) and ds is None:
-            raise ValueError(
-                'Significance mask set to true requires a dataset!')
-        if significance_mask is False:
-            raise ValueError('Significance mask has to be None, not False!')
-        if ds is not None:
-            significance_mask = xr.where(
-                ds.mask, False, True)  # Turn around the mask
-            hatch_type = '///'
-            gut.myprint(f'WARNING! So far the dataset mask is only plotted as significnance mask!',
-                        verbose=False)
-        significance_mask = xr.where(significance_mask == 1, 1, np.nan)
-        if 'points' in list(significance_mask.dims):
-            mask_dict = sput.interp2gaus(
-                dataarray=significance_mask, grid_step=grid_step)
-            mask = mask_dict['intpol']
+        if plot_type == 'points':
+            gut.myprint(
+                f'WARNING! plot_type {plot_type} cannot be used togehter with significance mask so far!')
         else:
-            mask = significance_mask
+            if isinstance(significance_mask, bool) and ds is None:
+                raise ValueError(
+                    'Significance mask set to true requires a dataset!')
+            if significance_mask is False:
+                raise ValueError(
+                    'Significance mask has to be None, not False!')
+            if ds is not None:
+                significance_mask = xr.where(
+                    ds.mask, False, True)  # Turn around the mask
+                hatch_type = '///'
+                gut.myprint(f'WARNING! So far the dataset mask is only plotted as significnance mask!',
+                            verbose=False)
+            significance_mask = xr.where(significance_mask == 1, 1, np.nan)
+            if 'points' in list(significance_mask.dims):
+                mask_dict = sput.interp2gaus(
+                    dataarray=significance_mask, grid_step=grid_step)
+                mask = mask_dict['intpol']
+            else:
+                mask = significance_mask
 
-        if mask.shape != z.shape:
-            raise ValueError(
-                'Significance mask not of same dimension as data input dimension!')
+            if mask.shape != z.shape:
+                raise ValueError(
+                    'Significance mask not of same dimension as data input dimension!')
 
-        plot_2D(x=x, y=y, z=mask, ax=im['ax'],
-                plot_type='hatch', alpha=0.0,
-                projection=projection,
-                hatch_type=hatch_type,
-                **kwargs)
+            plot_2D(x=x, y=y, z=mask, ax=im['ax'],
+                    plot_type='hatch', alpha=0.0,
+                    projection=projection,
+                    hatch_type=hatch_type,
+                    **kwargs)
 
     return im
 
