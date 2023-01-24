@@ -434,6 +434,47 @@ def get_locations_in_range(def_map,
     return mmap
 
 
+def extract_subregion(da: xr.DataArray,
+                      lat_range: tuple[float, float],
+                      lon_range: tuple[float, float]) -> xr.DataArray:
+    """
+    Extracts a subregion of an xr.DataArray based on given latitude and longitude ranges.
+    Args:
+        da (xr.DataArray): input xr.DataArray that needs to be subset.
+        lat_range (Tuple[float, float]): latitude range of the desired subregion.
+        lon_range (Tuple[float, float]): longitude range of the desired subregion.
+    Returns:
+        xr.DataArray: returns the subregion as xr.DataArray
+    """
+    lat_min, lat_max = lat_range
+    lon_min, lon_max = lon_range
+    lat_sub = da.lat.where((da.lat >= lat_min) & (da.lat <= lat_max), drop=True)
+    lon_sub = da.longitude.where((da.lon >= lon_min) & (da.lon <= lon_max), drop=True)
+    da_sub = da.sel(lat=lat_sub, lon=lon_sub)
+    return da_sub
+
+
+def get_ts_in_range(ds,
+                    lon_range=[-180, 180],
+                    lat_range=[-90, 90],
+                    dateline=False):
+    loc_map = get_locations_in_range(def_map=ds,
+                                     lon_range=lon_range,
+                                     lat_range=lat_range,
+                                     dateline=dateline)
+    dims = gut.get_dims(ds)
+    if 'points' in dims:
+        return loc_map.dropna(dim='points')
+    elif 'lat' in dims:
+        lat_sub = loc_map.dropna(dim='lat').lat
+        lon_sub = loc_map.dropna(dim='lon').lon
+        ds_sub = ds.sel(lat=lat_sub, lon=lon_sub)
+
+        return ds_sub
+    else:
+        raise ValueError(f'Dimensions have to contain points or lat-lon but are {dims}')
+
+
 @ np.vectorize
 def haversine(lon1, lat1, lon2, lat2, radius=1):
     lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])

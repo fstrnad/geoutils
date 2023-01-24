@@ -22,11 +22,11 @@ def set_title(title, ax=None, fig=None, **kwargs):
                          fontweight=fw, size=fsize,
                          y=y_title)
         elif fig is not None:
-            y_title = kwargs.pop('y_title', 1)
             fig.suptitle(title,
                          color=title_color,
                          y=y_title,
-                         fontweight=fw, fontsize=pst.BIGGER_SIZE)
+                         fontweight=fw,
+                         fontsize=pst.BIGGER_SIZE)
     if vertical_title is not None:
         x_title_offset = kwargs.pop('x_title_offset', -0.22)
         ax.text(x=x_title_offset, y=.5, s=vertical_title,
@@ -83,6 +83,7 @@ def prepare_axis(ax, log=False, **kwargs):
         ax.tick_params(axis="x", labelrotation=rot)
         if xticks is not None:
             ax.set_xticks(xticks)
+        if xticklabels is not None:
             ax.set_xticklabels(xticklabels)
 
     elif plot_type == 'polar':

@@ -556,3 +556,22 @@ def get_tps4val(ts, val):
     idx_tps = np.where(ts == val)[0]
 
     return ts[idx_tps].time
+
+
+def get_expt_ees(evs, tps, timemean='year'):
+    # Get selected number of EEs
+    sel_tps_data = tu.get_sel_tps_ds(ds=evs, tps=tps)
+    t_ee_sel = get_ee_ts(evs=sel_tps_data)
+    t_tm_sel = tu.apply_timesum(t_ee_sel, timemean=timemean)
+
+    # Get total number of EEs
+    t_ee_tot = get_ee_ts(evs=evs)
+    t_tm_tot = tu.apply_timesum(t_ee_tot, timemean=timemean)
+
+    # Fraction of EREs
+    frac_ees = t_tm_sel/t_tm_tot
+    # Normalize by number of days over whole time period
+    norm = len(t_ee_sel) / len(t_ee_tot)
+    # print(len(t_ee_sel), len(t_ee_tot), norm)
+
+    return frac_ees / norm

@@ -64,7 +64,7 @@ def set_extent(da, ax,
         min_ext_lon = np.min(lon_range)
         max_ext_lon = np.max(lon_range)
         min_ext_lat = np.min(lat_range)
-        max_ext_lat = np.max(lon_range)
+        max_ext_lat = np.max(lat_range)
 
     set_global = kwargs.pop('set_global', False)
     if not set_global:
@@ -165,26 +165,45 @@ def get_projection(projection, central_longitude=None):
     return proj
 
 
-def plot_map(
-    dmap,
-    fig=None,
-    ax=None,
-    ds=None,
-    plot_type="contourf",
-    central_longitude=None,
-    vmin=None,
-    vmax=None,
-    cmap='coolwarm',
-    bar=True,
-    projection=None,
-    label=None,
-    title=None,
-    significance_mask=None,
-    lat_range=None,
-    lon_range=None,
-    **kwargs,
-):
-    
+def plot_map(dmap: xr.DataArray,
+             fig: plt.Figure = None,
+             ax: plt.Axes = None,
+             ds: object = None,
+             plot_type: str = "contourf",
+             central_longitude: int = None,
+             vmin: float = None,
+             vmax: float = None,
+             cmap: str = 'coolwarm',
+             bar: bool = True,
+             projection: str = None,
+             label: str = None,
+             title: str = None,
+             significance_mask: xr.DataArray = None,
+             lat_range: tuple[float, float] = None,
+             lon_range: tuple[float, float] = None,
+             **kwargs):
+    """
+    This function plots a map of a given xr.DataArray.
+    Parameters:
+      dmap (xr.DataArray): DataArray that needs to be plotted.
+      fig (plt.Figure): Matplotlib figure object.
+      ax (plt.Axes): Matplotlib axes object.
+      ds (object): dataset object.
+      plot_type (str): Type of plot, contourf is default.
+      central_longitude (int): Central longitude of the map.
+      vmin (int): Minimum value for the colorbar.
+      vmax (int): Maximum value for the colorbar.
+      cmap (str): Colormap used for the plot.
+      bar (bool): Add colorbar or not.
+      projection (str): Map projection to be used.
+      label (str): Label for the colorbar.
+      title (str): Title for the plot.
+      significance_mask (xr.DataArray): Significance mask to apply on the plot.
+      lat_range (Tuple[float, float]): Latitude range for the plot.
+      lon_range (Tuple[float, float]): Longitude range for the plot.
+      **kwargs: Additional keyword arguments.
+    """
+
     reload(put)
     reload(sput)
     plt.rcParams["pcolor.shading"] = "nearest"  # For pcolormesh
@@ -649,7 +668,7 @@ def plot_wind_field(
     ax=None,
     x_vals=None,
     y_vals=None,
-    key_loc=(0.95, -0.06),
+    key_loc=(0.95, -0.08),
     stream=False,
     transform=True,
     **kwargs,
@@ -674,10 +693,10 @@ def plot_wind_field(
 
     lw = kwargs.pop("lw", 1)
     scale = kwargs.pop("scale", None)
-    headwidth = kwargs.pop('headwidth', 10)
-    width = kwargs.pop('width', 0.007)
-    headaxislength = kwargs.pop('headaxislength', 3)
-    headlength = kwargs.pop('headlength', 6)
+    headwidth = kwargs.pop('headwidth', 7)
+    width = kwargs.pop('width', 0.002)
+    headaxislength = kwargs.pop('headaxislength', 2)
+    headlength = kwargs.pop('headlength', 4)
     if stream:
         magnitude = (u ** 2 + v ** 2) ** 0.5
         im_stream = ax.streamplot(
@@ -737,6 +756,7 @@ def plot_wind_field(
 
 def create_multi_plot(nrows, ncols, ds=None, projection=None,
                       plt_grid=True, **kwargs):
+    reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
         figsize = (6*ncols, 4*nrows)
@@ -791,7 +811,7 @@ def create_multi_plot(nrows, ncols, ds=None, projection=None,
         axs = axs[0]
 
     title = kwargs.pop('title', None)
-    y_title = kwargs.pop('y_title', 1.)
+    y_title = kwargs.pop('y_title', .9)
     if title is not None:
         put.set_title(title=title, ax=None, fig=fig,
                       y_title=y_title)
