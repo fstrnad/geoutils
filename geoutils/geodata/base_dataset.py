@@ -135,8 +135,14 @@ class BaseDataset():
         if len(self.dims) > 2:
             ds = self.get_data_timerange(ds, time_range)
 
+        min_lon = kwargs.pop('min_lon', None)
+        max_lon = kwargs.pop('max_lon', None)
+        min_lat = kwargs.pop('min_lat', None)
+        max_lat = kwargs.pop('max_lat', None)
         if grid_step is not None:
             ds = self.common_grid(dataarray=ds, grid_step=grid_step,
+                                  min_lon=min_lon, max_lon=max_lon,
+                                  min_lat=min_lat, max_lat=max_lat,
                                   use_ds_grid=use_ds_grid)
         if large_ds:
             ds.unify_chunks()
@@ -801,48 +807,64 @@ class BaseDataset():
 
         return time_range, lon_range, lat_range
 
-    def common_grid(self, dataarray, grid_step=1, use_ds_grid=False):
+    def common_grid(self, dataarray, grid_step=1,
+                    min_lon=None, max_lon=None,
+                    min_lat=None, max_lat=None,
+                    use_ds_grid=False):
         """Common grid for all datasets.
         """
         if use_ds_grid:
             init_lat = self.ds.lat
             init_lon = self.ds.lon
-            min_lat = float(np.min(init_lat))
-            min_lon = float(np.min(init_lon))
+            min_lat = float(np.min(init_lat)) if min_lat is None else min_lat
+            min_lon = float(np.min(init_lon)) if min_lon is None else min_lon
 
-            max_lat = float(np.max(init_lat))
-            max_lon = float(np.max(init_lon))
+            max_lat = float(np.max(init_lat)) if max_lat is None else min_lat
+            max_lon = float(np.max(init_lon)) if max_lon is None else max_lon
         else:
             # min_lon = min(lon_range)
             # min_lat = min(lat_range)
             # Use minimum of original dataset because other lower variables aren't defined
             # without np. much slower!
-            min_lat = float(np.min(dataarray["lat"]))
-            min_lon = float(np.min(dataarray["lon"]))
 
-            max_lat = float(np.max(dataarray["lat"]))
-            max_lon = float(np.max(dataarray["lon"]))
+            correct_max_lon = True if max_lon is None else False
+            correct_min_lon = True if min_lon is None else False
+            correct_min_lat = True if min_lat is None else False
+            correct_max_lat = True if max_lat is None else False
+
+            min_lat = float(
+                np.min(dataarray["lat"])) if min_lat is None else min_lat
+            min_lon = float(
+                np.min(dataarray["lon"])) if min_lon is None else min_lon
+
+            max_lat = float(
+                np.max(dataarray["lat"])) if max_lat is None else max_lat
+            max_lon = float(
+                np.max(dataarray["lon"])) if max_lon is None else max_lon
             diff_lon = np.abs(max_lon - min_lon)
             if diff_lon-0.01 < 352:  # To avoid scenarios with big gap
                 gut.myprint(f'WARNING: Max lon smaller than {180}!')
             if max_lon < 179 and max_lon > 175:  # To avoid scenarios with big gap
                 gut.myprint(f'WARNING! Set max lon from {max_lon} to 179.75!')
-                max_lon = 179.75
+                max_lon = 179.75 if correct_max_lon else max_lon
             if diff_lon > 352 and diff_lon < 360 and min_lon >= 0:
-                gut.myprint(f'WARNING! Set max lon from {max_lon} to 359.75 and {min_lon} to 0!')
-                min_lon = 0
-                max_lon = 359.75
+                gut.myprint(
+                    f'WARNING! Set max lon from {max_lon} to 359.75 and {min_lon} to 0!')
+                min_lon = 0 if correct_min_lon else min_lon
+                max_lon = 359.75 if correct_max_lon else max_lon
 
             if min_lon == -180 and max_lon == 180:  # To avoid scenarios with big gap
                 gut.myprint(f'WARNING! Set min lon from {min_lon} to -179.75')
-                min_lon = 179.75
+                min_lon = 179.75 if correct_min_lon else min_lon
 
             if max_lat < 89 and max_lat > 85:  # To avoid scenarios with big gap
-                gut.myprint(f'WARNING! Set max lat from {max_lat} to 89.5!')
-                max_lat = 89.5
+                max_lat = 89.5 if correct_max_lat else max_lat
+                if max_lat == 89.5:
+                    gut.myprint(f'WARNING! Set max lat from {max_lat} to 89.5!')
+
             if min_lat > -89 and min_lat < -85:  # To avoid scenarios with big gap
                 gut.myprint(f'WARNING! Set min lat from {min_lat} to -89.5!')
-                min_lat = -89.5
+                min_lat = -89.5 if correct_min_lat else min_lat
 
             # init_lat = np.arange(min_lat, max_lat, grid_step, dtype=float)
             # init_lon = np.arange(min_lon, max_lon, grid_step, dtype=float)

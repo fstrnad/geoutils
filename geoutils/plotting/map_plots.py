@@ -18,6 +18,15 @@ reload(pst)
 
 
 def set_grid(ax, alpha=0.5, **kwargs):
+    """Generates a grid for a spatial map.
+
+    Args:
+        ax (mpl.axes): axis object
+        alpha (float, optional): transparancy of the grid. Defaults to 0.5.
+
+    Returns:
+        _type_: _description_
+    """
     # Set grid steps for longitude and latitude
     gs_lon = kwargs.pop('gs_lon', 60)
     gs_lat = kwargs.pop('gs_lat', 30)

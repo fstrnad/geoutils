@@ -24,8 +24,10 @@ ds_hadcm = bds.BaseDataset(data_nc=hadcm_file,
                            var_name=None,
                            grid_step=grid_step,
                            decode_times=False,
-                           lsm_file=mask_file_eocene
+                           lsm_file=mask_file_eocene,
+                           max_lat=86.25
                            )
+# %%
 ds_cesm = bds.BaseDataset(data_nc=cesm_file,
                           var_name=None,
                           grid_step=grid_step,
