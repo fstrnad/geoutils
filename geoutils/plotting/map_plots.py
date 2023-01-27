@@ -117,10 +117,9 @@ def create_map(
     **kwargs,
 ):
     proj = get_projection(projection, central_longitude)
-
+    figsize = kwargs.pop("figsize", (9, 6))
     # create figure
     if ax is None:
-        figsize = kwargs.pop("figsize", (9, 6))
         fig, ax = plt.subplots(figsize=(figsize))
         ax = plt.axes(projection=proj)
     else:

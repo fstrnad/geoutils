@@ -102,6 +102,7 @@ im_comp = gplt.plot_map(dmap=xr.where(ds_ocean.mask, 1, np.nan),
 
 
 # %%
+reload(gplt)
 ds = ds_hadcm.get_da()
 ds_month = {}
 max_mixedlayer = 0.6*float(ds.max())
@@ -112,10 +113,10 @@ im = gplt.create_multi_plot(nrows=3, ncols=4,
                             wspace=0.1, hspace=0.8)
 
 
-for j in range(0, 12):
-    ds_month[j] = ds.sel(time=j)
+for j, tp in enumerate(ds.time):
+    ds_month = ds.sel(time=tp)
 
-    im_comp = gplt.plot_map(dmap=ds_month[j],
+    im_comp = gplt.plot_map(dmap=ds_month,
                             ax=im['ax'][j],
                             fig=im['fig'],
                             plot_type='contourf',
