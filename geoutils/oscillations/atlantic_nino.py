@@ -1,8 +1,5 @@
 ''' File description
-
-@Author  :   Jakob Schlör
-@Time    :   2022/08/02 19:22:51
-@Contact :   jakob.schloer@uni-tuebingen.de
+@Author  :   Felix Strnad
 '''
 import geoutils.utils.general_utils as gut
 from importlib import reload

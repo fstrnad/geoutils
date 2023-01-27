@@ -18,12 +18,15 @@ reload(pst)
 
 
 def set_grid(ax, alpha=0.5, **kwargs):
+    # Set grid steps for longitude and latitude
     gs_lon = kwargs.pop('gs_lon', 60)
     gs_lat = kwargs.pop('gs_lat', 30)
+
+    # Generate the grid
     gl = ax.gridlines(
         draw_labels=True,
         xlocs=np.arange(-180, 181, gs_lon),
-        ylocs=range(-90, 90, gs_lat),
+        ylocs=np.arange(-90, 91, gs_lat),
         crs=ccrs.PlateCarree(),
         x_inline=False,
         y_inline=False,
@@ -41,7 +44,7 @@ def set_grid(ax, alpha=0.5, **kwargs):
     gl.xlabel_style = {'rotation': -0,
                        'color': 'black', 'size': pst.MEDIUM_SIZE}
     gl.top_labels = True
-    return ax
+    return ax, kwargs
 
 
 def set_extent(da, ax,
@@ -99,7 +102,7 @@ def create_map(
     projection="EqualEarth",
     central_longitude=None,
     alpha=1,
-    plt_grid=False,
+    plt_grid=True,
     lat_range=None,
     lon_range=None,
     **kwargs,
@@ -139,10 +142,10 @@ def create_map(
         if land_ocean:
             ax.add_feature(ctp.feature.OCEAN, alpha=alpha, zorder=-1)
             ax.add_feature(ctp.feature.LAND, alpha=alpha, zorder=-1)
-    if plt_grid is True:
-        ax = set_grid(ax, alpha=alpha, **kwargs)
+    if plt_grid:
+        ax, kwargs = set_grid(ax, alpha=alpha, **kwargs)
 
-    return ax, fig
+    return ax, fig, kwargs
 
 
 def get_projection(projection, central_longitude=None):
@@ -209,7 +212,6 @@ def plot_map(dmap: xr.DataArray,
     plt.rcParams["pcolor.shading"] = "nearest"  # For pcolormesh
 
     plt_grid = kwargs.pop("plt_grid", True)
-    set_global = kwargs.pop('set_global', False)
     hatch_type = kwargs.pop('hatch_type', '..')
     set_map = kwargs.pop('set_map', True)
     figsize = kwargs.pop("figsize", (9, 6))
@@ -219,13 +221,12 @@ def plot_map(dmap: xr.DataArray,
     else:
         if projection is None:
             projection = 'PlateCarree'  # Set default to PlateCarree
-    ax, fig = create_map(
+    ax, fig, kwargs = create_map(
         da=dmap,
         ax=ax,
         projection=projection,
         central_longitude=central_longitude,
         plt_grid=plt_grid,
-        set_global=set_global,
         set_map=set_map,
         figsize=figsize,
         lat_range=lat_range,
@@ -608,7 +609,7 @@ def plot_edges(
 
     plt_grid = kwargs.pop("plt_grid", False)
     set_map = kwargs.pop("set_map", False)
-    ax, fig = create_map(
+    ax, fig, kwargs = create_map(
         da=ds.ds,
         ax=ax,
         projection=projection,
@@ -794,7 +795,7 @@ def create_multi_plot(nrows, ncols, ds=None, projection=None,
             axs.append(fig.add_subplot(gs[i, j], projection=proj))
 
             if ds is not None:
-                ax, _ = create_map(
+                ax, _, kwargs = create_map(
                     da=ds,
                     ax=axs[run_idx-1],
                     projection=projection,

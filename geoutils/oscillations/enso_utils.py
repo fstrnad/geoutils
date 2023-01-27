@@ -1,8 +1,6 @@
 ''' File description
 
-@Author  :   Jakob Schlör
-@Time    :   2022/08/02 19:22:51
-@Contact :   jakob.schloer@uni-tuebingen.de
+@Author  :   Jakob Schlör, Felix Strnad
 '''
 from importlib import reload
 import cftime
