@@ -9,6 +9,7 @@ Class for network of rainfall events
 
 import geoutils.geodata.base_dataset as bds
 import xarray as xr
+import numpy as np
 import geoutils.utils.time_utils as tu
 import geoutils.utils.general_utils as gut
 from importlib import reload
@@ -58,7 +59,8 @@ class MultiPressureLevelDataset(bds.BaseDataset):
             gut.myprint(
                 f'Plevels {plevels}, now merge all single datasets into one!')
             self.ds = xr.merge(all_ds)
-            self.load_dataset_attributes(base_ds=single_pl_ds, init_mask=init_mask)
+            self.load_dataset_attributes(
+                base_ds=single_pl_ds, init_mask=init_mask)
 
         else:
             self.load(load_nc)
@@ -68,6 +70,7 @@ class MultiPressureLevelDataset(bds.BaseDataset):
         self.grid_step = base_ds.grid_step
         self.var_name = base_ds.var_name
         self.grid_type = base_ds.grid_type
+        self.an_types = base_ds.an_types
         # Init Mask
         init_mask = kwargs.pop('init_mask', True)
         if init_mask:
@@ -83,3 +86,24 @@ class MultiPressureLevelDataset(bds.BaseDataset):
             ds = self.cut_map(self.ds, lon_range, lat_range)
 
         return ds
+
+    def vertical_integration(self, var, c=1):
+        """Perform vertical integration over all pressure levels available.
+
+        Args:
+            var (str): variable name
+            c (int, optional): constant to multiply with. Defaults to 1.
+
+        Returns:
+            xr.Dataarray: vertically integrated variable
+        """
+        v_bar = self.ds[var]
+        lats = v_bar.lat
+        lats = np.cos(lats*np.pi/180)
+        plevels = v_bar.plevel
+        dp = xr.DataArray(np.diff(plevels, prepend=0)*100.,  # factor x100 because of hPa to bar
+                          coords={'plevel': plevels})
+        gut.myprint(f'Integrate {var} from {float(plevels[0])} to {float(plevels[-1])}!')
+
+        vert_int = c*np.cumsum(v_bar*dp, axis=v_bar.dims.index('plevel'))
+        return vert_int

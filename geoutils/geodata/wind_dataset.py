@@ -33,6 +33,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                  load_nc_arr_u=None,
                  load_nc_arr_v=None,
                  load_nc_arr_w=None,
+                 load_nc_arr_fac=None,
                  compute_ws=False,
                  plevels=None,
                  load_nc=None,
@@ -52,11 +53,23 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                     plevels=plevels,
                                                     can=False,
                                                     **v_kwargs)
-            u_name = kwargs.pop('u_name', 'u')
-            v_name = kwargs.pop('v_name', 'v')
 
-            u = ds_uwind.ds[u_name]
-            v = ds_vwind.ds[v_name]
+            self.u_name = kwargs.pop('u_name', 'u')
+            self.v_name = kwargs.pop('v_name', 'v')
+            u = ds_uwind.ds[self.u_name]
+            v = ds_vwind.ds[self.v_name]
+
+            if load_nc_arr_fac is not None:
+                ds_fac = mp.MultiPressureLevelDataset(load_nc_arr=load_nc_arr_fac,
+                                                      plevels=plevels,
+                                                      can=False,
+                                                      **w_kwargs)
+                fac_name = kwargs.pop('fac_name', 'fac')
+
+                gut.myprint(f'Multiply u- and v by factor {fac_name}!')
+                u = (u*ds_fac.ds[fac_name]).rename(self.u_name)
+                v = (v*ds_fac.ds[fac_name]).rename(self.v_name)
+
             self.grid_step = ds_uwind.grid_step
             self.vert_velocity = False
             w = None
@@ -71,10 +84,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
 
             windspeed = None
             if compute_ws:
-                windspeed = np.sqrt(u ** 2 + v ** 2)
-                windspeed = windspeed.rename('windspeed')
-                print(
-                    "Computed single components of wind dataset. Now compute windspeed!")
+                windspeed = self.compute_windspeed(u=u, v=v)
 
             self.ds = self.get_ds(u=u, v=v, w=w, windspeed=windspeed)
 
@@ -83,14 +93,9 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             self.load_dataset_attributes(base_ds=ds_vwind, init_mask=init_mask)
 
             self.vars = self.get_vars()
-            an_types = kwargs.pop('an_types', ['dayofyear'])
 
-            if self.can is True:
-                for vname in self.vars:
-                    for an_type in an_types:
-                        self.ds[f'{vname}_an_{an_type}'] = self.compute_anomalies(
-                            dataarray=self.ds[vname],
-                            group=an_type)
+            self.compute_all_anomalies()
+
             del u, v, w, windspeed, ds_uwind, ds_vwind, ds_wwind
         else:
             self.load(load_nc)
@@ -102,6 +107,13 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         if w is not None:
             ds = xr.merge([ds, w])
         return ds
+
+    def compute_windspeed(self, u, v, ws_name='windspeed'):
+        windspeed = np.sqrt(u ** 2 + v ** 2)
+        windspeed = windspeed.rename(ws_name)
+        gut.myprint(
+            "Computed single components of wind dataset. Now compute windspeed!")
+        return windspeed
 
     def compute_vertical_shear(self, group='JJAS'):
         shear_wind = self.ds['u'].sel(
@@ -129,6 +141,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
     def compute_vertical_velocity_gradient(self, group='JJAS', dp='plevel'):
         w = self.ds['w']
         self.w_grad = w.differentiate(dp).rename(f'w_grad_{dp}')
-        self.w_grad_an = tu.compute_anomalies(dataarray=self.w_grad, group=group)
+        self.w_grad_an = tu.compute_anomalies(
+            dataarray=self.w_grad, group=group)
         return self.w_grad, self.w_grad_an
 # %%

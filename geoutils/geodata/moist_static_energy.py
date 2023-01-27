@@ -77,7 +77,6 @@ class MoistStaticEnergy(mp.MultiPressureLevelDataset):
             moist_static_energy = moist_static_energy.rename('mse')
 
             self.can = can
-
             self.ds = self.get_ds(q=q,
                                   t=t,
                                   z=z,
@@ -85,12 +84,7 @@ class MoistStaticEnergy(mp.MultiPressureLevelDataset):
             self.vars = self.get_vars()
             self.an_types = kwargs.pop('an_types', ['dayofyear'])
 
-            if self.can is True:
-                for vname in self.vars:
-                    for an_type in self.an_types:
-                        self.ds[f'{vname}_an_{an_type}'] = self.compute_anomalies(
-                            dataarray=self.ds[vname],
-                            group=an_type)
+            self.compute_all_anomalies()
             # ds_q would be possible as well
             init_mask = kwargs.pop('init_mask', False)
             self.load_dataset_attributes(base_ds=ds_t,

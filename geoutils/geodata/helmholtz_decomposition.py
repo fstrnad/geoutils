@@ -1,4 +1,3 @@
-from pickletools import anyobject
 import geoutils.geodata.wind_dataset as wds
 
 import numpy as np
@@ -55,21 +54,13 @@ class HelmholtzDecomposition(wds.Wind_Dataset):
                 self.set_massstreamfunction(c=1,
                                             can=False)
 
-            self.vars = list(self.ds.keys())
-            if self.can is True:
-                for vname in self.vars:
-                    for an_type in self.an_types:
-                        var_type = f'{vname}_an_{an_type}'
-                        if var_type not in self.wind_vars:
-                            gut.myprint(f'Compute anomalies {var_type}')
-                            self.ds[var_type] = self.compute_anomalies(
-                                dataarray=self.ds[vname],
-                                group=an_type)
+            self.compute_all_anomalies()
 
             # self.load_dataset_attributes(base_ds=ds_wind)
 
         else:
             self.load(load_nc=load_nc)
+
 
     def helmholtz_decomposition(self, ds):
         """
@@ -139,20 +130,18 @@ class HelmholtzDecomposition(wds.Wind_Dataset):
         """
 
         if meridional:
-            v_bar = self.ds['v_chi']
+            var = 'v_chi'
             lats = v_bar.lat
             lats = np.cos(lats*np.pi/180)
         else:
-            v_bar = self.ds['u_chi']
+            var = 'u_chi'
             lats = 1 # No cosine factor for longitudes
-        dp = xr.DataArray(np.diff(v_bar.plevel, prepend=0)*100.,  # x100 because of hPa to bar
-                          coords={'plevel': v_bar.plevel})
 
         if c is None:
             c = 2*np.pi*a*lats / g
 
         # Compute Vertical integral of the Mass Streamfunction
-        Psi = c*np.cumsum(v_bar*dp, axis=v_bar.dims.index('plevel'))
+        Psi = self.vertical_integration(var=var)
 
         return Psi
 

@@ -98,6 +98,7 @@ class BaseDataset():
 
         # Compute Anomalies if needed
         self.can = can
+        self.an_types = kwargs.pop("an_types", ["dayofyear"])
         if self.can is True:
             self.compute_anomalies_ds(kwargs)
 
@@ -860,7 +861,8 @@ class BaseDataset():
             if max_lat < 89 and max_lat > 85:  # To avoid scenarios with big gap
                 max_lat = 89.5 if correct_max_lat else max_lat
                 if max_lat == 89.5:
-                    gut.myprint(f'WARNING! Set max lat from {max_lat} to 89.5!')
+                    gut.myprint(
+                        f'WARNING! Set max lat from {max_lat} to 89.5!')
 
             if min_lat > -89 and min_lat < -85:  # To avoid scenarios with big gap
                 gut.myprint(f'WARNING! Set min lat from {min_lat} to -89.5!')
@@ -1053,11 +1055,22 @@ class BaseDataset():
 
     def compute_anomalies_ds(self, kwargs):
         if "an" not in self.vars:
-            self.an_types = kwargs.pop("an_types", ["dayofyear"])
             for an_type in self.an_types:
                 self.ds[f"an_{an_type}"] = self.compute_anomalies(
                     self.ds[self.var_name], group=an_type
                 )
+
+    def compute_all_anomalies(self):
+        self.vars = self.get_vars()
+        if self.can is True:
+            for vname in self.vars:
+                for an_type in self.an_types:
+                    var_type = f'{vname}_an_{an_type}'
+                    if var_type not in self.vars:
+                        gut.myprint(f'Compute anomalies {var_type}')
+                        self.ds[var_type] = self.compute_anomalies(
+                            dataarray=self.ds[vname],
+                            group=an_type)
 
     def apply_timemean(self, timemean=None):
         self.ds = tu.apply_timemean(ds=self.ds, timemean=timemean)
