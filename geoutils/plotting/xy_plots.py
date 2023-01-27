@@ -20,7 +20,8 @@ from importlib import reload
 """
 # x - y plots
 """
-
+reload(put)
+reload(pst)
 
 def set_legend(ax,
                fig=None,

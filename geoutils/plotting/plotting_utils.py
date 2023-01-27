@@ -408,6 +408,26 @@ def plot_vline(ax, x, **kwargs):
     return ax
 
 
+def plot_arrow(ax, x1, y1, x2, y2, **kwargs):
+    lw = kwargs.pop("lw", 2)
+    ls = kwargs.pop("ls", '-')
+    color = kwargs.pop("color", "k")
+    zorder = kwargs.pop('zorder', 10)
+    label = kwargs.pop('label', "")
+
+    ax.annotate(label,
+                xytext=(x1, y1),
+                # xytext=(x1+(x2-x1)/2, y1+(y2-y1)/2),
+                xy=(x2, y2),
+                # textcoords='offset points',
+                xycoords='data',
+                arrowprops=dict(arrowstyle='->',
+                                color=color,
+                                lw=lw,
+                                linestyle=ls),
+                zorder=zorder,)
+
+
 def plot_hline(ax, y, **kwargs):
     lw = kwargs.pop("lw", 1)
     ls = kwargs.pop("ls", '--')

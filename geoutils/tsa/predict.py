@@ -7,8 +7,8 @@ from sklearn.linear_model import LinearRegression
 import sklearn as sk
 import numpy as np
 import pandas as pd
-import climnet.utils.time_utils as tu
-import climnet.utils.statistic_utils as sut
+import geoutils.utils.time_utils as tu
+import geoutils.utils.statistic_utils as sut
 from importlib import reload
 # %%
 # Fit linear model

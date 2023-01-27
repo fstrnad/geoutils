@@ -261,22 +261,23 @@ def plot_map(dmap: xr.DataArray,
     elif plot_type == "points":
         bar = False
         if ds is None:
-            raise ValueError(
-                f'For plot_type == points a dataset object is needed!')
-        flat_idx_lst = sput.flatten_array(dataarray=dmap,
-                                          mask=ds.mask,
-                                          time=False,
-                                          check=False)
-        flat_idx = np.where(np.abs(flat_idx_lst) >
-                            1e-5)[0]  # get all points >0
-        print('WARNING! Plot all points that are > 0!')
-        x = []
-        y = []
+           x = dmap.lon
+           y = dmap.lat
+        else:
+            flat_idx_lst = sput.flatten_array(dataarray=dmap,
+                                            mask=ds.mask,
+                                            time=False,
+                                            check=False)
+            flat_idx = np.where(np.abs(flat_idx_lst) >
+                                1e-5)[0]  # get all points >0
+            print('WARNING! Plot all points that are > 0!')
+            x = []
+            y = []
 
-        for idx in flat_idx:
-            map_idx = ds.get_map_index(idx)
-            x.append(map_idx["lon"])
-            y.append(map_idx["lat"])
+            for idx in flat_idx:
+                map_idx = ds.get_map_index(idx)
+                x.append(map_idx["lon"])
+                y.append(map_idx["lat"])
     elif plot_type == 'colormesh':
         plot_type += '_map'
 

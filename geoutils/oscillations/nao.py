@@ -54,4 +54,4 @@ reload(cplt)
 cplt.plot_xy(x_arr=[nao_index.time,
                     nao_index_days.time],
              y_arr=[nao_index, nao_index_days],
-             label_arr=['nao', 'nao Days'])
+             label_arr=['NAO Months', 'NAO Days'])
