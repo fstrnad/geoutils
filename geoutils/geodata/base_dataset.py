@@ -142,6 +142,17 @@ class BaseDataset():
         max_lat = kwargs.pop('max_lat', None)
         grid_step_lon = kwargs.pop('grid_step_lon', None)
         grid_step_lat = kwargs.pop('grid_step_lat', None)
+
+        if grid_step_lat is not None and grid_step_lon is None:
+            gut.myprint(f'Grid_step_lon not specified, but grid_step_lat is!')
+            grid_step_lon = grid_step_lat
+        if grid_step_lon is not None and grid_step_lat is None:
+            gut.myprint(f'Grid_step_lat not specified, but grid_step_lon is!')
+            grid_step_lat = grid_step_lon
+
+        if grid_step_lat is not None or grid_step_lon is not None:
+            grid_step = 1 # Not to be None
+
         if grid_step is not None:
             ds = self.common_grid(dataarray=ds, grid_step=grid_step,
                                   min_lon=min_lon, max_lon=max_lon,
