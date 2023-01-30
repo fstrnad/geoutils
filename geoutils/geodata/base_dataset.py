@@ -140,10 +140,14 @@ class BaseDataset():
         max_lon = kwargs.pop('max_lon', None)
         min_lat = kwargs.pop('min_lat', None)
         max_lat = kwargs.pop('max_lat', None)
+        grid_step_lon = kwargs.pop('grid_step_lon', None)
+        grid_step_lat = kwargs.pop('grid_step_lat', None)
         if grid_step is not None:
             ds = self.common_grid(dataarray=ds, grid_step=grid_step,
                                   min_lon=min_lon, max_lon=max_lon,
                                   min_lat=min_lat, max_lat=max_lat,
+                                  grid_step_lon=grid_step_lon,
+                                  grid_step_lat=grid_step_lat,
                                   use_ds_grid=use_ds_grid)
         if large_ds:
             ds.unify_chunks()
@@ -200,14 +204,19 @@ class BaseDataset():
 
         return None
 
-    def save(self, filepath, save_params=True, unlimited_dim=None,
+    def save(self, filepath, save_params=True,
+             unlimited_dim=None,
+             var_list=None,
              classic_nc=False):
         """Save the dataset class object to file.
         Args:
         ----
         filepath: str
         """
-        ds_temp = self.ds
+        if var_list is None:
+            ds_temp = self.ds
+        else:
+            ds_temp = self.ds[list(var_list)]
         if save_params and self.grid_step is not None:
             param_class = {
                 "grid_step": self.grid_step,
@@ -811,6 +820,8 @@ class BaseDataset():
     def common_grid(self, dataarray, grid_step=1,
                     min_lon=None, max_lon=None,
                     min_lat=None, max_lat=None,
+                    grid_step_lon=None,
+                    grid_step_lat=None,
                     use_ds_grid=False):
         """Common grid for all datasets.
         """
@@ -870,8 +881,11 @@ class BaseDataset():
 
             # init_lat = np.arange(min_lat, max_lat, grid_step, dtype=float)
             # init_lon = np.arange(min_lon, max_lon, grid_step, dtype=float)
-            init_lat = gut.crange(min_lat, max_lat, grid_step)
-            init_lon = gut.crange(min_lon, max_lon, grid_step)
+            grid_step_lon = grid_step if grid_step_lon is None else grid_step_lon
+            grid_step_lat = grid_step if grid_step_lat is None else grid_step_lat
+
+            init_lat = gut.crange(min_lat, max_lat, grid_step_lat)
+            init_lon = gut.crange(min_lon, max_lon, grid_step_lon)
 
             nlat = len(init_lat)
             if nlat % 2:
@@ -1375,3 +1389,5 @@ class BaseDataset():
         self.w_grad_an = tu.compute_anomalies(
             dataarray=self.w_grad, group=group)
         return self.w_grad, self.w_grad_an
+
+# %%

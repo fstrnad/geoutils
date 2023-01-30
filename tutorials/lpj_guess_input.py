@@ -86,3 +86,30 @@ ds_cesm_pr.ds['prec'] = xr.where(prec < 0, 0, prec)
 ds_cesm_pr.set_source_attrs()
 # ds_cesm.save(filepath=cesm_file_new)
 
+# %%
+# COSMOS
+reload(bds)
+data_folder = '/home/strnad/data/paleo'
+cosmos_file = f'{data_folder}/COSMOS-landveg_r2413-deepmip_stand_3xCO2-pr-v1.0.time_series.nc'
+lpj_file = f'{data_folder}/CESM1.2_CAM5-deepmip_stand_3xCO2-prec-v1.0.time_series.nc'
+cesm_file = f'{data_folder}/CESM1.2_CAM5-deepmip_stand_3xCO2-pr-v1.0.time_series.nc'
+cosmos_file_new = f'{data_folder}/COSMOS-landveg_r2413-deepmip_stand_3xCO2-pr-v1.0.time_series_new.nc'
+
+# lpj_mask_file_pi = f'{data_folder}/mask_1_Preindustrial_.nc'
+# mask_file_eocene = f'{data_folder}/mask_1_Eocene_.nc'
+
+grid_step = None
+
+ds_cosmos_pr = bds.BaseDataset(data_nc=cosmos_file,
+                               var_name=None,
+                               decode_times=False,
+                               grid_step=grid_step,
+                               lsm_file=None,
+                               sort=True,
+                               lon360=True,
+                               init_mask=True,
+                               )
+ds_cosmos_pr.rename_var(new_var_name='prec')
+prec = ds_cosmos_pr.ds['prec']
+ds_cosmos_pr.ds['prec'] = xr.where(prec < 0, 0, prec)
+ds_cosmos_pr.set_source_attrs()

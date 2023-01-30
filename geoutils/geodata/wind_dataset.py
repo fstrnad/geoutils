@@ -56,8 +56,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
 
             self.u_name = kwargs.pop('u_name', 'u')
             self.v_name = kwargs.pop('v_name', 'v')
-            u = ds_uwind.ds[self.u_name]
-            v = ds_vwind.ds[self.v_name]
+            u = ds_uwind.ds[self.u_name].rename('U')
+            v = ds_vwind.ds[self.v_name].rename('V')
 
             if load_nc_arr_fac is not None:
                 ds_fac = mp.MultiPressureLevelDataset(load_nc_arr=load_nc_arr_fac,
@@ -79,7 +79,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                         plevels=plevels,
                                                         can=False,
                                                         **w_kwargs)
-                w = ds_wwind.ds['w']
+                self.w_name = kwargs.pop('w_name', 'w')
+                w = ds_wwind.ds[self.w_name].rename('OMEGA')
                 self.vert_velocity = True
 
             windspeed = None
