@@ -395,11 +395,16 @@ def exist_file(filepath, verbose=True):
 
 
 def save_ds(ds, filepath, unlimited_dim=None,
-            classic_nc=False):
+            classic_nc=False, backup=False):
     if os.path.exists(filepath):
-        print("File" + filepath + " already exists!")
-        os.rename(filepath, filepath + "_backup")
-
+        myprint(f"File {filepath} already exists!")
+        if backup:
+            bak_file = f"{filepath}_backup"
+            os.rename(filepath, bak_file)
+            myprint(f"Old file stored as {bak_file} as backup written!")
+        else:
+            myprint(f"File {filepath} will be overwritten!")
+            os.remove(filepath)
     dirname = os.path.dirname(filepath)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
@@ -409,7 +414,7 @@ def save_ds(ds, filepath, unlimited_dim=None,
     else:
         ds.to_netcdf(filepath, unlimited_dims=unlimited_dim)
 
-    print(f"File {filepath} written!", flush=True)
+    myprint(f"File {filepath} written!")
 
     return None
 
@@ -667,3 +672,33 @@ def rename_da(da, name):
     myprint(f'Rename {old_name} to {name}!')
     da = da.rename(name)
     return da
+
+
+def merge_datasets(ds1, ds2):
+    """
+    Merge two xarray Dataset objects into a single Dataset object.
+
+    Parameters:
+    -----------
+    ds1, ds2 : xarray.Dataset
+        The two Dataset objects to be merged.
+
+    Returns:
+    --------
+    merged_ds : xarray.Dataset
+        The merged Dataset object.
+
+    Raises:
+    -------
+    ValueError:
+        If the dimensions (lat, lon, time) are not consistent between ds1 and ds2.
+    """
+    # Check if the dimensions are consistent between ds1 and ds2
+    for dim in ["lat", "lon", "time"]:
+        if not ds1[dim].equals(ds2[dim]):
+            raise ValueError(f"Inconsistent dimension {dim} between datasets")
+
+    # Merge the two Dataset objects into a single Dataset object
+    merged_ds = xr.merge([ds1, ds2])
+
+    return merged_ds

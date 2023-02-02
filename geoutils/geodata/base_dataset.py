@@ -151,7 +151,7 @@ class BaseDataset():
             grid_step_lat = grid_step_lon
 
         if grid_step_lat is not None or grid_step_lon is not None:
-            grid_step = 1 # Not to be None
+            grid_step = 1  # Not to be None
 
         if grid_step is not None:
             ds = self.common_grid(dataarray=ds, grid_step=grid_step,
@@ -227,6 +227,7 @@ class BaseDataset():
         if var_list is None:
             ds_temp = self.ds
         else:
+            gut.myprint(f'Save variables {var_list}!')
             ds_temp = self.ds[list(var_list)]
         if save_params and self.grid_step is not None:
             param_class = {
@@ -479,13 +480,18 @@ class BaseDataset():
         return self.ds
 
     def get_da(self, ds=None):
-        if ds is None:
-            ds = self.ds
-            var_name = self.var_name
-        else:
-            var_name = self
+        
         da = self.ds[self.var_name]
         return da
+
+    def get_da_vars(self, var_list):
+        vars = self.get_vars()
+        for var in var_list:
+            if var not in vars:
+                raise ValueError(f'{var} not in dataset variables {vars}!')
+        gut.myprint(f'Get dataarray of variables {var_list}!')
+
+        return self.ds[var_list]
 
     # ###################### Find out indices, map, locations etc. ####################
 

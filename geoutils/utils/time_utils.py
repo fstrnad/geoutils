@@ -307,17 +307,6 @@ def get_idx_tps_times(tps, times):
     return tps_idx
 
 
-def get_ym_date(date):
-    if isinstance(date, xr.DataArray):
-        date = date.data
-    else:
-        date = np.datetime64(date)
-    y, m, d = get_ymd_date(date)
-    mi = m.astype(int) % 12
-    mname = months[mi]
-    return f"{mname} {y}"
-
-
 def get_sy_ey_time(times, sy=None, ey=None, sm=None, em=None):
     """Returns the start and end year of a xr Dataarray
     datetime object
@@ -799,6 +788,57 @@ def tp2str(tp, m=True, d=True):
     return date
 
 
+def get_ymdh_date(date):
+    if gut.is_datetime360(date):
+        d = int(date.day)
+        m = int(date.month)
+        y = int(date.year)
+    else:
+        if isinstance(date, xr.DataArray):
+            date = np.datetime64(date.time.data)
+        else:
+            date = np.datetime64(date)
+
+        d = date.astype("M8[D]")
+        m = date.astype("M8[M]")
+        y = date.astype("M8[Y]")
+        h = date.astype("M8[h]")
+
+    return y, m, d, h
+
+
+def get_date2ymdh(date):
+    if isinstance(date, xr.DataArray):
+        date = date.data
+    else:
+        date = np.datetime64(date)
+    # this object knows what y, m, d, and hours are
+    date = pd.to_datetime(date)
+
+    yi = date.year
+    mi = date.month
+    di = date.day
+    hi = date.hour
+
+    return yi, mi, di, hi
+
+
+def get_date2ymdhstr(date):
+    if isinstance(date, xr.DataArray):
+        date = date.data
+    else:
+        date = np.datetime64(date)
+    # this object knows what y, m, d, and hours are
+    yi, mi, di, hi = get_date2ymdh(date)
+
+    ystr = f'{yi}'
+    mstr = f'{mi}' if mi > 9 else f'0{mi}'
+    dstr = f'{di}' if di > 9 else f'0{di}'
+    hstr = f'{hi}' if hi > 9 else f'0{hi}'
+
+    return f'{ystr}{mstr}{dstr}_{hstr}'
+
+
 def get_ymd_date(date):
     if gut.is_datetime360(date):
         d = int(date.day)
@@ -815,6 +855,17 @@ def get_ymd_date(date):
         y = date.astype("M8[Y]")
 
     return y, m, d
+
+
+def get_ym_date(date):
+    if isinstance(date, xr.DataArray):
+        date = date.data
+    else:
+        date = np.datetime64(date)
+    y, m, d = get_ymd_date(date)
+    mi = m.astype(int) % 12
+    mname = months[mi]
+    return f"{mname} {y}"
 
 
 def add_time_window(date, time_step=1, time_unit="D"):
