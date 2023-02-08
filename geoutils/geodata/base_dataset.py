@@ -130,8 +130,9 @@ class BaseDataset():
             ds = xr.open_dataset(nc_file, decode_times=decode_times)
 
         ds = self.check_dimensions(ds, ts_days=decode_times, **kwargs)
-        ds = self.rename_var_era5(ds)
         self.dims = self.get_dims(ds=ds)
+        ds = self.rename_var_era5(ds)
+
         # da = ds[var_name]
         if len(self.dims) > 2:
             ds = self.get_data_timerange(ds, time_range)
@@ -196,9 +197,10 @@ class BaseDataset():
         if "grid_step" in ds_attrs:
             self.grid_step = ds.attrs["grid_step"]
         self.info_dict = copy.deepcopy(ds.attrs)  # TODO
+
         # Read and create grid class
-        self.ds = self.rename_var_era5(ds)
-        self.get_vars(verbose=True)
+        ds = self.rename_var_era5(ds)
+        self.vars = self.get_vars(ds=ds, verbose=True)
         self.dims = self.get_dims(ds=ds)
 
         # mask = np.ones_like(ds[name][0].data, dtype=bool)
@@ -326,6 +328,16 @@ class BaseDataset():
             ds = ds.rename({"tp": "pr"})
             gut.myprint("Rename tp: pr!")
 
+        if 'sp' in names:
+            # PS is surface pressure but named according to CF convention
+            ds = ds.rename({"sp": "PS"})
+            gut.myprint("Rename sp to PS!")
+            if ds['PS'].units == 'Pa':
+                gut.myprint("Compute surface pressure from Pa to hPa!")
+                ds['PS'] /= 100  # compute Pa to hPa
+                ds.attrs.update({'units': 'hPa'})
+                ds['PS'].attrs.update({'units': 'hPa'})
+
         if "p86.162" in names:
             ds = ds.rename({"p86.162": "vidtef"})
             gut.myprint(
@@ -379,7 +391,12 @@ class BaseDataset():
         self.lat_attrs = ds.lat.attrs
         self.time_attrs = None
         self.lon_attrs['standard_name'] = self.lon_attrs['long_name'] = 'longitude'
+        self.lon_attrs['units'] = 'degree_east'
+        self.lon_attrs['axis'] = 'X'
         self.lat_attrs['standard_name'] = self.lat_attrs['long_name'] = 'latitude'
+        self.lat_attrs['units'] = 'degree_north'
+        self.lat_attrs['axis'] = 'Y'
+
         dims = self.get_dims(ds=ds)
         if 'time' in dims:
             self.time_attrs = ds.time.attrs
@@ -480,7 +497,7 @@ class BaseDataset():
         return self.ds
 
     def get_da(self, ds=None):
-        
+
         da = self.ds[self.var_name]
         return da
 
@@ -1103,10 +1120,6 @@ class BaseDataset():
                             dataarray=self.ds[vname],
                             group=an_type)
 
-    def apply_timemean(self, timemean=None):
-        self.ds = tu.apply_timemean(ds=self.ds, timemean=timemean)
-        return self.ds
-
     def interp_times(self, dataset, time_range):
         """Interpolate time in time range in steps of days.
         TODO: So far only days works.
@@ -1406,5 +1419,16 @@ class BaseDataset():
         self.w_grad_an = tu.compute_anomalies(
             dataarray=self.w_grad, group=group)
         return self.w_grad, self.w_grad_an
+
+    def apply_timemean(self, timemean=None):
+        self.ds = tu.apply_timemean(ds=self.ds, timemean=timemean)
+        return self.ds
+
+    def average_time(self, timemean='full'):
+        if timemean == 'full':
+            self.ds = self.ds.mean(dim='time')
+        else:
+            self.ds = self.apply_timemean(timemean=timemean)
+        return self.ds
 
 # %%

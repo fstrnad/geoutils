@@ -388,7 +388,7 @@ def get_varnames_ds(ds):
 
 def exist_file(filepath, verbose=True):
     if os.path.exists(filepath):
-        myprint(f"File {filepath} exists!", verbose=True)
+        myprint(f"File {filepath} exists!", verbose=verbose)
         return True
     else:
         return False
@@ -409,10 +409,12 @@ def save_ds(ds, filepath, unlimited_dim=None,
     if not os.path.exists(dirname):
         os.makedirs(dirname)
     if classic_nc:
+        myprint('Store as NETCDF4_CLASSIC!')
         ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
                      format='NETCDF4_CLASSIC')
     else:
-        ds.to_netcdf(filepath, unlimited_dims=unlimited_dim)
+        ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
+                     engine='netcdf4')
 
     myprint(f"File {filepath} written!")
 

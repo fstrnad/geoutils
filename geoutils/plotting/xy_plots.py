@@ -23,6 +23,7 @@ from importlib import reload
 reload(put)
 reload(pst)
 
+
 def set_legend(ax,
                fig=None,
                label_arr=[],
@@ -119,9 +120,8 @@ def plot_xy(
 
         num_items = len(y_arr) if len(y_arr) >= len(x_arr) else len(x_arr)
         if lcmap is not None:
-            evenly_spaced_interval = np.linspace(0, 1, num_items)
-            lcmap = plt.get_cmap(lcmap)
-            ccolors = [lcmap(x) for x in evenly_spaced_interval]
+            lcmap, evenly_spaced_interval, ccolors = put.get_arr_colorbar(
+                cmap=lcmap, num_items=num_items,)
 
         alpha = kwargs.pop('alpha', 1)
         fill_between = kwargs.pop('fill_between', False)

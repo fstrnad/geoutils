@@ -379,6 +379,19 @@ def discrete_norm_ticks(vmin, vmax, shift_ticks=False, num_ticks=None):
     return normticks
 
 
+def get_arr_colorbar(data, cmap='spectral'):
+    vmin = np.nanquantile(data, q=0.05)
+    vmax = np.nanquantile(data, q=0.95)
+    cmap = plt.get_cmap(cmap)
+    # Normalize the values in the array to fall within the range [0, 1]
+    norm = (array - vmin) / (vmax - vmin)
+
+    # Map the normalized values to colors in the colormap
+    colors = cmap(norm)
+
+    return colors
+
+
 def plot_line(ax, x_range, y_range, **kwargs):
     lw = kwargs.pop("lw", 1)
     color = kwargs.pop("color", "k")

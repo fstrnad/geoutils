@@ -448,8 +448,10 @@ def extract_subregion(da: xr.DataArray,
     """
     lat_min, lat_max = lat_range
     lon_min, lon_max = lon_range
-    lat_sub = da.lat.where((da.lat >= lat_min) & (da.lat <= lat_max), drop=True)
-    lon_sub = da.longitude.where((da.lon >= lon_min) & (da.lon <= lon_max), drop=True)
+    lat_sub = da.lat.where((da.lat >= lat_min) &
+                           (da.lat <= lat_max), drop=True)
+    lon_sub = da.longitude.where(
+        (da.lon >= lon_min) & (da.lon <= lon_max), drop=True)
     da_sub = da.sel(lat=lat_sub, lon=lon_sub)
     return da_sub
 
@@ -472,7 +474,8 @@ def get_ts_in_range(ds,
 
         return ds_sub
     else:
-        raise ValueError(f'Dimensions have to contain points or lat-lon but are {dims}')
+        raise ValueError(
+            f'Dimensions have to contain points or lat-lon but are {dims}')
 
 
 @ np.vectorize
@@ -968,10 +971,10 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
             if gut.is_datetime360(time=ds.time.data[0]) or keep_time:
                 ds = ds
             else:
-                gut.myprint('Set time to np.datetime time format!')
-                ds = ds.assign_coords(
-                    time=ds.time.data.astype("datetime64[D]"))
-                # ds = ds.transpose('time', 'lat', 'lon')
+                reload(tu)
+                ds = tu.get_netcdf_encoding(ds=ds,
+                                            calendar='gregorian',
+                                            )
         else:
             time_ds = ds.time
             num_steps = len(time_ds)

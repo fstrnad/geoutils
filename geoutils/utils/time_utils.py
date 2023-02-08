@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import math
 import scipy as sp
 import geoutils.utils.spatial_utils as sput
@@ -59,6 +60,26 @@ def get_month_number(*month_list):
     if len(idx_lst) == 1:
         return int(idx_lst[0])
     return idx_lst
+
+
+def get_netcdf_encoding(ds,
+                        calendar='gregorian',
+                        units='hours since 1900-01-01T00:00',):
+    time = ds.time
+    time = time.convert_calendar(calendar=calendar)
+    gut.myprint('Set time to np.datetime[ns] time format!')
+    ds = ds.assign_coords(
+        time=time.data.astype('datetime64[ns]'))
+    # ds = ds.transpose('time', 'lat', 'lon
+    ds.time.attrs.pop('calendar', None)
+    # ds.time.attrs.update({'calendar': '365_day'})
+    ds.time.encoding['calendar'] = calendar
+    ds.time.encoding['units'] = units
+    ds.time.attrs['standard_name'] = 'time'
+    ds.time.attrs['long_name'] = 'time'
+    ds.time.attrs['axis'] = 'T'
+
+    return ds
 
 
 def get_ts_arr_ds(da):
@@ -416,9 +437,13 @@ def get_dates_of_ds(ds):
     return tps
 
 
-def str2datetime(string, dtype='D', verbose=False):
+def str2datetime(string, dtype='D', numpy=True,
+                 verbose=False):
     if type(string) is str:
         date = np.datetime64(string, dtype)
+        if not numpy:
+            y, m, d, h = get_date2ymdh(date=date)
+            date = datetime(year=y, month=m, day=d, hour=h)
     else:
         date = string
         gut.myprint(f'WARNING {string} is not string!', verbose=verbose)
@@ -815,15 +840,15 @@ def get_date2ymdh(date):
     # this object knows what y, m, d, and hours are
     date = pd.to_datetime(date)
 
-    yi = date.year
-    mi = date.month
-    di = date.day
-    hi = date.hour
+    yi = int(date.year)
+    mi = int(date.month)
+    di = int(date.day)
+    hi = int(date.hour)
 
     return yi, mi, di, hi
 
 
-def get_date2ymdhstr(date):
+def get_date2ymdhstr(date, seperate_hour=True):
     if isinstance(date, xr.DataArray):
         date = date.data
     else:
@@ -836,7 +861,9 @@ def get_date2ymdhstr(date):
     dstr = f'{di}' if di > 9 else f'0{di}'
     hstr = f'{hi}' if hi > 9 else f'0{hi}'
 
-    return f'{ystr}{mstr}{dstr}_{hstr}'
+    strdate = f'{ystr}{mstr}{dstr}_{hstr}' if seperate_hour else f'{ystr}{mstr}{dstr}{hstr}'
+
+    return strdate
 
 
 def get_ymd_date(date):

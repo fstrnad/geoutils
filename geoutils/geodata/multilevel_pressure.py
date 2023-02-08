@@ -87,7 +87,11 @@ class MultiPressureLevelDataset(bds.BaseDataset):
 
     def set_plevel_attrs(self):
         self.plevel_attrs = self.ds[self.plevel_name].attrs
-        self.plevel_attrs['standard_name'] = self.plevel_attrs['long_name'] = 'air_pressure'
+        self.plevel_attrs['standard_name'] = 'air_pressure'
+        self.plevel_attrs['long_name'] = 'pressure_level'
+        self.plevel_attrs['positive'] = 'down'
+        self.plevel_attrs['units'] = 'hPa'
+        self.plevel_attrs['axis'] = 'Z'
         self.ds[self.plevel_name].attrs.update(self.plevel_attrs)
 
     def cut_map(self,  lon_range=[-180, 180], lat_range=[-90, 90]):

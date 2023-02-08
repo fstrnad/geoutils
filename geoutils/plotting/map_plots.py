@@ -17,7 +17,33 @@ reload(put)
 reload(pst)
 
 
-def set_grid(ax, alpha=0.5, **kwargs):
+def estimate_distance(minimum_value, maximum_value, min_dist_val=5):
+    # Calculate the range between minimum and maximum value
+    value_range = maximum_value - minimum_value
+
+    # Calculate the distance between lines
+    distance = value_range / min_dist_val
+
+    if distance % min_dist_val != 0:
+        distance = (distance // min_dist_val + 1) * min_dist_val
+    return distance
+
+
+def get_grid_dist(ext_dict):
+    min_lon = ext_dict['min_lon']
+    max_lon = ext_dict['max_lon']
+    min_lat = ext_dict['min_lat']
+    max_lat = ext_dict['max_lat']
+
+    gs_lon = estimate_distance(min_lon, max_lon, min_dist_val=5)
+    gs_lat = estimate_distance(min_lat, max_lat, min_dist_val=5)
+
+    return gs_lon, gs_lat
+
+
+def set_grid(ax, alpha=0.5,
+             ext_dict={},
+             **kwargs):
     """Generates a grid for a spatial map.
 
     Args:
@@ -28,8 +54,10 @@ def set_grid(ax, alpha=0.5, **kwargs):
         _type_: _description_
     """
     # Set grid steps for longitude and latitude
-    gs_lon = kwargs.pop('gs_lon', 60)
-    gs_lat = kwargs.pop('gs_lat', 30)
+    gs_lon = kwargs.pop('gs_lon', None)
+    gs_lat = kwargs.pop('gs_lat', None)
+    if gs_lon is None:
+        gs_lon, gs_lat = get_grid_dist(ext_dict=ext_dict)
 
     # Generate the grid
     gl = ax.gridlines(
@@ -64,44 +92,48 @@ def set_extent(da, ax,
         raise ValueError(
             f'Axis is not of type Geoaxis, but of type {type(ax)}!')
 
+    min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat = ax.get_extent()
+    set_global = kwargs.pop('set_global', False)
+    print(min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat)
     projection = ccrs.PlateCarree()
 
-    min_ext_lon = float(np.min(da.coords["lon"]))
-    max_ext_lon = float(np.max(da.coords["lon"]))
-    min_ext_lat = float(np.min(da.coords["lat"]))
-    max_ext_lat = float(np.max(da.coords["lat"]))
-    if lat_range is not None or lon_range is not None:
-        lat_range = lat_range if lat_range is not None else [-90, 90]
-        lon_range = lon_range if lon_range is not None else [-180, 180]
-        min_ext_lon = np.min(lon_range)
-        max_ext_lon = np.max(lon_range)
-        min_ext_lat = np.min(lat_range)
-        max_ext_lat = np.max(lat_range)
-
-    set_global = kwargs.pop('set_global', False)
-    if not set_global:
-        if abs(min_ext_lon) > 179 and abs(max_ext_lon) > 179 and abs(min_ext_lat) > 89 and abs(max_ext_lat) > 89:
+    if [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
+        if da is None and lat_range is None and lon_range is None:
             set_global = True
-            gut.myprint('WARNING! Set global map!')
+        else:
+            min_ext_lon = float(
+                np.min(da.coords["lon"])) if da is not None else min_ext_lon
+            max_ext_lon = float(
+                np.max(da.coords["lon"])) if da is not None else max_ext_lon
+            min_ext_lat = float(
+                np.min(da.coords["lat"])) if da is not None else min_ext_lat
+            max_ext_lat = float(
+                np.max(da.coords["lat"])) if da is not None else max_ext_lat
+            if lat_range is not None or lon_range is not None:
+                lat_range = lat_range if lat_range is not None else [-90, 90]
+                lon_range = lon_range if lon_range is not None else [-180, 180]
+                min_ext_lon = np.min(lon_range)
+                max_ext_lon = np.max(lon_range)
+                min_ext_lat = np.min(lat_range)
+                max_ext_lat = np.max(lat_range)
+
+            if not set_global:
+                if abs(min_ext_lon) > 179 and abs(max_ext_lon) > 179 and abs(min_ext_lat) > 89 and abs(max_ext_lat) > 89:
+                    set_global = True
+                    gut.myprint('WARNING! Set global map!')
     if set_global:
         ax.set_global()
     else:
-        # min_ext_lon = math.floor(np.min(lon_range))
-        # max_ext_lon = math.floor(np.max(lon_range))
-        # min_ext_lat = math.floor(np.min(lat_range))
-        # max_ext_lat = math.ceil(np.max(lat_range))
-
         ax.set_extent(
             [min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat], crs=projection
         )
-        # print(
-        #     [min_ext_lon,
-        #      max_ext_lon,
-        #      min_ext_lat,
-        #      max_ext_lat]
-        # )
-
-    return ax
+    return dict(
+        ax=ax,
+        min_lon=min_ext_lon,
+        max_lon=max_ext_lon,
+        min_lat=min_ext_lat,
+        max_lat=max_ext_lat
+    )
 
 
 def create_map(
@@ -116,6 +148,8 @@ def create_map(
     lon_range=None,
     **kwargs,
 ):
+    projection = 'PlateCarree' if lon_range is not None else projection
+    projection = 'PlateCarree' if lat_range is not None else projection
     proj = get_projection(projection, central_longitude)
     figsize = kwargs.pop("figsize", (9, 6))
     # create figure
@@ -130,7 +164,7 @@ def create_map(
                     f'WARNING! Central longitude set to {central_longitude} but has no effect since axis argument is passed is {ax_central_longitude}!')
 
     set_map = kwargs.pop('set_map', True)
-    ax = set_extent(
+    ext_dict = set_extent(
         da=da, ax=ax,
         lat_range=lat_range,
         lon_range=lon_range,
@@ -151,7 +185,9 @@ def create_map(
             ax.add_feature(ctp.feature.OCEAN, alpha=alpha, zorder=-1)
             ax.add_feature(ctp.feature.LAND, alpha=alpha, zorder=-1)
     if plt_grid:
-        ax, kwargs = set_grid(ax, alpha=alpha, **kwargs)
+        ax, kwargs = set_grid(ax, alpha=alpha,
+                              ext_dict=ext_dict,
+                              **kwargs)
 
     return ax, fig, kwargs
 
@@ -270,13 +306,13 @@ def plot_map(dmap: xr.DataArray,
     elif plot_type == "points":
         bar = False
         if ds is None:
-           x = dmap.lon
-           y = dmap.lat
+            x = dmap.lon
+            y = dmap.lat
         else:
             flat_idx_lst = sput.flatten_array(dataarray=dmap,
-                                            mask=ds.mask,
-                                            time=False,
-                                            check=False)
+                                              mask=ds.mask,
+                                              time=False,
+                                              check=False)
             flat_idx = np.where(np.abs(flat_idx_lst) >
                                 1e-5)[0]  # get all points >0
             print('WARNING! Plot all points that are > 0!')
@@ -340,7 +376,7 @@ def plot_map(dmap: xr.DataArray,
 def plot_2D(
     x,
     y,
-    z,
+    z=None,  # Not required for points
     fig=None,
     ax=None,
     plot_type="contourf",
@@ -355,6 +391,15 @@ def plot_2D(
 ):
     reload(put)
     reload(sput)
+
+    # plotting
+    color = kwargs.pop("color", None)
+    alpha = kwargs.pop("alpha", 1.0)
+    lw = kwargs.pop("lw", 1)
+    size = kwargs.pop("size", 1)
+    marker = kwargs.pop("marker", "o")
+    fillstyle = kwargs.pop("fillstyle", "full")
+
     if ax is None:
         figsize = kwargs.pop("figsize", (7, 5))
         fig, ax = plt.subplots(figsize=(figsize))
@@ -364,14 +409,23 @@ def plot_2D(
     if projection is None:
         # This is the Sci for the x axis
         ax, kwargs = put.prepare_axis(ax, sci=sci_x, **kwargs)
-
-    # plotting
-    color = kwargs.pop("color", None)
-    alpha = kwargs.pop("alpha", 1.0)
-    lw = kwargs.pop("lw", 1)
-    size = kwargs.pop("size", 1)
-    marker = kwargs.pop("marker", "o")
-    fillstyle = kwargs.pop("fillstyle", "full")
+    else:
+        if isinstance(projection, str):
+            projection = get_projection(projection='PlateCarree')
+    if plot_type == "points" or z is None:
+        im = ax.plot(
+            x,
+            y,
+            c=color,
+            linewidth=0,
+            linestyle='None',
+            markersize=size,
+            marker=marker,
+            fillstyle=fillstyle,
+            transform=projection,
+            alpha=alpha,
+        )
+        return dict(ax=ax, im=im)
 
     # set colormap
     if cmap is not None:
@@ -497,7 +551,6 @@ def plot_2D(
         if vmax is None:
             vmax = im.get_clim()[1]
         # im = ScalarMappable(cmap=im.get_cmap())
-        # print(vmin, vmax)
     elif plot_type == "contour":
         cmap = cmap if color is None else None
         im = ax.contour(
@@ -530,20 +583,6 @@ def plot_2D(
             cmap=cmap,
             transform=projection,
             norm=norm,
-        )
-    elif plot_type == "points":
-        # print(x)
-        im = ax.plot(
-            x,
-            y,
-            c=color,
-            linewidth=0,
-            linestyle='None',
-            markersize=size,
-            marker=marker,
-            fillstyle=fillstyle,
-            transform=projection,
-            alpha=alpha,
         )
 
     if plot_type == 'hatch' or significance_mask is not None:
@@ -668,7 +707,7 @@ def plot_edges(
             zorder=10,
         )  # zorder = -1 to always set at the background
 
-    print(f"number of edges: {counter}")
+    gut.myprint(f"number of edges: {counter}")
     return {"ax": ax, "fig": fig, "projection": projection}
 
 
