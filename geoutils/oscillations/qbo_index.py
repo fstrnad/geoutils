@@ -24,7 +24,7 @@ def get_qbo_index(u50, monthly=False, time_range=None):
     """Returns the qbo index based on the 50hPa zonal winds dataset.
 
     Args:
-        u50 (xr.dataarray): Zonal winds anomalies.
+        u50 (xr.dataarray): Zonal winds fields.
         monthly (boolean): Averages time dimensions to monthly.
             Default to False.
         time_range(list, optional): Select Nino indices only in a given time-range.
@@ -36,7 +36,7 @@ def get_qbo_index(u50, monthly=False, time_range=None):
     da = u50
     box_tropics, box_tropics_std = tut.get_mean_time_series(
         da, lon_range=None,
-        lat_range=[-10, 10],
+        lat_range=[-40, 40],  # Around the equator
         time_roll=0
     )
     box_tropics.name = 'qbo'
@@ -44,11 +44,9 @@ def get_qbo_index(u50, monthly=False, time_range=None):
     qbo_idx = box_tropics.to_dataset()
 
     if monthly:
-        # qbo_idx = qbo_idx.resample(time='M', label='left').mean()
-        qbo_idx = tut.compute_timemean(qbo_idx, timemean='month')
-        qbo_idx = qbo_idx.assign_coords(
-            dict(time=qbo_idx['time'].data + np.timedelta64(1, 'D'))
-        )
+        qbo_days = qbo_idx.time
+        qbo_mm = tut.compute_timemean(qbo_idx, timemean='month')
+        qbo_idx = qbo_mm.interp(time=qbo_days)
 
     if time_range is not None:
         # qbo_idx = qbo_idx.sel(time=slice(np.datetime64(time_range[0], "M"),
@@ -119,7 +117,7 @@ def get_qbo_flavors(qbo_index,
             qbo = qbo.min(dim='time', skipna=True)
 
         buff_dic = {'start': time_range[0], 'end': time_range[1],
-                    'dmi': float(qbo)}
+                    'qbo': float(qbo)}
         buff_dic['strength'] = get_qbo_strength(qbo)
 
         qbo_classes.append(buff_dic)

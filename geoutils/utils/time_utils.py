@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+import datetime
 import math
 import scipy as sp
 import geoutils.utils.spatial_utils as sput
@@ -214,6 +214,22 @@ def get_tps_month(ds, month, ):
         raise ValueError('Tps not in dataset!')
 
     return tps_month
+
+
+def get_np64(date):
+    if not isinstance(date, np.datetime64):
+        if isinstance(date, xr.DataArray):
+            date = date.time.data
+        date = np.datetime64(date)
+    return date
+
+
+def is_tp_smaller(date1, date2):
+    date1 = get_np64(date1)
+    date2 = get_np64(date2)
+
+    bool_date = date1 < date2
+    return bool_date
 
 
 def get_sel_time_range(ds, time_range,
@@ -928,6 +944,8 @@ def add_time_window(date, time_step=1, time_unit="D"):
             next_date = (y + ay) + (date - y)
         next_date = np.datetime64(next_date, "D")
 
+    next_date = create_xr_ts(data=[next_date], times=[next_date])[0]
+
     return next_date
 
 
@@ -1256,10 +1274,10 @@ def get_dates_of_time_range(time_range, freq='D'):
         sp, ep = time_range[0], time_range[-1]
         if isinstance(sp, xr.DataArray):
             sp = sp.time.data
+        if isinstance(ep, xr.DataArray):
             ep = ep.time.data
 
         sp, ep = np.sort([sp, ep])  # Order in time
-
         date_arr = get_dates_in_range(start_date=sp,
                                       end_date=ep,
                                       time_unit=freq)
@@ -1283,6 +1301,13 @@ def get_dates_of_time_ranges(time_ranges, freq='D'):
 
 
 def get_dates_in_range(start_date, end_date, time_unit='D'):
+    print(type(start_date))
+
+    if isinstance(start_date, xr.DataArray):
+        start_date = np.datetime64(start_date.time.data)
+    if isinstance(end_date, xr.DataArray):
+        end_date = np.datetime64(end_date.time.data)
+    print(type(start_date))
     tps = np.arange(start_date, end_date, dtype=f'datetime64[{time_unit}]')
     return tps
 
@@ -1299,7 +1324,21 @@ def get_dates_for_time_steps(start='0-01-01', num_steps=1, freq='D'):
     dates = []
     for step in np.arange(num_steps):
         dates.append(add_time_window(start, time_step=step,
-                                     time_unit=freq))
+                                     time_unit=freq).time.data)
+    return np.array(dates)
+
+
+def get_dates_arr_for_time_steps(tps, num_steps=1, freq='D'):
+    dates = np.array([], dtype='datetime64')
+    for tp in tps:
+        this_dates = get_dates_for_time_steps(
+            start=tp, num_steps=num_steps, freq=freq)
+        dates = np.concatenate([dates, this_dates], axis=0)
+
+    dates = xr.DataArray(data=dates,
+                         dims=['time'],
+                         coords={'time': dates})
+
     return dates
 
 
@@ -1638,3 +1677,8 @@ def select_time_snippets(ds, time_snippets):
     ds_snip = xr.concat(ds_lst, dim='time')
 
     return ds_snip
+
+
+def convert_datetime64_to_datetime(usert: np.datetime64) -> datetime.datetime:
+    t = np.datetime64(usert, 'us').astype(datetime.datetime)
+    return t

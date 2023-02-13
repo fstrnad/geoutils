@@ -94,7 +94,6 @@ def set_extent(da, ax,
 
     min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat = ax.get_extent()
     set_global = kwargs.pop('set_global', False)
-    print(min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat)
     projection = ccrs.PlateCarree()
 
     if [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
@@ -259,6 +258,8 @@ def plot_map(dmap: xr.DataArray,
     hatch_type = kwargs.pop('hatch_type', '..')
     set_map = kwargs.pop('set_map', True)
     figsize = kwargs.pop("figsize", (9, 6))
+    alpha = kwargs.pop("alpha", 1.0)
+
     if ax is not None and projection is not None:
         raise ValueError(
             f'Axis already given, projection {projection} will have no effect. Please do not pass projection argument!')
@@ -327,7 +328,6 @@ def plot_map(dmap: xr.DataArray,
         plot_type += '_map'
 
     # not to run into conflicts with significance mask
-    alpha = kwargs.pop("alpha", 1.0)
     im = plot_2D(x=x, y=y, z=z,
                  fig=fig, ax=ax, plot_type=plot_type, projection=projection,
                  vmin=vmin, vmax=vmax, cmap=cmap, label=label, title=title,
