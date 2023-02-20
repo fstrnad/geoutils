@@ -33,13 +33,14 @@ class SpatioTemporalPCA:
             self.da = self.ds.get_da()
             self.var_name = self.ds.var_name
         else:
-            self.da = self.ds[var_name]
+            self.da = self.ds.ds[var_name]
             self.var_name = var_name
         # create data matrix
         if normalize_ts:
             self.da = sut.standardize(self.da)
 
-        gut.myprint(f'Prepare the dataset to TxN array for variable {self.var_name}!')
+        gut.myprint(
+            f'Prepare the dataset to TxN array for variable {self.var_name}!')
         self.F = self.ds.flatten_array(self.var_name)
 
         # run pca
@@ -72,20 +73,8 @@ class SpatioTemporalPCA:
         -------
         components: xr.dataarray (n_components, N_x, N_y)
         """
-        # scale components by its variance explanation power
-        if scale == "var":
-            components = np.einsum('i, ij -> ij',
-                                   self.pca.explained_variance_, self.pca.components_)
-        # scale components by its standard deviation
-        elif scale == "std":
-            std_comp = 1 / np.std(self.pca.components_, axis=1)
-            components = np.einsum('i, ij -> ij',
-                                   std_comp, self.pca.components_)
-        elif scale is None:
-            components = self.pca.components_
-        else:
-            raise ValueError(
-                f"Chosen normalization type '{scale}' does not exist!")
+
+        components = self.scale_components(scale=scale)
 
         comp_map = []
         q_map_arr = []
@@ -103,7 +92,41 @@ class SpatioTemporalPCA:
                     pca_map >= np.nanquantile(pca_map, q=q),
                     1, 0)
                 q_map_arr.append(q_map)
-        return xr.concat(comp_map, dim='comp'), q_map_arr
+        return xr.concat(comp_map, dim='comp')
+
+    def scale_components(self, scale=None):
+        # scale components by its variance explanation power
+        if scale == "var":
+            components = np.einsum('i, ij -> ij',
+                                   self.pca.explained_variance_, self.pca.components_)
+        # scale components by its standard deviation
+        elif scale == "std":
+            std_comp = 1 / np.std(self.pca.components_, axis=1)
+            components = np.einsum('i, ij -> ij',
+                                   std_comp, self.pca.components_)
+        elif scale is None:
+            components = self.pca.components_
+        else:
+            raise ValueError(
+                f"Chosen normalization type '{scale}' does not exist!")
+        return components
+
+    def get_q_maps(self, scale=None, q=None):
+        components = self.scale_components(scale=scale)
+
+        q_map_arr = []
+        if q is not None:
+            for i, comp in enumerate(components):
+                pca_map = self.ds.get_map(comp,
+                                          name=f'EOF')
+
+                q_map = xr.where(
+                    pca_map >= np.nanquantile(pca_map, q=q),
+                    1, 0)
+                q_map_arr.append(q_map)
+            return xr.concat(q_map_arr, dim='comp')
+        else:
+            return None
 
     def get_timeEvolution(self,
                           q=None,
@@ -167,7 +190,11 @@ class SpatioTemporalPCA:
         return rec_map
 
     def get_pca_loc_dict(self, q=None, inverse=False, tq=None):
-        maps, q_maps = self.get_components(q=q, inverse=inverse)
+        if self.ds.mask is None:
+            gut.myprint('Init as well a mask for dataset!')
+            self.ds.init_mask()
+        maps = self.get_components(q=q, inverse=inverse)
+        q_maps = self.get_q_maps(q=q)
         ts = self.get_timeEvolution(q=tq, inverse=inverse)
         expl_var = self.get_explainedVariance()
         if len(maps) != len(ts) or len(maps) != len(expl_var):
@@ -176,15 +203,10 @@ class SpatioTemporalPCA:
         pca_dict = {}
         gut.myprint('Now prepare PCA dictionary...')
         for idx, this_map in enumerate(maps):
-            c_indices = self.ds.get_idx_point_lst(
-                point_lst=np.where(q_maps[idx] > 0)[0])
-            mean_loc = self.ds.get_mean_loc(c_indices)
 
-            pca_dict[idx] = dict(indices=c_indices,
-                                 loc=mean_loc,
-                                 ts=ts[f'eof{idx}'],
+            pca_dict[idx] = dict(ts=ts[f'eof{idx}'],
                                  map=this_map,
-                                 q_map=q_maps[idx],
+                                 q_map=q_maps[idx] if q is not None else None,
                                  ev=expl_var[idx]
                                  )
 

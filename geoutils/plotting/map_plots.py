@@ -54,11 +54,14 @@ def set_grid(ax, alpha=0.5,
         _type_: _description_
     """
     # Set grid steps for longitude and latitude
-    gs_lon = kwargs.pop('gs_lon', None)
-    gs_lat = kwargs.pop('gs_lat', None)
-    if gs_lon is None:
-        gs_lon, gs_lat = get_grid_dist(ext_dict=ext_dict)
-
+    if ext_dict is not None:
+        gs_lon = kwargs.pop('gs_lon', None)
+        gs_lat = kwargs.pop('gs_lat', None)
+        if gs_lon is None:
+            gs_lon, gs_lat = get_grid_dist(ext_dict=ext_dict)
+    else:
+        gs_lon = 30
+        gs_lat = 20
     # Generate the grid
     gl = ax.gridlines(
         draw_labels=True,
@@ -87,6 +90,7 @@ def set_grid(ax, alpha=0.5,
 def set_extent(da, ax,
                lat_range=None,
                lon_range=None,
+               dateline=False,
                **kwargs):
     if not isinstance(ax, ctp.mpl.geoaxes.GeoAxesSubplot) and not isinstance(ax, ctp.mpl.geoaxes.GeoAxes):
         raise ValueError(
@@ -94,7 +98,10 @@ def set_extent(da, ax,
 
     min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat = ax.get_extent()
     set_global = kwargs.pop('set_global', False)
-    projection = ccrs.PlateCarree()
+    if dateline:
+        projection = ccrs.PlateCarree(central_longitude=180)
+    else:
+        projection = ccrs.PlateCarree(central_longitude=0)
 
     if [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
         if da is None and lat_range is None and lon_range is None:
@@ -124,7 +131,7 @@ def set_extent(da, ax,
         ax.set_global()
     else:
         ax.set_extent(
-            [min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat], crs=projection
+            [min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat], projection
         )
     return dict(
         ax=ax,
@@ -145,11 +152,15 @@ def create_map(
     plt_grid=True,
     lat_range=None,
     lon_range=None,
+    dateline=False,
     **kwargs,
 ):
     projection = 'PlateCarree' if lon_range is not None else projection
     projection = 'PlateCarree' if lat_range is not None else projection
-    proj = get_projection(projection, central_longitude)
+    central_latitude = kwargs.pop("central_latitude", 0)
+    proj = get_projection(projection=projection,
+                          central_longitude=central_longitude,
+                          central_latitude=central_latitude,)
     figsize = kwargs.pop("figsize", (9, 6))
     # create figure
     if ax is None:
@@ -163,11 +174,15 @@ def create_map(
                     f'WARNING! Central longitude set to {central_longitude} but has no effect since axis argument is passed is {ax_central_longitude}!')
 
     set_map = kwargs.pop('set_map', True)
-    ext_dict = set_extent(
-        da=da, ax=ax,
-        lat_range=lat_range,
-        lon_range=lon_range,
-        **kwargs)
+    if projection != 'Nearside':
+        ext_dict = set_extent(
+            da=da, ax=ax,
+            lat_range=lat_range,
+            lon_range=lon_range,
+            dateline=dateline,
+            **kwargs)
+    else:
+        ext_dict = None
 
     if set_map:
         # axes properties
@@ -191,8 +206,9 @@ def create_map(
     return ax, fig, kwargs
 
 
-def get_projection(projection, central_longitude=None):
+def get_projection(projection, central_longitude=None, central_latitude=None):
     central_longitude = 0 if central_longitude is None else central_longitude
+    central_latitude = 0 if central_latitude is None else central_latitude
     if not isinstance(central_longitude, float) and not isinstance(central_longitude, int):
         raise ValueError(
             f'central_longitude is not of type int or float, but of type {type(central_longitude)}!'
@@ -205,6 +221,9 @@ def get_projection(projection, central_longitude=None):
         proj = ccrs.Robinson(central_longitude=central_longitude)
     elif projection == "PlateCarree":
         proj = ccrs.PlateCarree(central_longitude=central_longitude)
+    elif projection == "Nearside":
+        proj = ccrs.NearsidePerspective(
+            central_longitude=central_longitude, central_latitude=central_latitude)
     else:
         raise ValueError(f"This projection {projection} is not available yet!")
 
@@ -227,6 +246,7 @@ def plot_map(dmap: xr.DataArray,
              significance_mask: xr.DataArray = None,
              lat_range: tuple[float, float] = None,
              lon_range: tuple[float, float] = None,
+             dateline: bool = False,
              **kwargs):
     """
     This function plots a map of a given xr.DataArray.
@@ -276,6 +296,7 @@ def plot_map(dmap: xr.DataArray,
         figsize=figsize,
         lat_range=lat_range,
         lon_range=lon_range,
+        dateline=dateline,
         **kwargs
     )
 
@@ -310,10 +331,10 @@ def plot_map(dmap: xr.DataArray,
             x = dmap.lon
             y = dmap.lat
         else:
-            flat_idx_lst = sput.flatten_array(dataarray=dmap,
-                                              mask=ds.mask,
-                                              time=False,
-                                              check=False)
+            flat_idx_lst = gut.flatten_array(dataarray=dmap,
+                                             mask=ds.mask,
+                                             time=False,
+                                             check=False)
             flat_idx = np.where(np.abs(flat_idx_lst) >
                                 1e-5)[0]  # get all points >0
             print('WARNING! Plot all points that are > 0!')
@@ -327,11 +348,13 @@ def plot_map(dmap: xr.DataArray,
     elif plot_type == 'colormesh':
         plot_type += '_map'
 
+    # defines distance to lower y-range (different for maps and xy-plots)
+    pad = kwargs.pop('pad', "15%")
     # not to run into conflicts with significance mask
     im = plot_2D(x=x, y=y, z=z,
                  fig=fig, ax=ax, plot_type=plot_type, projection=projection,
                  vmin=vmin, vmax=vmax, cmap=cmap, label=label, title=title,
-                 alpha=alpha,
+                 alpha=alpha, pad=pad,
                  **kwargs)
 
     # areas which are dotted are mask
@@ -621,7 +644,9 @@ def plot_2D(
     # else:
     #     raise ValueError(f"Plot type {plot_type} does not exist!")
 
-    kwargs = put.set_title(title=title, ax=ax, **kwargs)
+    y_title = kwargs.pop('y_title', 1.18)
+    kwargs = put.set_title(title=title, ax=ax,
+                           y_title=y_title, **kwargs)
 
     if label is not None:
         cbar = put.make_colorbar(ax, im=im,
@@ -808,7 +833,7 @@ def create_multi_plot(nrows, ncols, ds=None, projection=None,
     reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
-        figsize = (6*ncols, 4*nrows)
+        figsize = (8*ncols, 4*nrows)
 
     ratios_w = np.ones(ncols)
     ratios_h = np.ones(nrows)
@@ -827,8 +852,10 @@ def create_multi_plot(nrows, ncols, ds=None, projection=None,
                           hspace=hspace, wspace=wspace)
     if projection is not None:
         central_longitude = kwargs.pop("central_longitude", 0)
+        central_latitude = kwargs.pop("central_latitude", 0)
         proj = get_projection(projection=projection,
-                              central_longitude=central_longitude)
+                              central_longitude=central_longitude,
+                              central_latitude=central_latitude,)
     else:
         proj = None
     axs = []
@@ -866,60 +893,6 @@ def create_multi_plot(nrows, ncols, ds=None, projection=None,
                       y_title=y_title)
 
     return {"ax": axs, "fig": fig, "projection": projection}
-
-
-def create_multi_map_plot_gs(nrows, ncols,
-                             projection="EqualEarth",
-                             orientation='horizontal',
-                             **kwargs):
-    """OUTDATED!!!
-    """
-    figsize = kwargs.pop('figsize', None)
-    if figsize is None:
-        figsize = (6*ncols, 4*nrows)
-    if orientation == 'vertical':
-        ratios_w = np.append(np.ones(ncols), 0.05)
-        ratios_h = np.ones(nrows)
-        gs_rows = nrows
-        gs_cols = ncols + 1
-    elif orientation == 'horizontal':
-        ratios_w = np.ones(ncols)
-        ratios_h = np.append(np.ones(nrows), 0.05)
-        gs_rows = nrows + 1
-        gs_cols = ncols
-    else:
-        ratios_w = np.ones(ncols)
-        ratios_h = np.ones(nrows)
-        gs_rows = nrows
-        gs_cols = ncols
-    fig = plt.figure(figsize=(figsize[0], figsize[1]))
-
-    hspace = kwargs.pop('hspace', 0)
-    wspace = kwargs.pop('wspace', 0)
-    space = kwargs.pop('space', 0)
-    if space != 0:
-        hspace = wspace = space
-    gs = fig.add_gridspec(gs_rows, gs_cols,
-                          height_ratios=ratios_h,
-                          width_ratios=ratios_w,
-                          hspace=hspace, wspace=wspace)
-    central_longitude = kwargs.pop("central_longitude", 0)
-    proj = get_projection(projection=projection,
-                          central_longitude=central_longitude)
-    axs = []
-    cbar_size = 1
-    for i in range(nrows):
-        for j in range(ncols):
-            axs.append(fig.add_subplot(gs[i, j], projection=proj))
-
-    axs = np.array(axs)
-    put.enumerate_subplots(axs, pos_x=-0.1, pos_y=1.07)
-    if orientation == 'vertical':
-        axs = np.append(axs, fig.add_subplot(gs[:, ncols]))
-    elif orientation == 'horizontal':
-        axs = np.append(axs, fig.add_subplot(gs[nrows, :]))
-
-    return {"ax": axs.flatten(), "fig": fig, "gs": gs, "projection": projection}
 
 
 def plt_text_map(ax, lon_pos, lat_pos, text, color="k"):
@@ -994,7 +967,7 @@ def plot_corr_matrix(
     return im
 
 
-def plot_rectangle(ax, lon_range, lat_range, **kwargs):
+def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
     """Plots a rectangle on a cartopy map
 
     Args:
@@ -1035,6 +1008,15 @@ def plot_rectangle(ax, lon_range, lat_range, **kwargs):
         linewidth=lw,
         zorder=zorder,
     )
+
+    if text is not None:
+        put.plt_text(ax=ax,
+                     text=text,
+                     geoaxis=True,
+                     color=color,
+                     xpos=np.mean(lon_range),
+                     ypos=np.max(lat_range)+2 # always plot above(!) the rectangle
+                     )
 
     return ax
 

@@ -114,11 +114,11 @@ class MultiPressureLevelDataset(bds.BaseDataset):
         v_bar = self.ds[var]
         lats = v_bar.lat
         lats = np.cos(lats*np.pi/180)
-        plevels = v_bar.plevel
+        plevels = v_bar.lev
         dp = xr.DataArray(np.diff(plevels, prepend=0)*100.,  # factor x100 because of hPa to bar
-                          coords={'plevel': plevels})
+                          coords={'lev': plevels})
         gut.myprint(
             f'Integrate {var} from {float(plevels[0])} to {float(plevels[-1])}!')
 
-        vert_int = c*np.cumsum(v_bar*dp, axis=v_bar.dims.index('plevel'))
+        vert_int = c*np.cumsum(v_bar*dp, axis=v_bar.dims.index('lev'))
         return vert_int

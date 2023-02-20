@@ -202,7 +202,6 @@ def find_local_min(data):
             'min_idx': max_dict['max_idx']
             }
 
-
 def find_local_max_xy(data, x):
     if len(data) != len(x):
         raise ValueError(f'Error data and x not of the same length!')
@@ -221,6 +220,42 @@ def find_local_min_xy(data, x):
     max_dict['x_min'] = x[max_dict['min_idx']]
 
     return max_dict
+
+
+def get_values_above_val(dataarray, val=None, dim='time'):
+    """Return all values in the input xarray that are above a value.
+    The median is taken if no value is given.
+
+    Parameters:
+    -----------
+    dataarray : xarray.DataArray
+        The input data array to get values from.
+
+    Returns:
+    --------
+    xarray.DataArray
+        An xarray object containing only the values that are above the median.
+
+    Raises:
+    -------
+    ValueError:
+        If the input data array does not have a time dimension.
+    """
+    if dim not in dataarray.dims:
+        raise ValueError(f"Input data array must have a {dim} dimension")
+
+    if val == 'mean':
+        val = dataarray.mean(dim=dim)
+    else:
+        val = dataarray.median(dim=dim) if val is None else val
+    above_val = dataarray.where(dataarray >= val).dropna(dim=dim)
+    below_val = diff_xarray(arr1=dataarray, arr2=above_val)
+
+    return {
+        'val': val,
+        'above': above_val,
+            'below': below_val
+            }
 
 
 def get_locmax_of_score(ts, q=0.95):
@@ -704,3 +739,58 @@ def merge_datasets(ds1, ds2):
     merged_ds = xr.merge([ds1, ds2])
 
     return merged_ds
+
+
+def flatten_array(dataarray, mask=None, time=True, check=False):
+    """Flatten and remove NaNs.
+    """
+
+    if mask is not None:
+        idx_land = np.where(mask.data.flatten() == 1)[0]
+    else:
+        idx_land = None
+    if time is False:
+        buff = dataarray.data.flatten()
+        buff[np.isnan(buff)] = 0.0  # set missing data to climatology
+        data = buff[idx_land] if idx_land is not None else buff[:]
+    else:
+        data = []
+        for idx, t in enumerate(dataarray.time):
+            buff = dataarray.sel(time=t.data).data.flatten()
+            buff[np.isnan(buff)] = 0.0  # set missing data to climatology
+            data_tmp = buff[idx_land] if idx_land is not None else buff[:]
+            data.append(data_tmp)
+
+    # check
+    if check is True:
+        num_nonzeros = np.count_nonzero(data[-1])
+        num_landpoints = sum(~np.isnan(mask.data.flatten()))
+        myprint(
+            f"The number of non-zero datapoints {num_nonzeros} "
+            + f"should approx. be {num_landpoints}."
+        )
+
+    return np.array(data)
+
+
+def diff_xarray(arr1, arr2):
+    """
+    Returns an xarray object that contains all values that are in arr1 but not in arr2.
+
+    Parameters:
+    -----------
+    arr1: xarray DataArray
+        The first array to compare.
+    arr2: xarray DataArray
+        The second array to compare.
+
+    Returns:
+    --------
+    xarray DataArray
+        The difference of arr1 and arr2.
+    """
+
+    # Compute the difference
+    unique_values = arr1[np.isin(arr1, arr2, invert=True)]
+
+    return unique_values

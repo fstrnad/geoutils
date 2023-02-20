@@ -163,7 +163,8 @@ class BaseDataset():
                                   use_ds_grid=use_ds_grid)
         if large_ds:
             ds.unify_chunks()
-        if lon_range != [-180, 180] and lat_range != [-90, 90]:
+        if lon_range != [-180, 180] or lat_range != [-90, 90]:
+            gut.myprint(f'Cut the dataset {lon_range}, {lat_range}!')
             ds = self.cut_map(ds, lon_range, lat_range)
 
         # ds = da.to_dataset(name=var_name)
@@ -418,10 +419,12 @@ class BaseDataset():
             gut.myprint(f'Added {key}: {val} to {self.var_name} attributes!')
             self.ds[self.var_name].attrs[key] = val
 
-    def init_mask(self, da, lsm_file=None, mask_ds=None, **kwargs):
-        init_mask = kwargs.pop('init_mask', True)
+    def init_mask(self, da=None, lsm_file=None, mask_ds=None, **kwargs):
+        init_mask = kwargs.pop('init_mask', False)
 
         if init_mask:
+            if da is None:
+                da = self.get_da()
             dims = self.get_dims(ds=da)
             # if len(dims) > 2 or dims == ['time', 'points'] or dims == ['points', 'time']:
             if 'time' in dims:
@@ -479,8 +482,8 @@ class BaseDataset():
         var_name = self.var_name if var_name is None else var_name
         dataarray = self.ds[var_name]
 
-        data = sput.flatten_array(dataarray=dataarray, mask=self.mask,
-                                  time=time, check=check)
+        data = gut.flatten_array(dataarray=dataarray, mask=self.mask,
+                                 time=time, check=check)
 
         return data
 
@@ -715,6 +718,25 @@ class BaseDataset():
 
         return loc_map
 
+    def get_points_for_idx(self, idx_lst):
+        """Returns the point number of the map for a given index list.
+        Important eg. to transform node ids to points of the network
+        Args:
+            idx_lst (list): list of indices of the network.
+
+        Returns:
+            np.array: array of the points of the index list
+        """
+        point_lst = []
+
+        for idx in idx_lst:
+            # map_idx = self.get_map_index(idx)
+            # point = int(map_idx["point"])
+            # point_lst.append(point)
+            point_lst.append(self.key_val_idx_point_dict[idx])
+
+        return np.array(point_lst, dtype=int)
+
     def add_loc_dict(
         self, name, lon_range, lat_range,
         slon=None, slat=None,
@@ -758,17 +780,22 @@ class BaseDataset():
                     gut.myprint(
                         f"WARNING! Rep IDs {idx_loc} for {name} not defined!")
                 else:
+
                     rep_ids = self.get_n_ids(loc=mean_loc, num_nn=n_rep_ids)
                     pids = self.get_points_for_idx(ids_lst)
+                    if 'points' in self.dims:
+                        data = self.ds.sel(points=pids)
+                    else:
+                        data = self.get_data_for_lon_lat_range(lon_range=lon_range,
+                                                               lat_range=lat_range)
+
                     this_loc_dict["rep_ids"] = np.array(rep_ids)
                     this_loc_dict["loc"] = loc
                     this_loc_dict['ids'] = ids_lst
                     this_loc_dict['pids'] = pids
-                    this_loc_dict['data'] = self.ds.sel(points=pids)
+                    this_loc_dict['data'] = data
                     this_loc_dict["map"] = self.get_map(
                         self.flat_idx_array(ids_lst))
-                    this_loc_dict['ds'] = self.ds.sel(
-                        points=this_loc_dict['pids'])
             else:
                 raise ValueError(
                     f"ERROR! This region {name} does not contain any data points!"
@@ -803,10 +830,13 @@ class BaseDataset():
         buff = idx_map.where(idx_map == idx_flat, drop=True)
         if idx_flat > len(indices_flat):
             raise ValueError("Index doesn't exist.")
+
+        point = int(self.get_points_for_idx([idx_flat]))
         map_idx = {
             "lat": float(buff.lat.data),
             "lon": float(buff.lon.data),
-            "point": int(np.argwhere(idx_map.data == idx_flat)),
+            # "point": int(np.argwhere(idx_map.data == idx_flat)),
+            "point": point
         }
         return map_idx
 
@@ -973,10 +1003,10 @@ class BaseDataset():
         )
 
         # Return these indices (NOT points!!!) that are defined
-        idx_lst = np.where(sput.flatten_array(dataarray=mmap,
-                                              mask=self.mask,
-                                              time=False,
-                                              check=False) > 0)[0]  # TODO check for better solution!
+        idx_lst = np.where(gut.flatten_array(dataarray=mmap,
+                                             mask=self.mask,
+                                             time=False,
+                                             check=False) > 0)[0]  # TODO check for better solution!
 
         return {'idx': idx_lst,
                 'mmap': mmap,
@@ -1285,7 +1315,7 @@ class BaseDataset():
         if var is None:
             var = self.var_name
         idx = self.get_index_for_coord(lon=lon, lat=lat)
-        ts = self.get_data_for_indices(idx=[idx], var=var)
+        ts = self.get_data_for_indices(idx_lst=[idx], var=var)
         return ts
 
     def get_data_for_locs(self, locs, var=None):
@@ -1293,8 +1323,12 @@ class BaseDataset():
             var = self.var_name
 
         idx_lst = self.get_idx_for_loc(locs=locs)
-        ts = self.get_data_for_indices(idx=idx_lst, var=var)
+        ts = self.get_data_for_indices(idx_lst=idx_lst, var=var)
         return ts
+
+    def get_data_for_lon_lat_range(self, lon_range, lat_range, dateline=False):
+        return self.cut_map(lon_range=lon_range, lat_range=lat_range,
+                            dateline=dateline)
 
     def get_idx_region(self, region_dict, def_map=None, dateline=False):
         """
@@ -1421,7 +1455,7 @@ class BaseDataset():
         return self.w_grad, self.w_grad_an
 
     def apply_timemean(self, timemean=None):
-        self.ds = tu.apply_timemean(ds=self.ds, timemean=timemean)
+        self.ds = tu.compute_timemean(ds=self.ds, timemean=timemean)
         return self.ds
 
     def average_time(self, timemean='full'):

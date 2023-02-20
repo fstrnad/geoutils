@@ -1,3 +1,4 @@
+import statsmodels.api as sm
 from statsmodels.tsa.ar_model import AutoReg
 import geoutils.utils.time_utils as tu
 from sklearn.preprocessing import minmax_scale
@@ -339,7 +340,7 @@ def KS_test(data1, data2=None, test='norm'):
     return KS_st, p_val
 
 
-def effective_sample_size(X, zdim=('lat','lon')):
+def effective_sample_size(X, zdim=('lat', 'lon')):
     """Compute effective sample size by fitting AR-process to each location in time-series.
 
         n_eff = n * (1-coeff) / (1+coeff)
@@ -452,8 +453,10 @@ def ttest_field(X, Y, serial_data=False,
     mean_y = Y.mean(dim='time', skipna=True).stack(z=zdim)
     std_y = Y.std(dim='time', skipna=True).stack(z=zdim)
     if serial_data:
-        nobs_x = effective_sample_size_parallel(X, zdim=zdim).stack(z=zdim).data
-        nobs_y = effective_sample_size_parallel(Y, zdim=zdim).stack(z=zdim).data
+        nobs_x = effective_sample_size_parallel(
+            X, zdim=zdim).stack(z=zdim).data
+        nobs_y = effective_sample_size_parallel(
+            Y, zdim=zdim).stack(z=zdim).data
     else:
         nobs_x = len(X['time'])
         nobs_y = len(Y['time'])
@@ -488,6 +491,85 @@ def field_significance_mask(pvalues, alpha=0.05, corr_type="dunn"):
         mask_flat[ids] = True
         mask = mask_flat.unstack()
     else:
-        mask = xr.where(pvalues < alpha, True, False)  # mask 1 where significant
+        # mask 1 where significant
+        mask = xr.where(pvalues < alpha, True, False)
 
     return mask
+
+
+def polyfit_regressor(data_array, predictor,  order=1):
+    """
+    Perform polynomial regression on a time series in an xarray DataArray with dimensions (time, lon, lat)
+    using a single time series as a predictor.
+
+    Parameters
+    ----------
+    data_array: xarray.DataArray
+        A DataArray with dimensions (time, lon, lat) containing the time series data.
+    order: int
+        The order of the polynomial to fit.
+    predictor: xarray.DataArray
+        A DataArray with dimensions (time) containing the single time series predictor.
+
+    Returns
+    -------
+    regressed: xarray.DataArray
+        A DataArray with dimensions (time, lon, lat) containing the regressed time series data.
+
+    Raises
+    ------
+    ValueError
+        If the time dimension of `data_array` and `predictor` do not match.
+    """
+    # check if the time dimensions match
+    if data_array['time'].shape[0] != predictor['time'].shape[0]:
+        raise ValueError(
+            'The time dimensions of `data_array` and `predictor` do not match.')
+
+    regressed_arr = xr.full_like(data_array, np.nan)
+
+    for lon in data_array['lon']:
+        for lat in data_array['lat']:
+            # Do something with the data_array.sel(lon=lon, lat=lat) time series
+            this_ts = data_array.sel(lon=lon, lat=lat)
+            coef = np.polyfit(predictor, this_ts, order)
+            regressed_arr.loc[dict(lon=lon, lat=lat)] = np.polyval(coef, this_ts)
+
+    return regressed_arr
+
+
+def compute_correlation(data_array, t_p, correlation_type='pearson'):
+    """
+    Compute the Pearson or Spearman correlation between a time series t_p and all time series in an xarray DataArray.
+
+    Parameters
+    ----------
+    data_array: xarray.DataArray
+        A DataArray with dimensions (lon, lat, time).
+    t_p: array-like
+        The time series to compute the correlation with.
+    correlation_type: str
+        The type of correlation to be computed. Can be either 'pearson' or 'spearman'.
+
+    Returns
+    -------
+    xarray.DataArray
+        A DataArray with dimensions (lon, lat) containing the correlation values between t_p and the time series in data_array.
+    """
+    corr_array = xr.DataArray(np.zeros((data_array.lon.size, data_array.lat.size)), dims=("lon", "lat"))
+    for i, lon in enumerate(data_array.lon):
+        for j, lat in enumerate(data_array.lat):
+            time_series = data_array.sel(lon=lon, lat=lat).values.flatten()
+            if correlation_type == 'pearson':
+                corr, _ = st.pearsonr(t_p, time_series)
+            elif correlation_type == 'spearman':
+                corr, _ = st.spearmanr(t_p, time_series)
+            else:
+                raise ValueError(f"Invalid correlation_type: {correlation_type}. Must be either 'pearson' or 'spearman'.")
+            corr_array[i, j] = corr
+    corr_array.coords["lon"] = data_array.lon
+    corr_array.coords["lat"] = data_array.lat
+
+    corr_array = corr_array.transpose('lat','lon').compute()
+
+    return corr_array

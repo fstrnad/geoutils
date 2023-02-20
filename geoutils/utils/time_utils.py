@@ -1,6 +1,5 @@
 import datetime
 import math
-import scipy as sp
 import geoutils.utils.spatial_utils as sput
 import geoutils.tsa.filters as flt
 import scipy.stats as st
@@ -40,6 +39,26 @@ jjas_months = np.array([
 ])
 
 
+def assert_has_time_dimension(da):
+    """
+    Assert that a given xarray DataArray has a time dimension.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        The input DataArray to check.
+
+    Raises
+    ------
+    ValueError
+        If the input DataArray does not have a time dimension.
+    """
+
+    if 'time' not in da.dims:
+        raise ValueError(
+            f"The input DataArray '{da.name}' does not have a time dimension.")
+
+
 def get_index_of_month(month):
     idx = int(np.argwhere(months == month)[0])
     if idx not in np.arange(0, len(months)):
@@ -60,6 +79,12 @@ def get_month_number(*month_list):
     if len(idx_lst) == 1:
         return int(idx_lst[0])
     return idx_lst
+
+
+def month2str(month):
+    mi = get_month_number(month)
+    mstr = f'{mi}' if mi > 9 else f'0{mi}'
+    return mstr
 
 
 def get_netcdf_encoding(ds,
@@ -300,6 +325,7 @@ def get_month_range_data(dataset, start_month="Jan", end_month="Dec"):
         array that contains only data within month-range.
 
     """
+    gut.myprint(f'Select data from {start_month} - {end_month}!')
     seasonal_data = dataset.sel(
         time=is_in_month_range(dataset["time.month"], start_month, end_month)
     )
@@ -344,6 +370,48 @@ def get_idx_tps_times(tps, times):
     return tps_idx
 
 
+def get_time_range_years(dataarray: xr.DataArray) -> tuple:
+    """
+    Given an xarray DataArray, return the start and end year of the time dimension
+    as well as the difference in years between them.
+
+    Parameters
+    ----------
+    data : xr.DataArray
+        The input xarray DataArray
+
+    Returns
+    -------
+    tuple
+        A tuple of three integers: the start year, end year, and difference in years
+
+    Raises
+    ------
+    ValueError
+        If the input data does not have a time dimension
+
+    Examples
+    --------
+    >>> import xarray as xr
+    >>> import numpy as np
+    >>> np.random.seed(0)
+    >>> data = xr.DataArray(np.random.rand(5, 10, 10), dims=('time', 'lon', 'lat'),
+    ...                     coords={'time': xr.cftime_range(start='2000-01-01', periods=5, freq='YS'),
+    ...                             'lon': np.linspace(-180, 180, 10),
+    ...                             'lat': np.linspace(-90, 90, 10)})
+    >>> start_year, end_year, num_years = get_time_range(data)
+    >>> print(f"Start year: {start_year}, End year: {end_year}, Number of years: {num_years}")
+    Start year: 2000, End year: 2004, Number of years: 5
+    """
+    assert_has_time_dimension(da=dataarray)
+
+    start_year = int(dataarray.time.dt.year.min())
+    end_year = int(dataarray.time.dt.year.max())
+    num_years = end_year - start_year + 1
+
+    return start_year, end_year, num_years
+
+
 def get_sy_ey_time(times, sy=None, ey=None, sm=None, em=None):
     """Returns the start and end year of a xr Dataarray
     datetime object
@@ -378,26 +446,6 @@ def get_start_end_date(data):
     base_period = np.array(
         [data.time.data.min(), data.time.data.max()])
     return base_period
-
-
-# def get_start_end_date(times, sm="Jan", em="Dec"):
-#     sy, ey = get_sy_ey_time(times=times)
-#     smi = get_month_number(sm)
-#     emi = get_month_number(em)
-#     start_date = np.datetime64(f"{int(sy)}-{int(smi):02}-{int(1):02}", "D")
-#     if em == "Feb":
-#         end_day = 28
-#     elif em in ["Jan", "Mar", "May", "Jul", "Aug", "Oct", "Dec"]:
-#         end_day = 31
-#     else:
-#         end_day = 30
-
-#     ey = copy.deepcopy(ey)
-#     if emi < smi:
-#         ey = ey + 1
-#     end_date = np.datetime64(f"{int(ey)}-{int(emi):02}-{int(end_day):02}", "D")
-
-#     return np.array([start_date, end_date])
 
 
 def get_start_end_date_shift(time, sm, em, shift=0):
@@ -864,7 +912,7 @@ def get_date2ymdh(date):
     return yi, mi, di, hi
 
 
-def get_date2ymdhstr(date, seperate_hour=True):
+def date2ymdhstr(date, seperate_hour=True):
     if isinstance(date, xr.DataArray):
         date = date.data
     else:
@@ -949,257 +997,6 @@ def add_time_window(date, time_step=1, time_unit="D"):
     return next_date
 
 
-def get_day_progression_arr(ds, tps, start,
-                            sps=None, eps=None,
-                            var=None, end=None,
-                            q=None, step=1,
-                            average_ts=False,
-                            verbose=False):
-    """Gets a day progression for a xr.Dataset for specific time points.
-
-    Args:
-        ds (xr.DataSet): dataset of variables
-        tps (xr.dataarray): dataarray that contains time points
-        start (int): how many time points before to start
-        end (int, optional): how many time points to end. Defaults to None.
-        step (int, optional): step of progression. Defaults to 1.
-        average_ts(bool, optional): Takes all days between two steps into account and averages over .
-
-    Returns:
-        dict: dictionary that contains xr.Dataarrays of the means
-    """
-    composite_arrs = dict()
-    s_step = 1
-    e_step = -1
-    if end is None:
-        end = start
-    if sps is None:
-        sps = tps
-        s_step = 0
-    if eps is None:
-        eps = tps
-        e_step = 0
-
-    days = np.arange(-start, end+step, step)
-    composite_arrs = []
-    for thisstep in days:
-        if thisstep < 0:
-            this_tps = add_time_step_tps(sps.time, time_step=thisstep + s_step)
-        elif thisstep > 0:
-            this_tps = add_time_step_tps(eps.time, time_step=thisstep + e_step)
-        else:
-            this_tps = tps.time  # day 0
-
-        if average_ts and thisstep != 0:
-            # the sign is because average is for the preceeding periode
-            # signum of thisstep
-            av_step = step * -1 * math.copysign(1, thisstep)
-            this_tps = get_periods_tps(tps=this_tps, step=av_step)
-
-        this_comp_ts = get_sel_tps_ds(ds=ds, tps=this_tps)
-        if var == 'evs':
-            this_comp_ts = xr.where(
-                this_comp_ts[var] == 1, this_comp_ts[var], np.nan
-            )
-            mean_ts = this_comp_ts.sum(dim='time')
-            # print(mean_ts)
-        elif var is not None:
-            if q is None:
-                mean_ts = this_comp_ts[var].mean(dim='time')
-            else:
-                mean_ts = this_comp_ts[var].quantile(q=q,
-                                                     dim='time')
-                # this_comp_ts = xr.where(
-                #     this_comp_ts < 1, this_comp_ts, np.nan
-                # )
-                # mean_ts = this_comp_ts[var].count(dim='time')
-        else:
-            mean_ts = this_comp_ts.mean(dim='time')
-
-        mean_ts = mean_ts.expand_dims(
-            {'day': 1}).assign_coords({'day': [thisstep]})
-
-        composite_arrs.append(mean_ts)
-
-    gut.myprint(
-        'Merge selected composite days into 1 xr.DataSet...', verbose=verbose)
-    composite_arrs = xr.merge(composite_arrs)
-
-    return composite_arrs
-
-
-def get_day_arr(ds, tps):
-
-    composite_arrs = []
-    for day, tp in enumerate(tps):
-        tp_ds = get_sel_tps_ds(ds, tps=[tp]).mean(dim='time')
-        tp_ds = tp_ds.expand_dims(
-            {'day': 1}).assign_coords({'day': [day]})
-        composite_arrs.append(tp_ds)
-
-    gut.myprint('Merge selected composite days into 1 xr.DataSet...')
-    composite_arrs = xr.merge(composite_arrs)
-
-    return composite_arrs
-
-
-def get_box_propagation(ds, loc_dict, tps,
-                        sps=None, eps=None,
-                        num_days=1, regions=None,
-                        normalize=True,
-                        var='evs', step=1, q=0.9,
-                        norm_grid_fac=2):  # four borders
-    reload(sput)
-    coll_data = dict()
-    if regions is None:
-        regions = list(loc_dict.keys())
-    for region in tqdm(regions):
-        # EE TS
-        pids = loc_dict[region]['pids']
-        pr_data = ds.sel(points=pids)
-        # pr_data = loc_dict[region]['data']
-        composite_arrs = get_day_progression_arr(ds=pr_data,
-                                                 tps=tps,
-                                                 sps=sps, eps=eps,
-                                                 start=num_days,
-                                                 end=num_days,
-                                                 step=step,
-                                                 var=var,
-                                                 )
-        coll_data[region] = composite_arrs[var]
-
-    days = composite_arrs.day.data
-    box_data = np.zeros((len(regions), len(days)))
-    for i, region in enumerate(regions):
-        this_data = coll_data[region]
-        pids = this_data.points
-        if normalize:
-            evs_data = loc_dict[region]['data']['evs']
-            tot_num_days = len(tps)
-            num_cells = len(evs_data.points)
-            # num_cells = 10  # Get Results per 100 cells
-            # norm = num_cells * tot_num_days
-            norm = tot_num_days*num_cells / \
-                (norm_grid_fac*100)  # Get Results per 100 cells
-            print(region, norm)
-        else:
-            norm = 1
-        for j, day in enumerate(days):
-            if var != 'evs':
-                box_data[i][j] = float(this_data.sel(day=day).quantile(
-                    dim='points',
-                    q=q).data)
-            else:
-                this_box_data = float(this_data.sel(
-                    day=day).sum(dim='points').data) / norm
-                box_data[i][j] = this_box_data
-    box_data = gut.mk_grid_array(data=box_data,
-                                 x_coords=days,
-                                 y_coords=regions,)
-
-    return box_data
-
-
-def get_quantile_progression_arr(ds, tps, start,
-                                 sps=None, eps=None,
-                                 var=None, end=None,
-                                 q=None, step=1,
-                                 average_ts=False,
-                                 verbose=False,
-                                 q_th=0.05,
-                                 th=None):
-    progression_arr = get_day_progression_arr(
-        ds=ds, tps=tps,
-        start=start,
-        sps=sps, eps=eps,
-        var=var, end=end,
-        q=q, step=step,
-        average_ts=average_ts,
-        verbose=verbose)
-    day_arr = xr.zeros_like(progression_arr.sel(day=0))
-    day_arr = xr.where(day_arr == 1, 0, np.nan)
-    for idx, (day) in enumerate(progression_arr.day):
-        day = int(day)
-        mean_ts = progression_arr.sel(day=day)
-        th_mask = xr.ones_like(mean_ts)
-        if th is not None:
-            th_mask = xr.where(mean_ts <= th, 1, 0) if th < 0 else xr.where(
-                mean_ts >= th, 1, 0)
-        q_mask = xr.ones_like(mean_ts)
-        if q_th is not None:
-            q_val = mean_ts.quantile(q=q_th)
-            q_mask = xr.where(mean_ts <= q_val, 1, 0) if q_th < 0.5 else xr.where(
-                mean_ts > q_val, 1, 0)
-        mask = q_mask * th_mask
-
-        # This overwrites old values
-        day_arr = xr.where(mask, day, day_arr)
-
-    return day_arr
-
-
-def get_hovmoeller(ds, tps, sps=None, eps=None, num_days=0,
-                   start=1,
-                   var=None, step=1,
-                   lat_range=None, lon_range=None,
-                   zonal=True,
-                   dateline=False):
-    reload(sput)
-    if num_days > 0:
-        composite_arrs = get_day_progression_arr(ds=ds,
-                                                 tps=tps,
-                                                 sps=sps, eps=eps,
-                                                 start=start,
-                                                 end=num_days,
-                                                 step=step,
-                                                 var=var,
-                                                 )
-    else:
-        composite_arrs = get_day_arr(ds=ds, tps=tps)
-    composite_arrs = sput.cut_map(ds=composite_arrs,
-                                  lon_range=lon_range,
-                                  lat_range=lat_range,
-                                  dateline=dateline)
-    if zonal:
-        hov_means = sput.compute_zonal_mean(ds=composite_arrs)
-    else:
-        hov_means = sput.compute_meridional_mean(ds=composite_arrs)
-
-    return hov_means
-
-
-def get_hovmoeller_single_tps(ds, tps, num_days,
-                              start=1,
-                              var=None, step=1,
-                              lat_range=None, lon_range=None,
-                              zonal=True,
-                              gf=(0, 0),
-                              dateline=False):
-    hov_data = []
-    if gf[0] != 0 or gf[1] != 0:
-        gut.myprint(f'Apply Gaussian Filter with sigma = {gf}!')
-        sigma = [gf[1], gf[0]]  # sigma_y, sigma_x
-
-    for tp in tps:
-        this_hov_data = get_hovmoeller(ds=ds, tps=tp,
-                                       num_days=num_days,
-                                       start=start,
-                                       var=var, step=step,
-                                       lat_range=lat_range,
-                                       lon_range=lon_range,
-                                       zonal=zonal, dateline=dateline)
-        if gf[0] != 0 or gf[1] != 0:
-            tmp_data = sp.ndimage.filters.gaussian_filter(
-                this_hov_data[var].data, sigma, mode='constant')
-            this_hov_data = xr.DataArray(data=tmp_data,
-                                         dims=this_hov_data.dims,
-                                         coords=this_hov_data.coords)
-        hov_data.append(this_hov_data)
-    single_hov_dates = xr.concat(hov_data, tps)
-
-    return single_hov_dates
-
-
 def add_time_step_tps(tps, time_step=1, time_unit="D", ):
     ntps = []
     if isinstance(tps, xr.DataArray):
@@ -1210,9 +1007,19 @@ def add_time_step_tps(tps, time_step=1, time_unit="D", ):
         ntp = add_time_window(
             date=tp, time_step=time_step, time_unit=time_unit)
         ntps.append(ntp)
-    ntps = np.array(ntps)
+    ntps = merge_time_arrays(ntps)
 
     return xr.DataArray(ntps, dims=["time"], coords={"time": ntps})
+
+
+def merge_time_arrays(time_arrays):
+    # Combine the time arrays into a single DataArray with a new "time" dimension
+    combined_data = xr.concat(time_arrays, dim="time")
+
+    # Sort the new "time" dimension
+    combined_data = combined_data.sortby("time")
+
+    return combined_data
 
 
 def get_tw_periods(
@@ -1301,13 +1108,11 @@ def get_dates_of_time_ranges(time_ranges, freq='D'):
 
 
 def get_dates_in_range(start_date, end_date, time_unit='D'):
-    print(type(start_date))
 
     if isinstance(start_date, xr.DataArray):
         start_date = np.datetime64(start_date.time.data)
     if isinstance(end_date, xr.DataArray):
         end_date = np.datetime64(end_date.time.data)
-    print(type(start_date))
     tps = np.arange(start_date, end_date, dtype=f'datetime64[{time_unit}]')
     return tps
 
@@ -1682,3 +1487,139 @@ def select_time_snippets(ds, time_snippets):
 def convert_datetime64_to_datetime(usert: np.datetime64) -> datetime.datetime:
     t = np.datetime64(usert, 'us').astype(datetime.datetime)
     return t
+
+
+def fill_time_series_val(ts: xr.DataArray, start_month: str = 'Jan', end_month: str = 'Dec',
+                         freq: str = 'D', fill_value: float = 0) -> xr.DataArray:
+    """
+    Adds zeros to a time series in an xarray dataarray object.
+
+    Args:
+        ts (xarray.DataArray): The input time series as an xarray DataArray object with dimensions (time, lon, lat).
+        start_month (str): The starting month for the time series. Defaults to 'Jan'.
+        end_month (str): The ending month for the time series. Defaults to 'Dec'.
+        freq (str): The frequency of the time series. Defaults to 'D' for daily.
+        fill_value (float): The value to use for filling any missing data in the time series. Defaults to 0.
+
+    Returns:
+        xarray.DataArray: The padded time series as an xarray DataArray object with dimensions (time, lon, lat).
+
+    Raises:
+        ValueError: If the input time series does not have a time dimension.
+
+    Examples:
+        import xarray as xr
+
+        # create example dataarray with monthly data
+        time = pd.date_range(start='2000-01-01', end='2001-12-31', freq='M')
+        lon = [-100, -90, -80, -70]
+        lat = [30, 40, 50]
+        data = np.random.rand(len(time), len(lon), len(lat))
+        da = xr.DataArray(data, coords={'time': time, 'lon': lon, 'lat': lat}, dims=('time', 'lon', 'lat'))
+
+        # add padding to time series
+        padded_da = fill_time_series_val(da, start_month='Apr', end_month='Nov', freq='M', fill_value=0)
+    """
+    assert_has_time_dimension(da=ts)
+    sy, ey, _ = get_time_range_years(dataarray=ts)
+    sm = month2str(start_month)
+    em = month2str(end_month)
+
+    sdate = str2datetime(f'{sy}-{sm}-01')
+    edate = str2datetime(f'{ey}-{em}-31')
+    all_dates = get_dates_of_time_range([sdate, edate], freq=freq)
+    padded_ts = ts.reindex(time=all_dates, fill_value=fill_value)
+
+    padded_ts = get_month_range_data(dataset=padded_ts,
+                                     start_month=start_month,
+                                     end_month=end_month)
+
+    return padded_ts
+
+
+def get_values_by_year(dataarray, years):
+    """Return all values of the input dataarray that belong to one of the specified years.
+
+    Args:
+        dataarray (xarray.DataArray): Input dataarray with a time dimension.
+        years (list or array-like): List or array of years to select.
+
+    Returns:
+        xarray.DataArray: New dataarray with only the values belonging to the specified years.
+    """
+    assert_has_time_dimension(dataarray)
+
+    # Extract years from dataarray time dimension
+    years_in_data = xr.DataArray(dataarray.time.dt.year, dims=["time"])
+
+    # Select values that are in the specified years
+    mask = years_in_data.isin(years)
+    data_selected = dataarray.where(mask, drop=True)
+
+    return data_selected
+
+
+def count_time_points(time_points, freq='Y'):
+    """
+    Returns a time series that gives per year (or per month in the year) the number of time points.
+
+    Parameters
+    ----------
+    time_points : xarray.DataArray
+        An xarray DataArray containing a time dimension of multiple time points.
+    freq : str, optional
+        The frequency of the output counts. Valid options are 'Y' (per year) and 'M' (per month in the year).
+        Default is 'Y'.
+
+    Returns
+    -------
+    xarray.DataArray
+        An xarray DataArray with a time dimension of type np.datetime64 and the number of time points as data.
+        The time dimension is continuous from the earliest time point in the input array to the last time point of the input array.
+    """
+    assert_has_time_dimension(time_points)
+
+    # Get start and end time points
+    start_time, end_time = get_start_end_date(data=time_points)
+
+    # Compute the number of years or months between start and end time points
+    if freq == 'Y':
+        time_range = pd.date_range(start=start_time, end=end_time, freq='YS')
+    elif freq == 'M':
+        time_range = pd.date_range(start=start_time, end=end_time, freq='MS')
+    else:
+        raise ValueError(
+            f"Invalid frequency: {freq}. Valid options are 'Y' (per year) and 'M' (per month in the year).")
+
+    # Count the number of time points per year or month
+    counts = []
+    for t in time_range:
+        if freq == 'Y':
+            count = np.count_nonzero(
+                (time_points.time.dt.year == t.year).values)
+        else:
+            count = np.count_nonzero((time_points.time.dt.year == t.year) & (
+                time_points.time.dt.month == t.month).values)
+        counts.append(count)
+
+    # Create output xarray DataArray
+    output = xr.DataArray(counts, dims=('time',), coords={'time': time_range})
+    return output
+
+
+def sort_time_points_by_year(tps, val='mean'):
+
+    yearly_tps = count_time_points(time_points=tps, freq='Y')
+
+    separate_year_arr = gut.get_values_above_val(dataarray=yearly_tps, val=val)
+    a_ys = separate_year_arr['above'].time.dt.year
+    b_ys = separate_year_arr['below'].time.dt.year
+
+    a_tps = get_values_by_year(tps, a_ys)
+    b_tps = get_values_by_year(tps, b_ys)
+
+    separate_arr = dict(
+        above=a_tps,
+        below=b_tps
+    )
+    return separate_arr

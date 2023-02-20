@@ -130,7 +130,7 @@ def get_evs_index_array(event_data, th=0, max_num_evs=None, rcevs=True, verbose=
         np.array: array of event series.
     """
     extreme_event_index_matrix = []
-    gut.myprint('Compute Index Array')
+    gut.myprint('Compute Index Array', verbose=verbose)
     for i, e in enumerate(tqdm(event_data, disable=~verbose)):
         idx_lst = get_evs_index(evs=e, th=th, rcevs=rcevs)
         num_evs = len(idx_lst)
@@ -183,7 +183,9 @@ def count_all_events_series(ds, evs_ind_arr, plot=True, savepath=None, label_arr
     return tps_arr
 
 
-def count_tps_occ(tps_arr, count_arr=None, counter='month', rel_freq=True):
+def count_tps_occ(tps_arr, count_arr=None, counter='month',
+                  rel_freq=True,
+                  norm_fac=1):
     """Counts the number of events per Month for a given list of list of time
     point indices.
 
@@ -227,17 +229,19 @@ def count_tps_occ(tps_arr, count_arr=None, counter='month', rel_freq=True):
             if tot_num > 0:
                 m_c_occ /= tot_num
                 if np.abs(np.sum(m_c_occ) - 1) > 0.1:
-                    print(
+                    gut.myprint(
                         f'WARNING, rel freq not summed to 1 {np.sum(m_c_occ)}')
             else:
                 m_c_occ = 0
 
-    res_c_occ = np.mean(res_c_occ_arr, axis=0)
+    res_c_occ = np.mean(res_c_occ_arr, axis=0)/norm_fac
 
     return res_c_occ
 
 
-def count_tps_occ_evs(evs, counter='month', count_arr=None):
+def count_tps_occ_evs(evs, counter='month', count_arr=None,
+                      rel_freq=True,
+                      norm_fac=1):
     """Counts the number of occurence in every month for a given array of binary event
     series
 
@@ -255,7 +259,8 @@ def count_tps_occ_evs(evs, counter='month', count_arr=None):
     tps_arr = get_tps_evs(evs=evs)
     if counter == 'month':
         res_c_occ = count_tps_occ(
-            tps_arr=tps_arr, counter=counter, count_arr=count_arr)
+            tps_arr=tps_arr, counter=counter, count_arr=count_arr, rel_freq=rel_freq,
+            norm_fac=norm_fac)
     else:
         raise ValueError(f'No such counter {counter} implemented yet!')
 
@@ -559,19 +564,27 @@ def get_tps4val(ts, val):
 
 
 def get_expt_ees(evs, tps, timemean='year'):
+
+    sy, ey, num_years = tu.get_time_range_years(evs)
+
     # Get selected number of EEs
     sel_tps_data = tu.get_sel_tps_ds(ds=evs, tps=tps)
+
+    # First fill time series with 0 to ensure continous time series results
+    sel_tps_data = tu.fill_time_series_val(sel_tps_data)
+    # Get the EE time series from the evs dataset
     t_ee_sel = get_ee_ts(evs=sel_tps_data)
     t_tm_sel = tu.apply_timesum(t_ee_sel, timemean=timemean)
 
     # Get total number of EEs
     t_ee_tot = get_ee_ts(evs=evs)
-    t_tm_tot = tu.apply_timesum(t_ee_tot, timemean=timemean)
-
+    # t_tm_tot = tu.apply_timesum(t_ee_tot, timemean=timemean)
+    t_tm_tot = np.count_nonzero(evs) / num_years  # average number of EREs per year
     # Fraction of EREs
     frac_ees = t_tm_sel/t_tm_tot
     # Normalize by number of days over whole time period
-    norm = len(t_ee_sel) / len(t_ee_tot)
+    norm = len(tps.time) / len(evs.time)
     # print(len(t_ee_sel), len(t_ee_tot), norm)
 
     return frac_ees / norm
+

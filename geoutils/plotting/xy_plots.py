@@ -33,10 +33,11 @@ def set_legend(ax,
         fig = ax
     loc = kwargs.pop("loc", "upper right")
     box_loc = kwargs.pop('box_loc', (0.96, 1))
-    box_loc = (0, 0) if loc == 'under' else box_loc
+    box_loc = (0.1, 0) if loc == 'under' else box_loc
     bbox_to_anchor = box_loc if loc == "outside" or loc == 'under' else None
-    loc = 'upper left' if loc == 'outside' or loc == 'under' else loc  # loc is set above
     ncol_legend = kwargs.pop('ncol_legend', 1)
+    ncol_legend = 2 if ncol_legend == 1 and loc == 'under' else ncol_legend
+    loc = 'upper left' if loc == 'outside' or loc == 'under' else loc  # loc is set above
     fsize = kwargs.pop("fontsize", pst.MEDIUM_SIZE)
     order = kwargs.pop("order", None)
     if len(label_arr) == 0:
@@ -124,8 +125,7 @@ def plot_xy(
                 cmap=lcmap, num_items=num_items,)
 
         alpha = kwargs.pop('alpha', 1)
-        fill_between = kwargs.pop('fill_between', False)
-        inverted_z_order = kwargs.pop('inv_z_order', False)
+        inverted_z_order = kwargs.pop('inv_z_order', True)
         for idx in range(num_items):
             x = x_arr[idx] if len(x_arr) > 1 else x_arr[0]
             # if type(x) == xr.DataArray and ts_axis is False:
@@ -225,7 +225,7 @@ def plot_xy(
                         y_lb = np.array(y + y_err / 2, dtype=float)
                         y_ub = np.array(y + y_err / 2, dtype=float)
 
-                    if fill_between:
+                    if len(y_err_arr) < 1:
                         c = color_arr_ci[idx] if color_arr_ci is not None else c
                         im = ax.fill_between(
                             x,
@@ -235,10 +235,10 @@ def plot_xy(
                             alpha=0.5,
                             # label=label,
                         )
-
-                    ax.errorbar(x, y, xerr=x_err, yerr=y_err,
-                                label=label, lw=lw, marker=mk, ls=ls, color=c,
-                                capsize=2)
+                    else:
+                        ax.errorbar(x, y, xerr=x_err, yerr=y_err,
+                                    label=label, lw=lw, marker=mk, ls=ls, color=c,
+                                    capsize=2)
     else:
         # Bar plot
         stacked = kwargs.pop('stacked', False)

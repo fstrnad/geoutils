@@ -12,39 +12,6 @@ from importlib import reload
 
 RADIUS_EARTH = 6371  # radius of earth in km
 
-
-def flatten_array(dataarray, mask=None, time=True, check=False):
-    """Flatten and remove NaNs.
-    """
-
-    if mask is not None:
-        idx_land = np.where(mask.data.flatten() == 1)[0]
-    else:
-        idx_land = None
-    if time is False:
-        buff = dataarray.data.flatten()
-        buff[np.isnan(buff)] = 0.0  # set missing data to climatology
-        data = buff[idx_land] if idx_land is not None else buff[:]
-    else:
-        data = []
-        for idx, t in enumerate(dataarray.time):
-            buff = dataarray.sel(time=t.data).data.flatten()
-            buff[np.isnan(buff)] = 0.0  # set missing data to climatology
-            data_tmp = buff[idx_land] if idx_land is not None else buff[:]
-            data.append(data_tmp)
-
-    # check
-    if check is True:
-        num_nonzeros = np.count_nonzero(data[-1])
-        num_landpoints = sum(~np.isnan(mask.data.flatten()))
-        gut.myprint(
-            f"The number of non-zero datapoints {num_nonzeros} "
-            + f"should approx. be {num_landpoints}."
-        )
-
-    return np.array(data)
-
-
 def def_sel_ids_ds(ds, ids):
     """Returns an dataset of climnet dataset class with the selected ids.
     note that ids are transformed to points first.

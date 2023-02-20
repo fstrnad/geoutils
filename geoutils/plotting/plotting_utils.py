@@ -5,12 +5,13 @@ import copy
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import string
+import cartopy.crs as ccrs
 import geoutils.plotting.plot_settings as pst
 from importlib import reload
 
 
 def set_title(title, ax=None, fig=None, **kwargs):
-    y_title = kwargs.pop('y_title', 1.2)
+    y_title = kwargs.pop('y_title', 1.)
     vertical_title = kwargs.pop('vertical_title', None)
     title_color = kwargs.pop('title_color', 'black')
     # fw = kwargs.pop('title_fontweight', "normal")
@@ -274,7 +275,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
     ticks = kwargs.pop('ticks', None)
     sci = kwargs.pop("sci", None)
 
-    tick_step = int(kwargs.pop("tick_step", 1))
+    tick_step = int(kwargs.pop("tick_step", 2))
     if ticks is not None:
         ticks = ticks[::tick_step]
     else:
@@ -296,8 +297,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
 
     orientation = kwargs.pop("orientation", "horizontal")
     set_cax = kwargs.pop('set_cax', False)
-    pad = kwargs.pop('pad', "15%")  # defines distance to lower y-range
-
+    pad = kwargs.pop('pad', "35%")  # defines distance to lower y-range
     if set_cax:
         if orientation == "vertical":
             loc = "right"
@@ -506,7 +506,7 @@ def plt_text(ax, text, xpos=0, ypos=0,
     fsize = kwargs.pop('fsize', pst.MEDIUM_SIZE)
     weight = kwargs.pop('weight', "bold")
     trafo_axis = kwargs.pop('transform', False)
-    box = kwargs.pop('box', True)
+    box = kwargs.pop('box', False)
     plot_box = dict(facecolor='white', edgecolor='black',
                     pad=10.0) if box else None
     if geoaxis:
@@ -516,13 +516,13 @@ def plt_text(ax, text, xpos=0, ypos=0,
             lon_pos,
             lat_pos,
             text,
-            horizontalalignment="left",
+            horizontalalignment="center",
             color=color,
             zorder=zorder,
             rotation=rot,
             fontsize=fsize,
             weight=weight,
-            transform=ax.transAxes,  # relative to range [0,1]
+            transform=ccrs.Geodetic(),
             bbox=plot_box
         )
     else:

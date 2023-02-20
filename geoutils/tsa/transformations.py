@@ -1,13 +1,13 @@
 from importlib import reload
-import climnet.utils.general_utils as gut
-import climnet.utils.statistic_utils as sut
+import geoutils.utils.general_utils as gut
+import geoutils.utils.statistic_utils as sut
 from statsmodels.tsa.ar_model import AutoReg
 import xarray as xr
 import scipy.signal as sig
 import numpy as np
 from scipy.fftpack import fft, fftfreq
 import pandas as pd
-import climnet.tsa.filters as flt
+import geoutils.tsa.filters as flt
 import nitime.algorithms as spectrum
 from tqdm import tqdm
 
@@ -142,13 +142,7 @@ def ar1_surrogates(x, N=1000):
 def ar1_surrogates_spectrum(x, N=1000, cutoff=1,
                             window=1,
                             fft_prop='Power'):
-    """In an AR(1) model
-        (x(t) - <x>)/std(x) = \gamma(x(t-1) - <x>)/std(x) + \alpha z(t) ,
-    where <x> is the process mean, \gamma and \alpha are process
-    parameters and z(t) is a Gaussian unit-variance white noise.
-
-    Args:
-        x (np.ndarraarray): array of the time series.
+    """Compute the power spectrum of an AR1 model
     """
     surr_arr = []
     surr_ts_arr = ar1_surrogates(x=x, N=N)
@@ -158,7 +152,10 @@ def ar1_surrogates_spectrum(x, N=1000, cutoff=1,
     surr_arr = np.array(surr_arr)
     lb = np.quantile(surr_arr[1:], q=0.05, axis=0)  # First is original TS
     ub = np.quantile(surr_arr[1:], q=0.95, axis=0)  # First is original TS
-    return {'freq': surr_fft['freq'], 'Power': surr_arr[0],
-            'surr': surr_arr,
-            'lb': lb, 'ub': ub,
-            'surr_ts': surr_ts_arr}
+    return {
+        'period': surr_fft['period'],
+        'freq': surr_fft['freq'],
+        'Power': surr_arr[0],
+        'surr': surr_arr,
+        'lb': lb, 'ub': ub,
+        'surr_ts': surr_ts_arr}

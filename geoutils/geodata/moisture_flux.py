@@ -33,6 +33,7 @@ class MoistureFlux(wds.Wind_Dataset):
                  load_nc_arr_w=None,
                  load_nc_arr_q=None,
                  can=True,
+                 plevels=None,
                  **kwargs):
         if load_nc_arr_q is None:
             gut.myprint(f'ERROR! Please provide specific humidity file')
@@ -42,6 +43,7 @@ class MoistureFlux(wds.Wind_Dataset):
                                   load_nc_arr_v=load_nc_arr_v,
                                   load_nc_arr_w=load_nc_arr_w,
                                   load_nc_arr_fac=load_nc_arr_q,
+                                  plevels=plevels,
                                   fac_name='q',
                                   can=False,  # anoamlies are computed later
                                   **kwargs)
