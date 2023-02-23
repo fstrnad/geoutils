@@ -7,11 +7,15 @@ import os
 import numpy as np
 import copy
 import geoutils.utils.general_utils as gut
+import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
 from importlib import reload
 import xarray as xr
-
+reload(gut)
+reload(fut)
+reload(sput)
+reload(tu)
 PATH = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -26,7 +30,7 @@ class BaseDataset():
         self,
         var_name=None,
         data_nc=None,
-        load_nc=None,
+        data_nc_arr=None,
         time_range=None,
         lon_range=[-180, 180],
         lat_range=[-90, 90],
@@ -58,38 +62,44 @@ class BaseDataset():
             decode_times (bool, optional): decode times if in nc file np.datetime64 format is provided. Defaults to True.
         """
         self.grid_type = 'rectangular'
-        if data_nc is not None and load_nc is not None:
-            raise ValueError("Specify either data or load file.")
-        # initialize dataset
-        elif data_nc is not None:
-            # check if file exists
-            if not os.path.exists(data_nc):
-                gut.myprint(f"You are here: {PATH}!")
-                gut.myprint(f'And this file is not here {data_nc}!')
-                raise ValueError(f"File does not exist {data_nc}!")
-            self.grid_step = grid_step
-            ds = self.open_ds(
-                nc_file=data_nc,
-                var_name=var_name,
-                lat_range=lat_range,
-                lon_range=lon_range,
-                time_range=time_range,
-                grid_step=grid_step,
-                large_ds=large_ds,
-                decode_times=decode_times,
-                **kwargs,
-            )
-            (
-                self.time_range,
-                self.lon_range,
-                self.lat_range,
-            ) = self.get_spatio_temp_range(ds)
-
-            self.ds = ds
+        if data_nc_arr is not None and data_nc is not None:
+            raise ValueError(f'Please either provide data_nc_arr OR data_nc!')
+        if data_nc_arr is None:
+            data_nc_arr = [data_nc]
         else:
-            self.load(load_nc=load_nc,
-                      lon_range=lon_range,
-                      lat_range=lat_range)
+            gut.myprint(f'Read multiple files (#files={len(data_nc_arr)})!')
+        # initialize dataset
+        ds_arr = []
+        for file in data_nc_arr:
+            if file is not None:
+                # check if file exists
+                if not os.path.exists(file):
+                    gut.myprint(f"You are here: {PATH}!")
+                    gut.myprint(f'And this file is not here {file}!')
+                    raise ValueError(f"File does not exist {file}!")
+                self.grid_step = grid_step
+                ds = self.open_ds(
+                    nc_file=file,
+                    var_name=var_name,
+                    lat_range=lat_range,
+                    lon_range=lon_range,
+                    time_range=time_range,
+                    grid_step=grid_step,
+                    large_ds=large_ds,
+                    decode_times=decode_times,
+                    **kwargs,
+                )
+                (
+                    self.time_range,
+                    self.lon_range,
+                    self.lat_range,
+                ) = self.get_spatio_temp_range(ds)
+                ds_arr.append(ds)
+        if len(data_nc_arr) > 1:
+            self.ds = sput.merge_datasets(datasets=ds_arr)
+        else:
+            self.ds = ds_arr[0]
+
         self.set_var(var_name=var_name)
         # detrending
         if detrend is True:
@@ -122,6 +132,7 @@ class BaseDataset():
         decode_times=True,
         **kwargs,
     ):
+        fut.print_file_location_and_size(file_path=nc_file)
         gut.myprint("Start processing data!")
 
         if large_ds:
@@ -167,10 +178,20 @@ class BaseDataset():
             gut.myprint(f'Cut the dataset {lon_range}, {lat_range}!')
             ds = self.cut_map(ds, lon_range, lat_range)
 
+        self.grid_step, self.grid_step_lon, self.grid_step_lat = sput.get_grid_step(
+            ds=ds)
         # ds = da.to_dataset(name=var_name)
 
         gut.myprint("Finished processing data")
         self.info_dict = copy.deepcopy(ds.attrs)
+
+        timemean = kwargs.pop('timemean', None)
+        if timemean is not None:
+            ds = tu.compute_timemean(ds=ds, timemean=timemean)
+        timemax = kwargs.pop('timemax', None)
+        if timemax is not None:
+            ds = tu.apply_timemax(ds=ds, timemean=timemax)
+
         return ds
 
     def load(self, load_nc, lon_range=[-180, 180], lat_range=[-90, 90]):
@@ -402,7 +423,8 @@ class BaseDataset():
         if 'time' in dims:
             self.time_attrs = ds.time.attrs
             self.time_attrs['standard_name'] = self.time_attrs['long_name'] = 'time'
-
+            self.time_attrs['axis'] = 'T'
+            
     def set_source_attrs(self):
         if self.source_attrs is None:
             raise ValueError('Source attributes is not set yet!')
@@ -1456,6 +1478,10 @@ class BaseDataset():
 
     def apply_timemean(self, timemean=None):
         self.ds = tu.compute_timemean(ds=self.ds, timemean=timemean)
+        return self.ds
+
+    def apply_timemmax(self, timemean=None):
+        self.ds = tu.apply_timemax(ds=self.ds, timemean=timemean)
         return self.ds
 
     def average_time(self, timemean='full'):

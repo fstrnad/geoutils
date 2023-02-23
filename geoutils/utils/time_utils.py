@@ -87,6 +87,15 @@ def month2str(month):
     return mstr
 
 
+def get_month_name(month_number):
+    if not isinstance(month_number, int):
+        raise ValueError(f'Month should be integer but is {type(int)}!')
+    if month_number < 1 or month_number > 12:
+        raise ValueError(
+            f'Month should be in range 1-12 but is {month_number}!')
+    return months[month_number-1]
+
+
 def get_netcdf_encoding(ds,
                         calendar='gregorian',
                         units='hours since 1900-01-01T00:00',):
@@ -331,6 +340,54 @@ def get_month_range_data(dataset, start_month="Jan", end_month="Dec"):
     )
 
     return seasonal_data
+
+
+def number2str(day):
+    day = str(int(day)) if day >= 10 else f'0{int(day)}'
+    return day
+
+
+def select_month_day_range(da, start_month, start_day, end_month, end_day):
+    """
+    Selects all values of an xarray DataArray that fall within a specified range of months and days, across all years.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        The input dataarray.
+    start_month : int
+        The starting month of the range, as an integer from 1 to 12.
+    start_day : int
+        The starting day of the range, as an integer from 1 to 31.
+    end_month : int
+        The ending month of the range, as an integer from 1 to 12.
+    end_day : int
+        The ending day of the range, as an integer from 1 to 31.
+
+    Returns
+    -------
+    xarray.DataArray
+        A new dataarray that includes all values within the specified range of months and days.
+
+    """
+    sy, ey, num_years = get_time_range_years(dataarray=da)
+    start_month = get_month_number(start_month) if isinstance(
+        start_month, str) else start_month
+    end_month = get_month_number(end_month) if isinstance(
+        end_month, str) else end_month
+    start_day = number2str(start_day)
+    end_day = number2str(end_day)
+    smi = number2str(start_month)
+    emi = number2str(end_month)
+    ranges = []
+    for year in range(sy, ey+1, 1):
+        sd = str2datetime(f'{year}-{smi}-{start_day}')
+        ed = str2datetime(f'{year}-{emi}-{end_day}')
+        ranges.append([sd, ed])
+    dates = get_dates_of_time_ranges(ranges)
+    selected_data = get_sel_tps_ds(ds=da, tps=dates)
+
+    return selected_data
 
 
 def get_idx_months(times, start_month, end_month):
@@ -605,7 +662,7 @@ def apply_timemax(ds, timemean, sm=None, em=None):
     """
     tm = get_tm_name(timemean)
 
-    gut.myprint(f"Compute {timemean}ly means of all variables!")
+    gut.myprint(f"Compute {timemean}ly maximum of all variables!")
     ds = ds.resample(time=tm).max(dim="time", skipna=True)
     if sm is not None or em is not None:
         ds = get_month_range_data(ds, start_month=sm, end_month=em)
@@ -1623,3 +1680,72 @@ def sort_time_points_by_year(tps, val='mean'):
         below=b_tps
     )
     return separate_arr
+
+
+def get_time_count_number(tps, counter='week'):
+    assert_has_time_dimension(tps)
+    times = tps.time
+    if counter == 'year':
+        counts = times.dt.isocalendar().year
+    if counter == 'month':
+        counts = times.dt.month
+    if counter == 'week':
+        counts = times.dt.isocalendar().week
+    if counter == 'day':
+        counts = times.dt.isocalendar().day
+    if counter == 'hour':
+        counts = times.dt.isocalendar().hour
+    return counts
+
+
+def get_week_dates(weeks):
+    """
+    Given an array of week numbers, return a list of tuples, where each tuple contains
+    the first calendar day of the corresponding week and the month as a string.
+
+    Parameters
+    ----------
+    weeks : list of int
+        An array of week numbers (1-52)
+
+    Returns
+    -------
+    list of tuple
+        A list of tuples, where each tuple contains a datetime object representing the
+        first calendar day of the corresponding week, and a string representing the
+        month (e.g., "January", "February", etc.)
+
+    """
+    year = 1000
+    start_date = datetime.datetime(year, 1, 1)
+    week_dates = []
+    for week in weeks:
+        week_start = start_date + datetime.timedelta(days=(week-1)*7)
+        day_of_month = week_start.day
+        month_num = week_start.month
+        month_name = get_month_name(month_number=month_num)
+        week_dates.append(f'{day_of_month}\n{month_name}')
+    return week_dates
+
+
+def daily_max(da):
+    """
+    Compute the daily maximum for each location in an xarray DataArray of hourly data.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        An xarray DataArray containing hourly data.
+
+    Returns
+    -------
+    daily_max : xarray.DataArray
+        An xarray DataArray containing the daily maximum for each location. Only days with values are included and NaNs at the end are excluded.
+    """
+    # Resample the data to daily frequency, taking the maximum value for each day
+    da_daily = da.resample(time='1D').max(keep_attrs=True)
+
+    # Exclude NaNs at the end
+    da_daily = da_daily.dropna(dim='time', how='all')
+
+    return da_daily

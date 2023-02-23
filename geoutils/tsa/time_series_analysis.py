@@ -215,12 +215,8 @@ def count_tps_occ(tps_arr, count_arr=None, counter='month',
     for idx, tps in enumerate(tps_arr):
         m_c_occ = res_c_occ_arr[idx]
         tot_num = len(tps)
-        if counter == 'month':
-            u, count = np.unique(tps.dt.month,  return_counts=True)
-        elif counter == 'year':
-            u, count = np.unique(tps.dt.year,  return_counts=True)
-        else:
-            u, count = np.unique(tps_arr,  return_counts=True)
+        counts = tu.get_time_count_number(tps, counter=counter)
+        u, count = np.unique(counts,  return_counts=True)
         u = np.array(u, dtype=int)
         for iu, u_val in enumerate(u):
             idx_cnt_arr = int(np.where(u_val == count_arr)[0])
@@ -234,6 +230,8 @@ def count_tps_occ(tps_arr, count_arr=None, counter='month',
             else:
                 m_c_occ = 0
 
+    if norm_fac == 'max':
+        norm_fac = np.max(res_c_occ_arr, axis=1)
     res_c_occ = np.mean(res_c_occ_arr, axis=0)/norm_fac
 
     return res_c_occ

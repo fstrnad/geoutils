@@ -12,6 +12,7 @@ from importlib import reload
 
 RADIUS_EARTH = 6371  # radius of earth in km
 
+
 def def_sel_ids_ds(ds, ids):
     """Returns an dataset of climnet dataset class with the selected ids.
     note that ids are transformed to points first.
@@ -973,3 +974,72 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
             ds.time.encoding['calendar'] = calendar
 
     return ds
+
+
+def get_grid_step(ds):
+    """
+    Calculates the grid step (distance between grid points) in longitude and latitude direction
+    for an xarray dataarray or dataset object.
+
+    Parameters:
+    -----------
+    ds: xarray dataarray or dataset object
+          An xarray dataarray or dataset object with 'lon' and 'lat' dimensions.
+
+    Returns:
+    --------
+    grid_step: tuple of floats
+                Tuple containing the grid step in longitude and latitude direction.
+    """
+
+    if 'lon' not in ds.dims or 'lat' not in ds.dims:
+        raise ValueError(
+            'Input dataarray or dataset does not have "lon" and "lat" dimensions.')
+
+    lon = np.array(ds.lon)
+    lat = np.array(ds.lat)
+    grid_step_lon = np.round(np.abs(lon[1] - lon[0]), 1)
+    grid_step_lat = np.round(np.abs(lat[1] - lat[0]), 1)
+
+    if grid_step_lat == grid_step_lon:
+        grid_step = grid_step_lat
+    else:
+        gut.myprint(
+            f'Different grid step in lon {grid_step_lon} and lat {grid_step_lat} direction!')
+        grid_step = grid_step_lat
+    return grid_step, grid_step_lon, grid_step_lat
+
+
+def merge_datasets(datasets):
+    """
+    Merges multiple xarray datasets into a single dataset, checking for consistency of lon and lat dimensions.
+
+    Args:
+    datasets (list): A list of xarray datasets.
+
+    Returns:
+    merged_dataset (xarray.Dataset): A merged xarray dataset with sorted time points.
+
+    Raises:
+    ValueError: If the datasets have inconsistent lon or lat dimensions.
+    """
+
+    # Check for consistency of lon and lat dimensions
+    ref_ds = datasets[0]
+    for ds in datasets[1:]:
+        if not np.array_equal(ds['lon'], ref_ds['lon']) or not np.array_equal(ds['lat'], ref_ds['lat']):
+            raise ValueError("Inconsistent lon or lat dimensions")
+
+    # Check consistency of variable names
+    variable_names = [set(ds.variables.keys()) for ds in datasets]
+    if not all(x == variable_names[0] for x in variable_names):
+        raise ValueError('Variable names are not consistent.')
+
+    # Merge the datasets
+    gut.myprint(f'Merge {len(datasets)} datasets to 1 dataset')
+    merged_dataset = xr.concat(datasets, dim='time')
+
+    # Sort the time dimension in increasing order
+    merged_dataset = merged_dataset.sortby('time')
+
+    return merged_dataset

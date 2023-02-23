@@ -73,10 +73,6 @@ def get_day_progression_arr(data, tps, start,
             else:
                 mean_ts = this_comp_ts[var].quantile(q=q,
                                                      dim='time')
-                # this_comp_ts = xr.where(
-                #     this_comp_ts < 1, this_comp_ts, np.nan
-                # )
-                # mean_ts = this_comp_ts[var].count(dim='time')
         else:
             mean_ts = this_comp_ts.mean(dim='time')
 
@@ -183,7 +179,7 @@ def get_box_propagation(ds, loc_dict, tps,
         regions = list(loc_dict.keys())
     for region in tqdm(regions):
         # EE TS
-        if 'points' in ds.dims:
+        if 'points' in list(loc_dict[region]['data'].dims):
             pids = loc_dict[region]['pids']
             pr_data = ds.sel(points=pids)
         else:
