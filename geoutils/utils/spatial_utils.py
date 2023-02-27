@@ -998,8 +998,8 @@ def get_grid_step(ds):
 
     lon = np.array(ds.lon)
     lat = np.array(ds.lat)
-    grid_step_lon = np.round(np.abs(lon[1] - lon[0]), 1)
-    grid_step_lat = np.round(np.abs(lat[1] - lat[0]), 1)
+    grid_step_lon = np.round(np.abs(lon[1] - lon[0]), 2)
+    grid_step_lat = np.round(np.abs(lat[1] - lat[0]), 2)
 
     if grid_step_lat == grid_step_lon:
         grid_step = grid_step_lat

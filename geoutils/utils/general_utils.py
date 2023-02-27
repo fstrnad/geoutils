@@ -421,16 +421,13 @@ def get_varnames_ds(ds):
     return list(ds.keys())
 
 
-def exist_file(filepath, verbose=True):
-    if os.path.exists(filepath):
-        myprint(f"File {filepath} exists!", verbose=verbose)
-        return True
-    else:
-        return False
+
 
 
 def save_ds(ds, filepath, unlimited_dim=None,
-            classic_nc=False, backup=False):
+            classic_nc=False,
+            zlib=True,
+            backup=False):
     if os.path.exists(filepath):
         myprint(f"File {filepath} already exists!")
         if backup:
@@ -443,6 +440,7 @@ def save_ds(ds, filepath, unlimited_dim=None,
     dirname = os.path.dirname(filepath)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
+
     if classic_nc:
         myprint('Store as NETCDF4_CLASSIC!')
         ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
@@ -451,6 +449,9 @@ def save_ds(ds, filepath, unlimited_dim=None,
         ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
                      engine='netcdf4')
 
+    if zlib:
+        encoding = {var: {'zlib': True} for var in ds.data_vars}
+        ds.to_netcdf(filepath, encoding=encoding)
     myprint(f"File {filepath} written!")
 
     return None

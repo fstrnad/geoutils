@@ -1,6 +1,7 @@
 # Geoutils
 
-This is a useful package for processing and plotting geodata provided as nc-files and pre- and postprocessing them accordingly.
+This is a small package for processing and plotting geodata provided as nc-files and pre- and postprocessing them accordingly.
+It is mostly build upon the xarray package. 
 
 ### 1. Clone repository:
 ```
@@ -17,6 +18,7 @@ The following packages are required for running the package:
 - cartopy
 - scipy
 - scikit-learn
+
 The required packages are provided by the condaEnv.yml file.
 
 To install the package and all its dependencies, we recommend the following steps:
@@ -25,6 +27,11 @@ Create a new environment and install all required packages by running:
 ```
 conda env create -f condaEnv.yml
 conda activate geoutils
+```
+
+Otherwise you can install the required packages on your own python environment and install the package by:
+```
+pip install -e .
 ```
 
 ### 3. Download data

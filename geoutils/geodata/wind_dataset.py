@@ -30,10 +30,10 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
     """
 
     def __init__(self,
-                 load_nc_arr_u=None,
-                 load_nc_arr_v=None,
-                 load_nc_arr_w=None,
-                 load_nc_arr_fac=None,
+                 data_nc_arr_u=None,
+                 data_nc_arr_v=None,
+                 data_nc_arr_w=None,
+                 data_nc_arr_fac=None,
                  compute_ws=False,
                  plevels=None,
                  load_nc=None,
@@ -45,11 +45,11 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         w_kwargs = copy.deepcopy(kwargs)
         self.can = can
         if load_nc is None:
-            ds_uwind = mp.MultiPressureLevelDataset(load_nc_arr=load_nc_arr_u,
+            ds_uwind = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_u,
                                                     plevels=plevels,
                                                     can=False,  # Anomalies are computed later all together
                                                     **u_kwargs)
-            ds_vwind = mp.MultiPressureLevelDataset(load_nc_arr=load_nc_arr_v,
+            ds_vwind = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_v,
                                                     plevels=plevels,
                                                     can=False,
                                                     **v_kwargs)
@@ -63,8 +63,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             if self.v_name == 'v':
                 v = v.rename('V')
 
-            if load_nc_arr_fac is not None:
-                ds_fac = mp.MultiPressureLevelDataset(load_nc_arr=load_nc_arr_fac,
+            if data_nc_arr_fac is not None:
+                ds_fac = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_fac,
                                                       plevels=plevels,
                                                       can=False,
                                                       **w_kwargs)
@@ -78,8 +78,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             self.vert_velocity = False
             w = None
             ds_wwind = None
-            if load_nc_arr_w is not None:
-                ds_wwind = mp.MultiPressureLevelDataset(load_nc_arr=load_nc_arr_w,
+            if data_nc_arr_w is not None:
+                ds_wwind = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_w,
                                                         plevels=plevels,
                                                         can=False,
                                                         **w_kwargs)

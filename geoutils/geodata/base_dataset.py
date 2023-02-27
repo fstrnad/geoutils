@@ -6,6 +6,7 @@ Base class for the geodata datasets with lon-lat resolution.
 import os
 import numpy as np
 import copy
+from tqdm import tqdm
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
@@ -70,7 +71,7 @@ class BaseDataset():
             gut.myprint(f'Read multiple files (#files={len(data_nc_arr)})!')
         # initialize dataset
         ds_arr = []
-        for file in data_nc_arr:
+        for file in tqdm(data_nc_arr):
             if file is not None:
                 # check if file exists
                 if not os.path.exists(file):
@@ -242,7 +243,8 @@ class BaseDataset():
     def save(self, filepath, save_params=True,
              unlimited_dim=None,
              var_list=None,
-             classic_nc=False):
+             classic_nc=False,
+             zlib=False):
         """Save the dataset class object to file.
         Args:
         ----
@@ -261,7 +263,8 @@ class BaseDataset():
 
         gut.save_ds(ds=ds_temp, filepath=filepath,
                     unlimited_dim=unlimited_dim,
-                    classic_nc=classic_nc)
+                    classic_nc=classic_nc,
+                    zlib=zlib)
 
         return None
 
@@ -380,6 +383,11 @@ class BaseDataset():
             gut.myprint(
                 "Rename top net thermal radiation (ttr) to: olr!\n Multiply by -1!")
             ds['olr'] *= -1
+
+        if "ar_binary_tag" in names:
+            ds = ds.rename({"ar_binary_tag": "ar"})
+            gut.myprint(
+                "Rename ar_binary_tag (ttr) to: ar!")
         return ds
 
     def get_vars(self, ds=None, verbose=False):
@@ -424,7 +432,7 @@ class BaseDataset():
             self.time_attrs = ds.time.attrs
             self.time_attrs['standard_name'] = self.time_attrs['long_name'] = 'time'
             self.time_attrs['axis'] = 'T'
-            
+
     def set_source_attrs(self):
         if self.source_attrs is None:
             raise ValueError('Source attributes is not set yet!')

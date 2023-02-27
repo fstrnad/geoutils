@@ -149,9 +149,10 @@ def get_max_num_tps(ds, q=None):
 def get_sel_tps_ds(ds, tps, remove_tp=False, verbose=False):
     if isinstance(tps, xr.DataArray):
         tps = tps.time.data
-
-    if gut.is_single_tp(tps=tps):
+    stp = gut.is_single_tp(tps=tps)
+    if stp:
         tps = [tps]
+
 
     if len(tps) == 0:
         gut.myprint(f'Empty list of time points')
@@ -175,6 +176,9 @@ def get_sel_tps_ds(ds, tps, remove_tp=False, verbose=False):
                 print('No tps not in dataset!')
                 return []
             ds_sel = ds.sel(time=tps_sel, method='nearest')
+
+    # if stp:
+    #     ds_sel.drop_dims('time')
 
     return ds_sel
 

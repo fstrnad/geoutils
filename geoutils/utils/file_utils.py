@@ -48,6 +48,14 @@ def assert_file_exists(file_path):
         raise ValueError(f"File {file_path} does not exist.")
 
 
+def exist_file(filepath, verbose=True):
+    if os.path.exists(filepath):
+        gut.myprint(f"File {filepath} exists!", verbose=verbose)
+        return True
+    else:
+        return False
+
+
 def print_file_location_and_size(file_path):
     """
     Prints the location and memory size of a given file.
