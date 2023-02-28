@@ -16,6 +16,7 @@ The following packages are required for running the package:
 - numpy
 - metpy
 - windspharm
+- matplotlib
 - cartopy
 - scipy
 - scikit-learn

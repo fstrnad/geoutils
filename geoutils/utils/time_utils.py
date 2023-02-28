@@ -1,3 +1,4 @@
+import re
 import datetime
 import math
 import geoutils.utils.spatial_utils as sput
@@ -99,7 +100,11 @@ def get_month_name(month_number):
 def get_netcdf_encoding(ds,
                         calendar='gregorian',
                         units='hours since 1900-01-01T00:00',):
+
     time = ds.time
+    if check_AR_strings(da=time):
+        time = convert_AR_xarray_to_timepoints(da=time)
+
     time = time.convert_calendar(calendar=calendar)
     gut.myprint('Set time to np.datetime[ns] time format!')
     ds = ds.assign_coords(
@@ -152,7 +157,6 @@ def get_sel_tps_ds(ds, tps, remove_tp=False, verbose=False):
     stp = gut.is_single_tp(tps=tps)
     if stp:
         tps = [tps]
-
 
     if len(tps) == 0:
         gut.myprint(f'Empty list of time points')
@@ -1753,3 +1757,78 @@ def daily_max(da):
     da_daily = da_daily.dropna(dim='time', how='all')
 
     return da_daily
+
+
+def parse_AR_date_string(date_string):
+    """
+    Parses a date string in the format 'yyyy-mm-dd hh:mm:ss_x' and returns a numpy.datetime64
+    object representing the date and time.
+
+    Parameters
+    ----------
+    date_string : str
+        A date string in the format 'yyyy-mm-dd hh:mm:ss_x'.
+
+    Returns
+    -------
+    numpy.datetime64
+        A numpy.datetime64 object representing the date and time in the input string.
+
+    """
+    date, _ = date_string.split('_')  # discard the '_x' part
+    return np.datetime64(date)
+
+
+def convert_AR_xarray_to_timepoints(da):
+    """
+    Converts an xarray dataarray containing dates in the format 'yyyy-mm-dd hh:mm:ss_x'
+    to an xarray dataarray of time points.
+
+    Parameters
+    ----------
+    da : xarray.core.dataarray.DataArray
+        An xarray dataarray containing dates in the format 'yyyy-mm-dd hh:mm:ss_x'.
+
+    Returns
+    -------
+    xarray.core.dataarray.DataArray
+        An xarray dataarray of time points.
+
+    """
+    # Parse date strings using parse_date_string function
+    dates = np.array([parse_AR_date_string(ds) for ds in da.values])
+
+    # Create an xarray dataarray of time points
+    time_coords = xr.DataArray(dates, dims='time', coords={'time': dates})
+    return time_coords
+
+
+def check_AR_strings(da):
+    """
+    Checks if all strings in a given xarray object match the format 'X-Y-Z A:B:C_D' where X, Y, Z, A, B, C and D can be any integer.
+
+    Args:
+        da (xarray.DataArray): The input xarray object with the data array to check.
+
+    Returns:
+        bool: True if all strings match the format, False otherwise.
+    """
+    arr = da.values.flatten().astype(str)
+    for s in arr:
+        if not check_AR_string_format(s):
+            return False
+    return True
+
+
+def check_AR_string_format(s):
+    """
+    Checks if a given string matches the format 'X-Y-Z A:B:C_D' where X, Y, Z, A, B, C and D can be any integer.
+
+    Args:
+        s (str): The input string to check.
+
+    Returns:
+        bool: True if the string matches the format, False otherwise.
+    """
+    pattern = r"^-?\d+-\d+-?\d* \d+:\d+:\d+_\d+$"
+    return bool(re.match(pattern, s))

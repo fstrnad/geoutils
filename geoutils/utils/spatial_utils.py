@@ -887,8 +887,8 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
     """
     reload(tu)
 
-    lon_lat_names = ['longitude', 'latitude', 't', 'month', 'time_counter']
-    xr_lon_lat_names = ['lon', 'lat', 'time', 'time', 'time']
+    lon_lat_names = ['longitude', 'latitude', 't', 'month', 'time_counter', 'AR_key']
+    xr_lon_lat_names = ['lon', 'lat', 'time', 'time', 'time', 'time']
     dims = list(ds.dims)
     dim3 = len(dims) > 2
     for idx, lon_lat in enumerate(lon_lat_names):
