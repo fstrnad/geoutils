@@ -99,14 +99,15 @@ def get_month_name(month_number):
 
 def get_netcdf_encoding(ds,
                         calendar='gregorian',
-                        units='hours since 1900-01-01T00:00',):
+                        units='hours since 1900-01-01T00:00',
+                        verbose=True):
 
     time = ds.time
     if check_AR_strings(da=time):
         time = convert_AR_xarray_to_timepoints(da=time)
 
     time = time.convert_calendar(calendar=calendar)
-    gut.myprint('Set time to np.datetime[ns] time format!')
+    gut.myprint('Set time to np.datetime[ns] time format!', verbose=verbose)
     ds = ds.assign_coords(
         time=time.data.astype('datetime64[ns]'))
     # ds = ds.transpose('time', 'lat', 'lon
@@ -637,7 +638,7 @@ def get_mean_time_series(da, lon_range, lat_range, time_roll=0):
     return ts_mean, ts_std
 
 
-def compute_timemean(ds, timemean, sm=None, em=None, dropna=True):
+def compute_timemean(ds, timemean, dropna=True, verbose=True):
     """Computes the monmean average on a given xr.dataset
 
     Args:
@@ -648,18 +649,17 @@ def compute_timemean(ds, timemean, sm=None, em=None, dropna=True):
     """
     tm = get_tm_name(timemean)
 
-    gut.myprint(f"Compute {timemean}ly means of all variables!")
+    gut.myprint(f"Compute {timemean}ly means of all variables!", verbose=verbose)
     if dropna:
         ds = ds.resample(time=tm).mean(
             dim="time", skipna=True).dropna(dim="time")
     else:
         ds = ds.resample(time=tm).mean(dim="time", skipna=True)
-    if sm is not None or em is not None:
-        ds = get_month_range_data(ds, start_month=sm, end_month=em)
+
     return ds
 
 
-def apply_timemax(ds, timemean, sm=None, em=None):
+def apply_timemax(ds, timemean,  dropna=True, verbose=True):
     """Computes the monmax on a given xr.dataset
 
     Args:
@@ -670,10 +670,13 @@ def apply_timemax(ds, timemean, sm=None, em=None):
     """
     tm = get_tm_name(timemean)
 
-    gut.myprint(f"Compute {timemean}ly maximum of all variables!")
-    ds = ds.resample(time=tm).max(dim="time", skipna=True)
-    if sm is not None or em is not None:
-        ds = get_month_range_data(ds, start_month=sm, end_month=em)
+    gut.myprint(f"Compute {timemean}ly maximum of all variables!", verbose=verbose)
+    if dropna:
+        ds = ds.resample(time=tm).mean(
+            dim="time", skipna=True).dropna(dim="time")
+    else:
+        ds = ds.resample(time=tm).mean(dim="time", skipna=True)
+
     return ds
 
 
@@ -1157,6 +1160,11 @@ def get_dates_of_time_range(time_range, freq='D'):
         date_arr = np.concatenate(
             [date_arr, [date_arr[-1] + np.timedelta64(1, freq)]], axis=0
         )
+
+    date_arr = gut.create_xr_ds(data=date_arr,
+                                dims=['time'],
+                                coords={'time': date_arr})
+
     return date_arr
 
 
@@ -1165,10 +1173,14 @@ def get_dates_of_time_ranges(time_ranges, freq='D'):
     arr = np.array([], dtype=dtype)
     for time_range in time_ranges:
         arr = np.concatenate(
-            [arr, get_dates_of_time_range(time_range, freq=freq)], axis=0
+            [arr, get_dates_of_time_range(
+                time_range, freq=freq).time.data], axis=0
         )
     # Also sort the array
     arr = np.sort(arr)
+    arr = gut.create_xr_ds(data=arr,
+                           dims=['time'],
+                           coords={'time': arr})
     return arr
 
 

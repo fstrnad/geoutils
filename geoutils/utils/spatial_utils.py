@@ -446,8 +446,37 @@ def get_ts_in_range(ds,
             f'Dimensions have to contain points or lat-lon but are {dims}')
 
 
+def gdistance(pt1, pt2, radius=RADIUS_EARTH):
+    """Distance between two points pt1 and pt2 given as tuple (lon1,lat1) and (lon2,lat2)
+
+    Args:
+        pt1 (tuple): tuple of floats.
+        pt2 (tuple): tuple of floats.
+        radius (float, optional): Radius. Defaults to RADIUS_EARTH.
+
+    Returns:
+        float: distance between pt1 and pt2.
+    """
+    lon1, lat1 = pt1[1], pt1[0]
+    lon2, lat2 = pt2[1], pt2[0]
+    return haversine(lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2)
+
+
 @ np.vectorize
 def haversine(lon1, lat1, lon2, lat2, radius=1):
+    """Computes spatial distance between two points, given as (lon1,lat1) and
+    (lon2,lat2).
+
+    Args:
+        lon1 (float): longitude of point 1.
+        lat1 (float): latitude of point1.
+        lon2 (float): longitude of point 2
+        lat2 (float): latitude of point 2.
+        radius (float, optional): radius. Defaults to 1.
+
+    Returns:
+        float: distance between points.
+    """
     lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])
     dlon = lon2 - lon1
     dlat = lat2 - lat1
@@ -881,23 +910,24 @@ def da_lon2_360(da):
 
 
 def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
-                     freq='D'):
+                     freq='D', verbose=True):
     """
     Checks whether the dimensions are the correct ones for xarray!
     """
     reload(tu)
 
-    lon_lat_names = ['longitude', 'latitude', 't', 'month', 'time_counter', 'AR_key']
+    lon_lat_names = ['longitude', 'latitude',
+                     't', 'month', 'time_counter', 'AR_key']
     xr_lon_lat_names = ['lon', 'lat', 'time', 'time', 'time', 'time']
     dims = list(ds.dims)
     dim3 = len(dims) > 2
     for idx, lon_lat in enumerate(lon_lat_names):
         if lon_lat in dims:
-            gut.myprint(dims)
-            gut.myprint(f'Rename:{lon_lat} : {xr_lon_lat_names[idx]} ')
+            gut.myprint(
+                f'Rename:{lon_lat} : {xr_lon_lat_names[idx]}', verbose=verbose)
             ds = ds.rename({lon_lat: xr_lon_lat_names[idx]})
             dims = list(ds.dims)
-            gut.myprint(dims)
+            gut.myprint(dims, verbose=verbose)
     ds = remove_single_dim(ds=ds)
     ds = remove_useless_variables(ds=ds)
 
@@ -913,7 +943,7 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
     if dim3:
         # Actually change location in memory if necessary!
         ds = ds.transpose("lat", "lon", "time").compute()
-        gut.myprint('3d object transposed to lat-lon-time!')
+        gut.myprint('3d object transposed to lat-lon-time!', verbose=verbose)
     else:
         ds = ds.transpose('lat', 'lon').compute()
         gut.myprint('2d oject transposed to lat-lon!')
@@ -932,7 +962,7 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
         ds = ds.sortby('lon')
         ds = ds.sortby('lat')
         gut.myprint(
-            'Sorted longitudes and latitudes in ascending order, respectively')
+            'Sorted longitudes and latitudes in ascending order, respectively', verbose=verbose)
 
     if 'time' in dims:
         if ts_days:
@@ -942,6 +972,7 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
                 reload(tu)
                 ds = tu.get_netcdf_encoding(ds=ds,
                                             calendar='gregorian',
+                                            verbose=verbose
                                             )
         else:
             time_ds = ds.time

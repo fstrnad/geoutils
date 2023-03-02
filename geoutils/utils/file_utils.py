@@ -35,7 +35,7 @@ def find_files_with_string(folder_path: str, search_string: str = None) -> list:
 
     gut.myprint(f'Found {len(file_list)} files!')
 
-    return file_list
+    return np.array(file_list)
 
 
 def assert_folder_exists(folder_path):
@@ -56,7 +56,7 @@ def exist_file(filepath, verbose=True):
         return False
 
 
-def print_file_location_and_size(file_path):
+def print_file_location_and_size(file_path, verbose=True):
     """
     Prints the location and memory size of a given file.
 
@@ -80,5 +80,7 @@ def print_file_location_and_size(file_path):
         file_size /= 1024
         size_unit = "GB"
 
-    gut.myprint(f"File location: {os.path.abspath(file_path)}")
-    gut.myprint(f"File size: {file_size:.2f} {size_unit}")
+    gut.myprint(f"File location: {os.path.abspath(file_path)}", verbose=verbose)
+    gut.myprint(f"File size: {file_size:.2f} {size_unit}", verbose=verbose)
+
+    return None

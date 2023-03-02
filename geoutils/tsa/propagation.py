@@ -270,3 +270,21 @@ def get_quantile_progression_arr(ds, tps, start,
         day_arr = xr.where(mask, day, day_arr)
 
     return day_arr
+
+
+def count_non_nans(da,
+                   q=None,
+                   th=None,
+                   normalize=False):
+
+    if q is not None:
+        da = xr.where(da.quantile(q=q) > th, da, np.nan)
+    elif th is not None:
+        da = xr.where(da > th, da, np.nan)
+
+    evs_da = xr.where(~np.isnan(da), 1, np.nan)
+    counts = evs_da.sum(dim='time')
+    if normalize:
+        counts = counts*10 / len(evs_da.time)
+
+    return counts

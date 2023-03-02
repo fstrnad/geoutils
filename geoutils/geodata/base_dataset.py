@@ -42,6 +42,7 @@ class BaseDataset():
         month_range=None,
         lsm_file=None,
         decode_times=True,
+        verbose=True,
         **kwargs,
     ):
         """Initializes a BaseDataset object with an nc file provided.
@@ -75,7 +76,7 @@ class BaseDataset():
             if file is not None:
                 # check if file exists
                 if not os.path.exists(file):
-                    gut.myprint(f"You are here: {PATH}!")
+                    gut.myprint(f"You are here: {PATH}!", verbose=verbose)
                     gut.myprint(f'And this file is not here {file}!')
                     raise ValueError(f"File does not exist {file}!")
                 self.grid_step = grid_step
@@ -88,6 +89,7 @@ class BaseDataset():
                     grid_step=grid_step,
                     large_ds=large_ds,
                     decode_times=decode_times,
+                    verbose=verbose,
                     **kwargs,
                 )
                 (
@@ -131,17 +133,18 @@ class BaseDataset():
         lat_range=[-90, 90],
         use_ds_grid=False,
         decode_times=True,
+        verbose=True,
         **kwargs,
     ):
-        fut.print_file_location_and_size(file_path=nc_file)
-        gut.myprint("Start processing data!")
+        fut.print_file_location_and_size(file_path=nc_file, verbose=verbose)
+        gut.myprint("Start processing data!", verbose=verbose)
 
         if large_ds:
             ds = xr.open_dataset(nc_file, chunks={"time": 100})
         else:
             ds = xr.open_dataset(nc_file, decode_times=decode_times)
 
-        ds = self.check_dimensions(ds, ts_days=decode_times, **kwargs)
+        ds = self.check_dimensions(ds, ts_days=decode_times, verbose=verbose, **kwargs)
         self.dims = self.get_dims(ds=ds)
         ds = self.rename_var_era5(ds)
 
@@ -157,10 +160,10 @@ class BaseDataset():
         grid_step_lat = kwargs.pop('grid_step_lat', None)
 
         if grid_step_lat is not None and grid_step_lon is None:
-            gut.myprint(f'Grid_step_lon not specified, but grid_step_lat is!')
+            gut.myprint(f'Grid_step_lon not specified, but grid_step_lat is!', verbose=verbose)
             grid_step_lon = grid_step_lat
         if grid_step_lon is not None and grid_step_lat is None:
-            gut.myprint(f'Grid_step_lat not specified, but grid_step_lon is!')
+            gut.myprint(f'Grid_step_lat not specified, but grid_step_lon is!', verbose=verbose)
             grid_step_lat = grid_step_lon
 
         if grid_step_lat is not None or grid_step_lon is not None:
@@ -176,22 +179,22 @@ class BaseDataset():
         if large_ds:
             ds.unify_chunks()
         if lon_range != [-180, 180] or lat_range != [-90, 90]:
-            gut.myprint(f'Cut the dataset {lon_range}, {lat_range}!')
+            gut.myprint(f'Cut the dataset {lon_range}, {lat_range}!', verbose=verbose)
             ds = self.cut_map(ds, lon_range, lat_range)
 
         self.grid_step, self.grid_step_lon, self.grid_step_lat = sput.get_grid_step(
             ds=ds)
         # ds = da.to_dataset(name=var_name)
 
-        gut.myprint("Finished processing data")
+        gut.myprint("Finished processing data", verbose=verbose)
         self.info_dict = copy.deepcopy(ds.attrs)
 
         timemean = kwargs.pop('timemean', None)
         if timemean is not None:
-            ds = tu.compute_timemean(ds=ds, timemean=timemean)
+            ds = tu.compute_timemean(ds=ds, timemean=timemean, verbose=verbose)
         timemax = kwargs.pop('timemax', None)
         if timemax is not None:
-            ds = tu.apply_timemax(ds=ds, timemean=timemax)
+            ds = tu.apply_timemax(ds=ds, timemean=timemax, verbose=verbose)
 
         return ds
 
@@ -289,7 +292,7 @@ class BaseDataset():
         return None
 
     # ############# functions for opening and processing input data ############
-    def check_dimensions(self, ds, **kwargs):
+    def check_dimensions(self, ds, verbose=True, **kwargs):
         """
         Checks whether the dimensions are the correct ones for xarray!
         """
@@ -304,7 +307,8 @@ class BaseDataset():
                                    lon360=lon360,
                                    sort=sort,
                                    keep_time=keep_time,
-                                   freq=freq)
+                                   freq=freq,
+                                   verbose=verbose)
         # Set time series to days
         if len(list(ds.dims)) > 2:
             ds = self.check_time(ds, **kwargs)
@@ -1484,12 +1488,12 @@ class BaseDataset():
             dataarray=self.w_grad, group=group)
         return self.w_grad, self.w_grad_an
 
-    def apply_timemean(self, timemean=None):
-        self.ds = tu.compute_timemean(ds=self.ds, timemean=timemean)
+    def apply_timemean(self, timemean=None, verbose=True):
+        self.ds = tu.compute_timemean(ds=self.ds, timemean=timemean, verbose=verbose)
         return self.ds
 
-    def apply_timemmax(self, timemean=None):
-        self.ds = tu.apply_timemax(ds=self.ds, timemean=timemean)
+    def apply_timemmax(self, timemean=None, verbose=True):
+        self.ds = tu.apply_timemax(ds=self.ds, timemean=timemean, verbose=verbose)
         return self.ds
 
     def average_time(self, timemean='full'):
