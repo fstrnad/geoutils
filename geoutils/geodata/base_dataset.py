@@ -144,7 +144,8 @@ class BaseDataset():
         else:
             ds = xr.open_dataset(nc_file, decode_times=decode_times)
 
-        ds = self.check_dimensions(ds, ts_days=decode_times, verbose=verbose, **kwargs)
+        ds = self.check_dimensions(
+            ds, ts_days=decode_times, verbose=verbose, **kwargs)
         self.dims = self.get_dims(ds=ds)
         ds = self.rename_var_era5(ds)
 
@@ -160,10 +161,12 @@ class BaseDataset():
         grid_step_lat = kwargs.pop('grid_step_lat', None)
 
         if grid_step_lat is not None and grid_step_lon is None:
-            gut.myprint(f'Grid_step_lon not specified, but grid_step_lat is!', verbose=verbose)
+            gut.myprint(
+                f'Grid_step_lon not specified, but grid_step_lat is!', verbose=verbose)
             grid_step_lon = grid_step_lat
         if grid_step_lon is not None and grid_step_lat is None:
-            gut.myprint(f'Grid_step_lat not specified, but grid_step_lon is!', verbose=verbose)
+            gut.myprint(
+                f'Grid_step_lat not specified, but grid_step_lon is!', verbose=verbose)
             grid_step_lat = grid_step_lon
 
         if grid_step_lat is not None or grid_step_lon is not None:
@@ -179,7 +182,8 @@ class BaseDataset():
         if large_ds:
             ds.unify_chunks()
         if lon_range != [-180, 180] or lat_range != [-90, 90]:
-            gut.myprint(f'Cut the dataset {lon_range}, {lat_range}!', verbose=verbose)
+            gut.myprint(
+                f'Cut the dataset {lon_range}, {lat_range}!', verbose=verbose)
             ds = self.cut_map(ds, lon_range, lat_range)
 
         self.grid_step, self.grid_step_lon, self.grid_step_lat = sput.get_grid_step(
@@ -675,6 +679,7 @@ class BaseDataset():
             dtype = type(ds)
             raise ValueError(
                 f'ds needs to be of type xr.DataArray but is of type {dtype}!')
+
         return dims
 
     def get_idx_for_loc(self, locs):
@@ -795,6 +800,7 @@ class BaseDataset():
             # Choose first all ids in lon-lat range!
             ids_lst, _ = self.get_idx_region(
                 this_loc_dict, def_map=None)  # these are ids, not points!
+            locs = self.get_locs_for_indices(ids_lst)
 
             if len(ids_lst) > 0:
                 # Representative Ids for every location
@@ -825,6 +831,7 @@ class BaseDataset():
 
                     this_loc_dict["rep_ids"] = np.array(rep_ids)
                     this_loc_dict["loc"] = loc
+                    this_loc_dict["locs"] = locs
                     this_loc_dict['ids'] = ids_lst
                     this_loc_dict['pids'] = pids
                     this_loc_dict['data'] = data
@@ -1489,11 +1496,13 @@ class BaseDataset():
         return self.w_grad, self.w_grad_an
 
     def apply_timemean(self, timemean=None, verbose=True):
-        self.ds = tu.compute_timemean(ds=self.ds, timemean=timemean, verbose=verbose)
+        self.ds = tu.compute_timemean(
+            ds=self.ds, timemean=timemean, verbose=verbose)
         return self.ds
 
     def apply_timemmax(self, timemean=None, verbose=True):
-        self.ds = tu.apply_timemax(ds=self.ds, timemean=timemean, verbose=verbose)
+        self.ds = tu.apply_timemax(
+            ds=self.ds, timemean=timemean, verbose=verbose)
         return self.ds
 
     def average_time(self, timemean='full'):

@@ -103,30 +103,40 @@ def set_extent(da, ax,
     else:
         projection = ccrs.PlateCarree(central_longitude=0)
 
-    if [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
-        if da is None and lat_range is None and lon_range is None:
-            set_global = True
-        else:
-            min_ext_lon = float(
-                np.min(da.coords["lon"])) if da is not None else min_ext_lon
-            max_ext_lon = float(
-                np.max(da.coords["lon"])) if da is not None else max_ext_lon
-            min_ext_lat = float(
-                np.min(da.coords["lat"])) if da is not None else min_ext_lat
-            max_ext_lat = float(
-                np.max(da.coords["lat"])) if da is not None else max_ext_lat
-            if lat_range is not None or lon_range is not None:
-                lat_range = lat_range if lat_range is not None else [-90, 90]
-                lon_range = lon_range if lon_range is not None else [-180, 180]
-                min_ext_lon = np.min(lon_range)
-                max_ext_lon = np.max(lon_range)
-                min_ext_lat = np.min(lat_range)
-                max_ext_lat = np.max(lat_range)
+    if not isinstance(da, xr.DataArray):
+        # expect list of tuple of type (lon, lat)
+        min_ext_lon = np.min(da[:, 0])
+        min_ext_lat = np.min(da[:, 1])
+        max_ext_lon = np.max(da[:, 0])
+        max_ext_lat = np.max(da[:, 1])
 
-            if not set_global:
-                if abs(min_ext_lon) > 179 and abs(max_ext_lon) > 179 and abs(min_ext_lat) > 89 and abs(max_ext_lat) > 89:
-                    set_global = True
-                    gut.myprint('WARNING! Set global map!')
+    else:
+        if [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
+            if da is None and lat_range is None and lon_range is None:
+                set_global = True
+            else:
+                min_ext_lon = float(
+                    np.min(da.coords["lon"])) if da is not None else min_ext_lon
+                max_ext_lon = float(
+                    np.max(da.coords["lon"])) if da is not None else max_ext_lon
+                min_ext_lat = float(
+                    np.min(da.coords["lat"])) if da is not None else min_ext_lat
+                max_ext_lat = float(
+                    np.max(da.coords["lat"])) if da is not None else max_ext_lat
+    if lat_range is not None or lon_range is not None:
+        lat_range = lat_range if lat_range is not None else [
+            min_ext_lat, max_ext_lat]
+        lon_range = lon_range if lon_range is not None else [
+            min_ext_lon, max_ext_lon]
+        min_ext_lon = np.min(lon_range)
+        max_ext_lon = np.max(lon_range)
+        min_ext_lat = np.min(lat_range)
+        max_ext_lat = np.max(lat_range)
+
+    if not set_global:
+        if abs(min_ext_lon) > 179 and abs(max_ext_lon) > 179 and abs(min_ext_lat) > 89 and abs(max_ext_lat) > 89:
+            set_global = True
+            gut.myprint('WARNING! Set global map!')
     if set_global:
         ax.set_global()
     else:
@@ -286,6 +296,11 @@ def plot_map(dmap: xr.DataArray,
     else:
         if projection is None:
             projection = 'PlateCarree'  # Set default to PlateCarree
+
+    if not isinstance(dmap, xr.DataArray) and plot_type != 'points':
+        raise ValueError(
+            f'data needs to be xarray object for plot_type = {plot_type}!')
+
     ax, fig, kwargs = create_map(
         da=dmap,
         ax=ax,
@@ -312,14 +327,27 @@ def plot_map(dmap: xr.DataArray,
     # interpolate grid of points to regular grid
     grid_step = kwargs.pop('grid_step', 1)  # by default 1 grid
 
-    if 'points' in list(dmap.dims):
-        if plot_type != 'points':
-            if ds is not None:
-                grid_step = ds.grid_step
-            dmap_dict = sput.interp2gaus(dataarray=dmap, grid_step=grid_step)
-            dmap = dmap_dict['intpol']
-    x, y = dmap.coords["lon"], dmap.coords["lat"]
-    z = dmap
+    if isinstance(dmap, xr.DataArray):
+        if 'points' in list(dmap.dims):
+            if plot_type != 'points':
+                if ds is not None:
+                    grid_step = ds.grid_step
+                dmap_dict = sput.interp2gaus(
+                    dataarray=dmap, grid_step=grid_step)
+                dmap = dmap_dict['intpol']
+        x, y = dmap.coords["lon"], dmap.coords["lat"]
+        z = dmap
+    else:
+        # Expect a list of tuples of lon, lat
+        z = kwargs.pop('z', None)
+        if np.shape(dmap)[1] != 2:
+            raise ValueError('For plot_type points please provide a list of tuples!')
+        x = dmap[:, 0]
+        y = dmap[:, 1]
+        if z is not None:
+            if len(z) != len(x):
+                raise ValueError(
+                    f'Length of input z and lon-lat tuples not the same!')
 
     if plot_type == "scatter":
         x = dmap.coords["lon"]
@@ -327,9 +355,11 @@ def plot_map(dmap: xr.DataArray,
         z = dmap.data
     elif plot_type == "points":
         bar = False
-        if ds is None:
-            x = dmap.lon
-            y = dmap.lat
+        if not isinstance(dmap, xr.DataArray):
+            x = dmap[:, 0]
+            y = dmap[:, 1]
+            if z is not None:
+                plot_type = 'scatter'  # use scatter function of plot2D
         else:
             flat_idx_lst = gut.flatten_array(dataarray=dmap,
                                              mask=ds.mask,
@@ -435,20 +465,6 @@ def plot_2D(
     else:
         if isinstance(projection, str):
             projection = get_projection(projection='PlateCarree')
-    if plot_type == "points" or z is None:
-        im = ax.plot(
-            x,
-            y,
-            c=color,
-            linewidth=0,
-            linestyle='None',
-            markersize=size,
-            marker=marker,
-            fillstyle=fillstyle,
-            transform=projection,
-            alpha=alpha,
-        )
-        return dict(ax=ax, im=im)
 
     # set colormap
     if cmap is not None:
@@ -516,6 +532,20 @@ def plot_2D(
             marker=mpl.markers.MarkerStyle(marker=marker, fillstyle=fillstyle),
             s=size,
         )
+    elif plot_type == "points" or z is None:
+        im = ax.plot(
+            x,
+            y,
+            c=color,
+            linewidth=0,
+            linestyle='None',
+            markersize=size,
+            marker=marker,
+            fillstyle=fillstyle,
+            transform=projection,
+            alpha=alpha,
+        )
+        return dict(ax=ax, im=im)
     elif plot_type == "colormesh":
         im = ax.pcolor(
             x,
@@ -1015,7 +1045,8 @@ def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
                      geoaxis=True,
                      color=color,
                      xpos=np.mean(lon_range),
-                     ypos=np.max(lat_range)+2 # always plot above(!) the rectangle
+                     # always plot above(!) the rectangle
+                     ypos=np.max(lat_range)+2
                      )
 
     return ax
