@@ -61,7 +61,7 @@ def get_day_progression_arr(data, tps, start,
             av_step = step * -1 * math.copysign(1, thisstep)
             this_tps = tu.get_periods_tps(tps=this_tps, step=av_step)
 
-        this_comp_ts = tu.get_sel_tps_ds(ds=data, tps=this_tps)
+        this_comp_ts = tu.get_sel_tps_ds(ds=data, tps=this_tps, drop_dim=False)
         if var == 'evs':
             this_comp_ts = xr.where(
                 this_comp_ts[var] == 1, this_comp_ts[var], np.nan
@@ -92,7 +92,7 @@ def get_day_arr(ds, tps):
 
     composite_arrs = []
     for day, tp in enumerate(tps):
-        tp_ds = tu.get_sel_tps_ds(ds, tps=[tp]).mean(dim='time')
+        tp_ds = tu.get_sel_tps_ds(ds, tps=[tp], drop_dim=True)
         tp_ds = tp_ds.expand_dims(
             {'day': 1}).assign_coords({'day': [day]})
         composite_arrs.append(tp_ds)
@@ -285,6 +285,6 @@ def count_non_nans(da,
     evs_da = xr.where(~np.isnan(da), 1, np.nan)
     counts = evs_da.sum(dim='time')
     if normalize:
-        counts = counts*10 / len(evs_da.time)
+        counts = counts / len(evs_da.time)
 
     return counts

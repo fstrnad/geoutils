@@ -99,7 +99,8 @@ class BaseDataset():
                 ) = self.get_spatio_temp_range(ds)
                 ds_arr.append(ds)
         if len(data_nc_arr) > 1:
-            self.ds = sput.merge_datasets(datasets=ds_arr)
+            multiple = kwargs.pop('multiple', 'max')
+            self.ds = sput.merge_datasets(datasets=ds_arr, multiple=multiple)
         else:
             self.ds = ds_arr[0]
 
@@ -111,17 +112,27 @@ class BaseDataset():
 
         # Compute Anomalies if needed
         self.can = can
-        self.an_types = kwargs.pop("an_types", ["dayofyear"])
         if self.can is True:
-            self.compute_anomalies_ds(kwargs)
+            self.compute_anomalies_ds(**kwargs)
 
         if month_range is not None:
             self.ds = tu.get_month_range_data(dataset=self.ds,
                                               start_month=month_range[0],
                                               end_month=month_range[1])
+
+        # Filter nans
+        nan_filter = kwargs.pop('nan_filter', None)
+        if nan_filter is not None:
+            self.ds = self.filter_nans(th=nan_filter)
         # Init Mask
         self.init_mask(da=self.ds[self.var_name], lsm_file=lsm_file, **kwargs)
         self.set_source_attrs()
+
+        self.set_ds_objects()
+
+    def set_ds_objects(self):
+        self.time = self.ds.time
+        self.coords = self.ds.coords
 
     def open_ds(
         self,
@@ -198,8 +209,7 @@ class BaseDataset():
             ds = tu.compute_timemean(ds=ds, timemean=timemean, verbose=verbose)
         timemax = kwargs.pop('timemax', None)
         if timemax is not None:
-            ds = tu.apply_timemax(ds=ds, timemean=timemax, verbose=verbose)
-
+            ds = tu.compute_timemax(ds=ds, timemean=timemax, verbose=verbose)
         return ds
 
     def load(self, load_nc, lon_range=[-180, 180], lat_range=[-90, 90]):
@@ -1172,7 +1182,8 @@ class BaseDataset():
 
         return anomalies
 
-    def compute_anomalies_ds(self, kwargs):
+    def compute_anomalies_ds(self, **kwargs):
+        self.an_types = kwargs.pop('an_types', [])
         if "an" not in self.vars:
             for an_type in self.an_types:
                 self.ds[f"an_{an_type}"] = self.compute_anomalies(
@@ -1501,7 +1512,7 @@ class BaseDataset():
         return self.ds
 
     def apply_timemmax(self, timemean=None, verbose=True):
-        self.ds = tu.apply_timemax(
+        self.ds = tu.compute_timemax(
             ds=self.ds, timemean=timemean, verbose=verbose)
         return self.ds
 
@@ -1512,4 +1523,9 @@ class BaseDataset():
             self.ds = self.apply_timemean(timemean=timemean)
         return self.ds
 
+    def filter_nans(self, th=1, dims=['lon', 'lat']):
+        da = self.ds[self.var_name]
+        self.ds = tu.filter_nan_values(dataarray=da, dims=dims, th=th).to_dataset()
+        self.set_var()
+        return self.ds
 # %%

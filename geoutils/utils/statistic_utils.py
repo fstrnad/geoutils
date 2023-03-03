@@ -89,6 +89,45 @@ def normalize(data, min=0, max=1):
     return norm
 
 
+def count_occ(occ_arr, count_arr, rel_freq=False, norm_fac=1.):
+    """Counts the occurences of certain objects (eg. floats, ints, strs etc.)
+
+    Args:
+        occ_arr (arr): arr of objects
+        count_arr (arr): objects to count
+        rel_freq (bool, optional): Give relative frequency. Defaults to False.
+        norm_fac (int, optional): Normalization factor. Defaults to 1.
+
+    Returns:
+        arr: counts of objects
+    """
+    res_c_occ_arr = np.zeros((len(occ_arr), len(count_arr)))
+
+    for idx, occ in enumerate(occ_arr):
+        m_c_occ = res_c_occ_arr[idx]
+        tot_num = len(occ)
+        u, count = np.unique(occ,  return_counts=True)
+        u = np.array(u, dtype=int)
+        for iu, u_val in enumerate(u):
+            idx_cnt_arr = int(np.where(u_val == count_arr)[0])
+            m_c_occ[idx_cnt_arr] = count[iu]
+        if rel_freq:
+            if tot_num > 0:
+                m_c_occ /= tot_num
+                if np.abs(np.sum(m_c_occ) - 1) > 0.1:
+                    gut.myprint(
+                        f'WARNING, rel freq not summed to 1 {np.sum(m_c_occ)}')
+            else:
+                m_c_occ = 0
+
+    if norm_fac == 'max':
+        norm_fac = np.max(res_c_occ_arr, axis=1)
+    res_c_occ = np.mean(res_c_occ_arr, axis=0)/norm_fac
+
+    return res_c_occ
+
+
+
 def normlize_time_slides(data, min=0, max=1):
     mean_data_arr = []
     times = data.time
@@ -573,3 +612,6 @@ def compute_correlation(data_array, t_p, correlation_type='pearson'):
     corr_array = corr_array.transpose('lat','lon').compute()
 
     return corr_array
+
+
+

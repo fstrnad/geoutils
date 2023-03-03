@@ -1,14 +1,16 @@
-import cftime
-import geoutils.utils.statistic_utils as sut
 from tqdm import tqdm
-import geoutils.utils.general_utils as gut
 from sklearn.neighbors import KernelDensity
 import scipy.stats as st
-import geoutils.utils.time_utils as tu
 import numpy as np
 import xarray as xr
 import scipy.interpolate as interp
+import geoutils.utils.time_utils as tu
+import geoutils.utils.general_utils as gut
+import geoutils.utils.statistic_utils as sut
 from importlib import reload
+reload(tu)
+reload(sut)
+reload(gut)
 
 RADIUS_EARTH = 6371  # radius of earth in km
 
@@ -1041,7 +1043,7 @@ def get_grid_step(ds):
     return grid_step, grid_step_lon, grid_step_lat
 
 
-def merge_datasets(datasets):
+def merge_datasets(datasets, multiple='max'):
     """
     Merges multiple xarray datasets into a single dataset, checking for consistency of lon and lat dimensions.
 
@@ -1068,9 +1070,7 @@ def merge_datasets(datasets):
 
     # Merge the datasets
     gut.myprint(f'Merge {len(datasets)} datasets to 1 dataset')
-    merged_dataset = xr.concat(datasets, dim='time')
-
-    # Sort the time dimension in increasing order
-    merged_dataset = merged_dataset.sortby('time')
+    merged_dataset = tu.merge_time_arrays(
+        time_arrays=datasets, multiple=multiple)
 
     return merged_dataset

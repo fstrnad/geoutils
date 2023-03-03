@@ -3,6 +3,7 @@ File that contains files for the analysis of different time series.
 Often using event synchronization
 """
 
+import geoutils.utils.statistic_utils as sut
 import multiprocessing as mpi
 from joblib import Parallel, delayed
 import scipy.stats as st
@@ -18,6 +19,7 @@ import geoutils.utils.general_utils as gut
 from tqdm import tqdm
 reload(tu)
 reload(gut)
+reload(sut)
 
 
 def get_yearly_ts(data_t, times,
@@ -577,7 +579,8 @@ def get_expt_ees(evs, tps, timemean='year'):
     # Get total number of EEs
     t_ee_tot = get_ee_ts(evs=evs)
     # t_tm_tot = tu.apply_timesum(t_ee_tot, timemean=timemean)
-    t_tm_tot = np.count_nonzero(evs) / num_years  # average number of EREs per year
+    # average number of EREs per year
+    t_tm_tot = np.count_nonzero(evs) / num_years
     # Fraction of EREs
     frac_ees = t_tm_sel/t_tm_tot
     # Normalize by number of days over whole time period
@@ -586,3 +589,23 @@ def get_expt_ees(evs, tps, timemean='year'):
 
     return frac_ees / norm
 
+
+def get_cond_occ(tps, cond, counter):
+
+    # Joint count, eg. sync, active, phase
+    phase_sync_act = tu.get_sel_tps_ds(ds=cond, tps=tps)
+
+    # Determine time points counts for denominator
+    # Tps active/break of phase = joint probabilites (P(p,a))
+    count_phase_act = sut.count_occ(occ_arr=[cond.data],
+                                    count_arr=counter,
+                                    rel_freq=False)
+
+    # Get Counts of conditional intersection, eg. Sync + Active/Break
+    count_phase_act_sync = sut.count_occ(occ_arr=[phase_sync_act.data],
+                                         count_arr=counter,
+                                         rel_freq=False)
+
+    p_s_1_act = count_phase_act_sync/count_phase_act
+
+    return p_s_1_act

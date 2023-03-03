@@ -152,7 +152,9 @@ def get_max_num_tps(ds, q=None):
     return max_num_events
 
 
-def get_sel_tps_ds(ds, tps, remove_tp=False, verbose=False):
+def get_sel_tps_ds(ds, tps, remove_tp=False,
+                   drop_dim=True,
+                   verbose=False):
     if isinstance(tps, xr.DataArray):
         tps = tps.time.data
     stp = gut.is_single_tp(tps=tps)
@@ -178,12 +180,12 @@ def get_sel_tps_ds(ds, tps, remove_tp=False, verbose=False):
                         if x not in ds.time.data:
                             gut.myprint(f'WARNING! tp not in ds: {x}')
             if len(tps_sel) == 0:
-                print('No tps not in dataset!')
+                gut.myprint('No tps not in dataset!')
                 return []
             ds_sel = ds.sel(time=tps_sel, method='nearest')
 
-    # if stp:
-    #     ds_sel.drop_dims('time')
+    if stp and drop_dim:
+        ds_sel = ds_sel.mean(dim='time')
 
     return ds_sel
 
@@ -638,7 +640,7 @@ def get_mean_time_series(da, lon_range, lat_range, time_roll=0):
     return ts_mean, ts_std
 
 
-def compute_timemean(ds, timemean, dropna=True, verbose=True):
+def compute_timemean(ds, timemean, dropna=False, verbose=True):
     """Computes the monmean average on a given xr.dataset
 
     Args:
@@ -649,7 +651,8 @@ def compute_timemean(ds, timemean, dropna=True, verbose=True):
     """
     tm = get_tm_name(timemean)
 
-    gut.myprint(f"Compute {timemean}ly means of all variables!", verbose=verbose)
+    gut.myprint(
+        f"Compute {timemean}ly means of all variables!", verbose=verbose)
     if dropna:
         ds = ds.resample(time=tm).mean(
             dim="time", skipna=True).dropna(dim="time")
@@ -659,7 +662,7 @@ def compute_timemean(ds, timemean, dropna=True, verbose=True):
     return ds
 
 
-def apply_timemax(ds, timemean,  dropna=True, verbose=True):
+def compute_timemax(ds, timemean,  dropna=False, verbose=True):
     """Computes the monmax on a given xr.dataset
 
     Args:
@@ -670,7 +673,8 @@ def apply_timemax(ds, timemean,  dropna=True, verbose=True):
     """
     tm = get_tm_name(timemean)
 
-    gut.myprint(f"Compute {timemean}ly maximum of all variables!", verbose=verbose)
+    gut.myprint(
+        f"Compute {timemean}ly maximum of all variables!", verbose=verbose)
     if dropna:
         ds = ds.resample(time=tm).mean(
             dim="time", skipna=True).dropna(dim="time")
@@ -1075,14 +1079,24 @@ def add_time_step_tps(tps, time_step=1, time_unit="D", ):
         ntp = add_time_window(
             date=tp, time_step=time_step, time_unit=time_unit)
         ntps.append(ntp)
-    ntps = merge_time_arrays(ntps)
+    ntps = merge_time_arrays(ntps, multiple=None)
 
     return xr.DataArray(ntps, dims=["time"], coords={"time": ntps})
 
 
-def merge_time_arrays(time_arrays):
+def merge_time_arrays(time_arrays, multiple='max'):
     # Combine the time arrays into a single DataArray with a new "time" dimension
     combined_data = xr.concat(time_arrays, dim="time")
+
+    if multiple is not None:
+        gut.myprint(f'Group multiple files by {multiple}')
+    if multiple == 'max':
+        # Group the data by time and take the maximum value for each group
+        combined_data = combined_data.groupby('time').max()
+    elif multiple == 'mean':
+        combined_data = combined_data.groupby('time').mean()
+    elif multiple == 'min':
+        combined_data = combined_data.groupby('time').min()
 
     # Sort the new "time" dimension
     combined_data = combined_data.sortby("time")
@@ -1109,7 +1123,7 @@ def get_tw_periods(
     return {"range": all_time_periods, "tps": np.array(all_tps)}
 
 
-def get_periods_tps(tps, start=0, step=1, time_unit="D", include_start=True):
+def get_periods_tps(tps, step=1, start=0, time_unit="D", include_start=True):
     if step == 0:
         return tps
     else:
@@ -1132,6 +1146,9 @@ def get_periods_tps(tps, start=0, step=1, time_unit="D", include_start=True):
         all_time_periods = np.concatenate(all_time_periods, axis=0)
         # Removes duplicates of time points
         all_time_periods = np.unique(all_time_periods)
+
+        all_time_periods = create_xr_ts(data=all_time_periods, times=all_time_periods)
+
         return all_time_periods
 
 
@@ -1707,14 +1724,16 @@ def get_time_count_number(tps, counter='week'):
     times = tps.time
     if counter == 'year':
         counts = times.dt.isocalendar().year
-    if counter == 'month':
+    elif counter == 'month':
         counts = times.dt.month
-    if counter == 'week':
+    elif counter == 'week':
         counts = times.dt.isocalendar().week
-    if counter == 'day':
-        counts = times.dt.isocalendar().day
-    if counter == 'hour':
-        counts = times.dt.isocalendar().hour
+    elif counter == 'day':
+        counts = times.dt.day
+    elif counter == 'hour':
+        counts = times.dt.hour
+    else:
+        raise ValueError(f'The counter {counter} does not exist!')
     return counts
 
 
@@ -1844,3 +1863,28 @@ def check_AR_string_format(s):
     """
     pattern = r"^-?\d+-\d+-?\d* \d+:\d+:\d+_\d+$"
     return bool(re.match(pattern, s))
+
+
+def filter_nan_values(dataarray, dims=['lon', 'lat'], th=1.):
+    """
+    Takes an xarray DataArray with dimensions (time, lon, lat) and removes time points where
+    the number of NaN values exceeds th.
+
+    Parameters:
+    da (xarray.DataArray): The input DataArray with dimensions (time, lon, lat).
+
+    Returns:
+    xarray.DataArray: A new DataArray without time points where the number of NaN values exceeds 100.
+    """
+    # Count number of non-NaN values along the time dimension
+    non_nan_counts = dataarray.count(dim=dims)
+
+    # Boolean index to select time points with at least th non-NaN values
+    time_filter = non_nan_counts >= th
+
+    rem_frac = 100 - np.count_nonzero(time_filter) / len(time_filter) * 100
+    gut.myprint(f'Remove {rem_frac:.1f}% of all time points with less than {th} non-nan values!')
+    # Filter the time dimension using boolean indexing
+    filtered_dataarray = dataarray.isel(time=time_filter)
+
+    return filtered_dataarray
