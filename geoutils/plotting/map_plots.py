@@ -289,6 +289,7 @@ def plot_map(dmap: xr.DataArray,
     set_map = kwargs.pop('set_map', True)
     figsize = kwargs.pop("figsize", (9, 6))
     alpha = kwargs.pop("alpha", 1.0)
+    sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
 
     if ax is not None and projection is not None:
         raise ValueError(
@@ -341,7 +342,8 @@ def plot_map(dmap: xr.DataArray,
         # Expect a list of tuples of lon, lat
         z = kwargs.pop('z', None)
         if np.shape(dmap)[1] != 2:
-            raise ValueError('For plot_type points please provide a list of tuples!')
+            raise ValueError(
+                'For plot_type points please provide a list of tuples!')
         x = dmap[:, 0]
         y = dmap[:, 1]
         if z is not None:
@@ -405,7 +407,11 @@ def plot_map(dmap: xr.DataArray,
                 hatch_type = '///'
                 gut.myprint(f'WARNING! So far the dataset mask is only plotted as significnance mask!',
                             verbose=False)
-            significance_mask = xr.where(significance_mask == 1, 1, np.nan)
+            if sig_plot_type == 'hatch':
+                significance_mask = xr.where(significance_mask == 1, 1, np.nan)
+            elif sig_plot_type == 'contour':
+                significance_mask = xr.where(
+                    significance_mask, 1, 0)
             if 'points' in list(significance_mask.dims):
                 mask_dict = sput.interp2gaus(
                     dataarray=significance_mask, grid_step=grid_step)
@@ -417,12 +423,23 @@ def plot_map(dmap: xr.DataArray,
                 raise ValueError(
                     'Significance mask not of same dimension as data input dimension!')
 
-            plot_2D(x=x, y=y, z=mask, ax=im['ax'],
-                    plot_type='hatch', alpha=0.0,
-                    projection=projection,
-                    hatch_type=hatch_type,
-                    **kwargs)
-
+            if sig_plot_type == 'hatch':
+                plot_2D(x=x, y=y, z=mask, ax=im['ax'],
+                        plot_type=sig_plot_type, alpha=0.0,
+                        projection=projection,
+                        hatch_type=hatch_type,
+                        **kwargs)
+            elif sig_plot_type == 'contour':
+                color = kwargs.pop('color', 'black')
+                levels = kwargs.pop('levels', 1)
+                plot_2D(x=x, y=y, z=mask, ax=im['ax'],
+                        plot_type='contour',
+                        levels=1,
+                        vmin=0, vmax=1,
+                        color='black',
+                        projection=projection,
+                        lw=2,
+                        **kwargs)
     return im
 
 

@@ -156,7 +156,7 @@ for plevel in plevels:
     var_names = ['u', 'v', 'z', 'pv']
     var_names = ['u', 'v']
     var_names = ['t', 'q']
-    var_names = ['u', 'v', 'w']
+    var_names = ['u', 'v', 'sh', 'z', 'w', ]
 
     for idx, var_name in enumerate(var_names):
         fname = fnames_dict[var_name]
