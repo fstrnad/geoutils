@@ -43,7 +43,6 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         u_kwargs = copy.deepcopy(kwargs)
         v_kwargs = copy.deepcopy(kwargs)
         w_kwargs = copy.deepcopy(kwargs)
-        self.can = can
         if load_nc is None:
             ds_uwind = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_u,
                                                     plevels=plevels,
@@ -98,8 +97,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             self.load_dataset_attributes(base_ds=ds_vwind, init_mask=init_mask)
 
             self.vars = self.get_vars()
-
-            self.compute_all_anomalies()
+            self.can = can
+            self.compute_all_anomalies(**kwargs)
 
             del u, v, w, windspeed, ds_uwind, ds_vwind, ds_wwind
         else:

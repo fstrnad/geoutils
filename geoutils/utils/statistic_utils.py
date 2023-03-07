@@ -577,41 +577,4 @@ def polyfit_regressor(data_array, predictor,  order=1):
     return regressed_arr
 
 
-def compute_correlation(data_array, t_p, correlation_type='pearson'):
-    """
-    Compute the Pearson or Spearman correlation between a time series t_p and all time series in an xarray DataArray.
-
-    Parameters
-    ----------
-    data_array: xarray.DataArray
-        A DataArray with dimensions (lon, lat, time).
-    t_p: array-like
-        The time series to compute the correlation with.
-    correlation_type: str
-        The type of correlation to be computed. Can be either 'pearson' or 'spearman'.
-
-    Returns
-    -------
-    xarray.DataArray
-        A DataArray with dimensions (lon, lat) containing the correlation values between t_p and the time series in data_array.
-    """
-    corr_array = xr.DataArray(np.zeros((data_array.lon.size, data_array.lat.size)), dims=("lon", "lat"))
-    for i, lon in enumerate(data_array.lon):
-        for j, lat in enumerate(data_array.lat):
-            time_series = data_array.sel(lon=lon, lat=lat).values.flatten()
-            if correlation_type == 'pearson':
-                corr, _ = st.pearsonr(t_p, time_series)
-            elif correlation_type == 'spearman':
-                corr, _ = st.spearmanr(t_p, time_series)
-            else:
-                raise ValueError(f"Invalid correlation_type: {correlation_type}. Must be either 'pearson' or 'spearman'.")
-            corr_array[i, j] = corr
-    corr_array.coords["lon"] = data_array.lon
-    corr_array.coords["lat"] = data_array.lat
-
-    corr_array = corr_array.transpose('lat','lon').compute()
-
-    return corr_array
-
-
 

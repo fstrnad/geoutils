@@ -16,7 +16,7 @@ class SpatioTemporalPCA:
 
     Parameters:
     -----------
-    da: xr.DataArray dim=(time, x, y)
+    da: geoutils.BaseDataset of  dim=(time, x, y)
         Input dataarray to perform PCA on.
     n_components: int
         Number of components for PCA
@@ -192,7 +192,7 @@ class SpatioTemporalPCA:
     def get_pca_loc_dict(self, q=None, inverse=False, tq=None):
         if self.ds.mask is None:
             gut.myprint('Init as well a mask for dataset!')
-            self.ds.init_mask()
+            self.ds.init_mask(init_mask=True)
         maps = self.get_components(q=q, inverse=inverse)
         q_maps = self.get_q_maps(q=q)
         ts = self.get_timeEvolution(q=tq, inverse=inverse)

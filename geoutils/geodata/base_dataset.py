@@ -158,7 +158,7 @@ class BaseDataset():
         ds = self.check_dimensions(
             ds, ts_days=decode_times, verbose=verbose, **kwargs)
         self.dims = self.get_dims(ds=ds)
-        ds = self.rename_var_era5(ds)
+        ds = self.rename_var_era5(ds, verbose=verbose)
 
         # da = ds[var_name]
         if len(self.dims) > 2:
@@ -361,7 +361,7 @@ class BaseDataset():
         self.var_name = new_var_name
         self.vars = self.get_vars()
 
-    def rename_var_era5(self, ds):
+    def rename_var_era5(self, ds, verbose=True):
         names = gut.get_vars(ds=ds)
 
         if "precipitation" in names:
@@ -405,7 +405,7 @@ class BaseDataset():
         if "ar_binary_tag" in names:
             ds = ds.rename({"ar_binary_tag": "ar"})
             gut.myprint(
-                "Rename ar_binary_tag (ttr) to: ar!")
+                "Rename ar_binary_tag (atmospheric rivers) to: ar!", verbose=verbose)
         return ds
 
     def get_vars(self, ds=None, verbose=False):
@@ -1190,9 +1190,10 @@ class BaseDataset():
                     self.ds[self.var_name], group=an_type
                 )
 
-    def compute_all_anomalies(self):
+    def compute_all_anomalies(self, **kwargs):
+        self.an_types = kwargs.pop('an_types', [])
         self.vars = self.get_vars()
-        if self.can is True:
+        if self.can:
             for vname in self.vars:
                 for an_type in self.an_types:
                     var_type = f'{vname}_an_{an_type}'

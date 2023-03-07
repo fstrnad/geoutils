@@ -39,7 +39,6 @@ class MultiPressureLevelDataset(bds.BaseDataset):
             gut.myprint(
                 'No Plevel provided! Assuming variable is vertically integrated!')
             plevels = [0]
-
         init_mask = kwargs.pop('init_mask', False)
 
         # Dimension name of pressure level
@@ -51,7 +50,7 @@ class MultiPressureLevelDataset(bds.BaseDataset):
         for idx, plevel in enumerate(plevels):
             load_nc_file = data_nc_arr[idx]
             single_pl_ds = bds.BaseDataset(data_nc=load_nc_file,
-                                           can=can,
+                                           can=False,  # is computed later
                                            init_mask=False,  # is initialized later
                                            **kwargs)
             all_ds.append(single_pl_ds.ds.expand_dims(
@@ -62,6 +61,8 @@ class MultiPressureLevelDataset(bds.BaseDataset):
         gut.myprint(
             f'Plevels {plevels}, now merge all single datasets into one!')
         self.ds = xr.merge(all_ds)
+        self.can = can
+        self.compute_all_anomalies(**kwargs)
         self.load_dataset_attributes(
             base_ds=single_pl_ds, init_mask=init_mask)
         self.set_plevel_attrs()
@@ -71,7 +72,6 @@ class MultiPressureLevelDataset(bds.BaseDataset):
         self.grid_step = base_ds.grid_step
         self.var_name = base_ds.var_name
         self.grid_type = base_ds.grid_type
-        self.an_types = base_ds.an_types
         # Init Mask
         init_mask = kwargs.pop('init_mask', True)
         if init_mask:

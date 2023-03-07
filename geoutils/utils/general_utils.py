@@ -122,8 +122,8 @@ def tryToCreateDir(d):
 
 def get_index_array(arr, item):
     arr_tmp = np.array(arr)
-    if item in arr_tmp is False:
-        myprint(f'{item} not in array!')
+    if item not in arr_tmp:
+        myprint(f'{item} not in array {arr}!')
         return None
     else:
         idx_val = np.where(arr_tmp == item)[0]
@@ -184,7 +184,10 @@ def find_local_max(data):
     if len(peak_idx) == 0:
         peak_idx = []
         peak_val = []
-    max_val = np.max(peak_val)
+        max_val = np.max(data)
+    else:
+        max_val = np.max(peak_val)
+
     max_idx = get_index_array(arr=data, item=max_val)
     return {'idx': peak_idx,
             'val': peak_val,
@@ -194,22 +197,85 @@ def find_local_max(data):
 
 def find_local_min(data):
     # same as local max but *-1
-    max_dict = find_local_max(-1*data)
+    peak_idx, _ = find_peaks(-1*data)
+    peak_idx = np.array(peak_idx, dtype=int)
+    peak_val = data[peak_idx]
+    if len(peak_idx) == 0:
+        peak_idx = []
+        peak_val = []
+        # Because we look for global minimum at the border
+        max_val = np.min(data)
+    else:
+        max_val = np.max(peak_val)
 
-    return {'idx': max_dict['idx'],
-            'val': -1*max_dict['val'],
-            'min': -1*max_dict['max'],
-            'min_idx': max_dict['max_idx']
-            }
+    max_idx = get_index_array(arr=data, item=max_val)
+    return {'idx': peak_idx,
+            'val': peak_val,
+            'min': max_val,
+            'min_idx': max_idx}
 
-def find_local_max_xy(data, x):
+
+def find_local_min_max_xy(data, x):
     if len(data) != len(x):
         raise ValueError(f'Error data and x not of the same length!')
-    max_dict = find_local_max(data=data)
-    max_dict['x'] = x[max_dict['idx']]
+    max_dict = find_local_extrema(arr=data)
+
+    max_dict['x_local_max'] = x[max_dict['local_maxima_indices']]
     max_dict['x_max'] = x[max_dict['max_idx']]
+    max_dict['x_local_min'] = x[max_dict['local_maxima_indices']]
+    max_dict['x_min'] = x[max_dict['min_idx']]
+
 
     return max_dict
+
+
+def find_local_extrema(arr):
+    """
+    Returns information about the local and global extrema of a given numpy array.
+
+    Parameters:
+    -----------
+    arr : numpy array
+        The input array for which the extrema should be found.
+
+    Returns:
+    --------
+    A dictionary containing the following information:
+    {
+        "local_minima": list of local minima values,
+        "local_maxima": list of local maxima values,
+        "local_minima_indices": list of indices of local minima,
+        "local_maxima_indices": list of indices of local maxima,
+        "global_minimum": global minimum value,
+        "global_maximum": global maximum value,
+        "global_minimum_index": index of global minimum,
+        "global_maximum_index": index of global maximum
+    }
+    """
+
+    # Find local minima and maxima
+    local_minima = np.where((arr[:-2] > arr[1:-1])
+                            & (arr[1:-1] < arr[2:]))[0] + 1
+    local_maxima = np.where((arr[:-2] < arr[1:-1])
+                            & (arr[1:-1] > arr[2:]))[0] + 1
+
+    # Find global minima and maxima
+    global_minimum_index = np.argmin(arr)
+    global_minimum = arr[global_minimum_index]
+    global_maximum_index = np.argmax(arr)
+    global_maximum = arr[global_maximum_index]
+
+    # Return dictionary of results
+    return {
+        "local_minima": arr[local_minima],
+        "local_maxima": arr[local_maxima],
+        "local_minima_indices": local_minima,
+        "local_maxima_indices": local_maxima,
+        "min": global_minimum,
+        "max": global_maximum,
+        "min_idx": global_minimum_index,
+        "max_idx": global_maximum_index
+    }
 
 
 def find_local_min_xy(data, x):
@@ -254,8 +320,8 @@ def get_values_above_val(dataarray, val=None, dim='time'):
     return {
         'val': val,
         'above': above_val,
-            'below': below_val
-            }
+        'below': below_val
+    }
 
 
 def get_locmax_of_score(ts, q=0.95):
@@ -419,9 +485,6 @@ def save_pkl_dict(arr_dict, sp):
 
 def get_varnames_ds(ds):
     return list(ds.keys())
-
-
-
 
 
 def save_ds(ds, filepath, unlimited_dim=None,

@@ -164,7 +164,7 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
     if len(tps) == 0:
         gut.myprint(f'Empty list of time points')
         return []
-
+    print(tps)
     if gut.is_datetime360(tps):
         tps_sel = tps
         ds_sel = ds.sel(time=tps_sel, method='nearest')
@@ -284,9 +284,14 @@ def get_sel_time_range(ds, time_range,
                        verbose=True):
     if time_range is not None:
         sd, ed = get_time_range(ds)
-        time_range_0 = str2datetime(time_range[0], verbose=False)
-        time_range_1 = str2datetime(time_range[-1], verbose=False)
-
+        if isinstance(time_range[0], str):
+            time_range_0 = str2datetime(time_range[0], verbose=False)
+        else:
+            time_range_0 = time_range[0]
+        if isinstance(time_range[-1], str):
+            time_range_1 = str2datetime(time_range[-1], verbose=False)
+        else:
+            time_range_1 = time_range[-1]
         if time_range_0 < sd:
             gut.myprint(
                 f'WARNING: Selected {time_range_0} smaller dataset {sd}',
@@ -1493,20 +1498,21 @@ def lead_lag_corr(ts1, ts2,
     # if cutoff > 1:
     #     corr_range = flt.apply_butter_filter(corr_range, cutoff=cutoff)
 
-    max_dict = gut.find_local_max_xy(data=corr_range, x=tau_arr)
-    min_dict = gut.find_local_min_xy(data=corr_range, x=tau_arr)
+    min_max_dict = gut.find_local_min_max_xy(data=corr_range, x=tau_arr)
+
+    # abs_max_dict = gut.find_local_max_xy(data=np.abs(corr_range), x=tau_arr)
 
     ll_dict = {'corr': corr_range,
                'p_val': np.array(p_val_arr),
                'tau': tau_arr,
-               'tau_max': max_dict['x_max'],
-               'max': max_dict['max'],
-               'all_max': max_dict['val'],
-               'all_tau_max': max_dict['x'],
-               'tau_min': min_dict['x_min'],
-               'min': min_dict['min'],
-               'all_min': min_dict['val'],
-               'all_tau_min': min_dict['x']
+               'tau_max': min_max_dict['x_max'],
+               'max': min_max_dict['max'],
+               'all_max': min_max_dict['local_maxima'],
+               'all_tau_max': min_max_dict['x_local_max'],
+               'tau_min': min_max_dict['x_min'],
+               'min': min_max_dict['min'],
+               'all_min': min_max_dict['local_minima'],
+               'all_tau_min': min_max_dict['x_local_min']
                }
 
     return ll_dict
@@ -1888,3 +1894,25 @@ def filter_nan_values(dataarray, dims=['lon', 'lat'], th=1.):
     filtered_dataarray = dataarray.isel(time=time_filter)
 
     return filtered_dataarray
+
+
+def get_dates_later_as(times, date):
+    if isinstance(date, str):
+        date = str2datetime(date)
+    elif isinstance(date, xr.DataArray):
+        date = date.time
+
+    sd, ed = get_start_end_date(data=times)
+
+    new_times = get_sel_time_range(ds=times, time_range=[date, ed])
+
+    return new_times
+
+
+def equalize_time_points(ts1, ts2):
+    assert_has_time_dimension(ts1)
+    assert_has_time_dimension(ts2)
+    ts1 = get_sel_tps_ds(ts1, tps=ts2.time)
+    ts2 = get_sel_tps_ds(ts2, tps=ts1.time)
+
+    return ts1, ts2

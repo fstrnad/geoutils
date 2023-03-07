@@ -707,6 +707,50 @@ def get_corr_map(ds, var, sids=None, method='spearman', p_value_test='twosided')
     return da_corr
 
 
+
+def compute_correlation(data_array, ts, correlation_type='spearman'):
+    """
+    Compute the Pearson or Spearman correlation between a time series t_p and all time series in an xarray DataArray.
+
+    Parameters
+    ----------
+    data_array: xarray.DataArray
+        A DataArray with dimensions (lon, lat, time).
+    ts: array-like
+        The time series to compute the correlation with.
+    correlation_type: str
+        The type of correlation to be computed. Can be either 'pearson' or 'spearman'.
+
+    Returns
+    -------
+    xarray.DataArray
+        A DataArray with dimensions (lon, lat) containing the correlation values between t_p and the time series in data_array.
+    """
+    corr_array = xr.DataArray(np.zeros((data_array.lon.size, data_array.lat.size)), dims=("lon", "lat"), name='corr')
+    p_array = xr.DataArray(np.zeros((data_array.lon.size, data_array.lat.size)), dims=("lon", "lat"), name='p')
+
+    for i, lon in enumerate(tqdm(data_array.lon)):
+        for j, lat in enumerate(data_array.lat):
+            time_series = data_array.sel(lon=lon, lat=lat).values.flatten()
+            if correlation_type == 'pearson':
+                corr, p = st.pearsonr(ts, time_series)
+            elif correlation_type == 'spearman':
+                corr, p = st.spearmanr(ts, time_series)
+            else:
+                raise ValueError(f"Invalid correlation_type: {correlation_type}. Must be either 'pearson' or 'spearman'.")
+            corr_array[i, j] = corr
+            p_array[i, j] = p
+    corr_array.coords["lon"] = data_array.lon
+    corr_array.coords["lat"] = data_array.lat
+    da_corr = corr_array.to_dataset()
+    da_corr['p'] = p_array
+    da_corr = da_corr.transpose().compute()
+    return da_corr
+
+
+
+
+
 def get_quantile_map(ds, val_map):
     return (ds < val_map).mean(dim='time')
 
@@ -957,7 +1001,7 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
             ds = da_lon2_360(da=ds)
     else:
         if max(ds.lon) > 180:
-            gut.myprint("Shift longitude -180 - 180!")
+            gut.myprint("Shift longitude -180 - 180!", verbose=verbose)
             ds = da_lon2_180(da=ds)
 
     if sort:
