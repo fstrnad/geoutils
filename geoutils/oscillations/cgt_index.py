@@ -38,8 +38,8 @@ def get_cgt_index(z200, monthly=False, time_range=None):
     """
     da = z200
     box_tropics, box_tropics_std = tut.get_mean_time_series(
-        da, lon_range=[55, 75],  # Defined by Ding&Wang 2007
-        lat_range=[35, 45],  # Defined as by Ding&Wang 2007  (compare DW2005)
+        da, lon_range=[60, 70],  # Defined by Ding&Wang 2005
+        lat_range=[35, 40],  # Defined as by Ding&Wang 2005  (compare DW2007)
         time_roll=0
     )
     box_tropics.name = 'cgti'

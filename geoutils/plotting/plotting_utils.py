@@ -551,3 +551,9 @@ def text_box(ax, text, pos="upper right", fsize=pst.MEDIUM_SIZE, **kwargs):
     ax.add_artist(anchored_text)
 
     return ax
+
+
+def check_plot_type(plot_type):
+    if plot_type not in ['contour', 'contourf', 'scatter', 'points', 'colormesh']:
+        raise ValueError(f'ERROR plot_type {plot_type} not available!')
+    return True

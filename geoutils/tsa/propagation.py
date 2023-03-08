@@ -60,7 +60,6 @@ def get_day_progression_arr(data, tps, start,
             # signum of thisstep
             av_step = step * -1 * math.copysign(1, thisstep)
             this_tps = tu.get_periods_tps(tps=this_tps, step=av_step)
-
         this_comp_ts = tu.get_sel_tps_ds(ds=data, tps=this_tps, drop_dim=False)
         if var == 'evs':
             this_comp_ts = xr.where(
@@ -185,7 +184,7 @@ def get_box_propagation(ds, loc_dict, tps,
         else:
             pr_data = loc_dict[region]['data']
         # pr_data = loc_dict[region]['data']
-        print(pr_data[var].data.shape)
+        gut.myprint(f'data shape: {pr_data[var].data.shape}')
         composite_arrs = get_day_progression_arr(data=pr_data,
                                                  tps=tps,
                                                  sps=sps, eps=eps,

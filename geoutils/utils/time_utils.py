@@ -164,7 +164,6 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
     if len(tps) == 0:
         gut.myprint(f'Empty list of time points')
         return []
-    print(tps)
     if gut.is_datetime360(tps):
         tps_sel = tps
         ds_sel = ds.sel(time=tps_sel, method='nearest')
@@ -304,7 +303,7 @@ def get_sel_time_range(ds, time_range,
             time_range_1 = ed
 
         if gut.is_datetime360(time_range_0):
-            time_range_1 = add_time_window(time_range_1, time_unit=freq)
+            time_range_1 = add_time_window(time_range_1, freq=freq)
 
         tps = get_dates_of_time_range(
             time_range=[time_range_0, time_range_1], freq=freq)
@@ -1036,12 +1035,12 @@ def get_ym_date(date):
     return f"{mname} {y}"
 
 
-def add_time_window(date, time_step=1, time_unit="D"):
+def add_time_window_old(date, time_step=1, freq="D"):
 
     y, m, d = get_ymd_date(date)
-    ad = time_step if time_unit == "D" else 0
-    am = time_step if time_unit == "M" else 0
-    ay = time_step if time_unit == "Y" else 0
+    ad = time_step if freq == "D" else 0
+    am = time_step if freq == "M" else 0
+    ay = time_step if freq == "Y" else 0
 
     if gut.is_datetime360(date):
         if d + ad > 30:
@@ -1061,11 +1060,11 @@ def add_time_window(date, time_step=1, time_unit="D"):
             date = np.datetime64(date.time.data)
         else:
             date = np.datetime64(date)
-        if time_unit == "D":
+        if freq == "D":
             next_date = (d + ad) + (date - d)
-        elif time_unit == "M":
+        elif freq == "M":
             next_date = (m + am) + (date - m)
-        elif time_unit == "Y":
+        elif freq == "Y":
             next_date = (y + ay) + (date - y)
         next_date = np.datetime64(next_date, "D")
 
@@ -1074,7 +1073,49 @@ def add_time_window(date, time_step=1, time_unit="D"):
     return next_date
 
 
-def add_time_step_tps(tps, time_step=1, time_unit="D", ):
+def add_time_window(date, time_step=1, freq='D'):
+    """
+    Add a specified number of days, months, or years to the time dimension of an xarray DataArray.
+
+    Parameters
+    ----------
+    dataarray : xr.DataArray
+        The input dataarray containing the time dimension to be modified.
+    num : int
+        The number of units (days, months or years) to add to the time dimension.
+    freq : str, optional
+        The frequency of the units to add. Valid values are 'days', 'months' or 'years'. Defaults to 'days'.
+
+    Returns
+    -------
+    xr.DataArray
+        The modified dataarray with the time dimension updated.
+    """
+    # Define the time delta to add based on the frequency parameter
+    if freq == 'D':
+        tdelta = pd.DateOffset(days=time_step)
+    elif freq == 'M':
+        tdelta = pd.DateOffset(months=time_step)
+    elif freq == 'Y':
+        tdelta = pd.DateOffset(years=time_step)
+    else:
+        raise ValueError(f"Invalid frequency '{freq}', must be one of 'D', 'M', or 'Y'")
+
+    shifted_time = pd.to_datetime(date.time.values) + tdelta
+    # Convert the modified time dimension back to xarray.DataArray format
+    time_xr = xr.DataArray(shifted_time.values,
+                           dims='time',
+                           coords={'time': shifted_time})
+
+    return time_xr
+
+
+def add_time_step_tps(tps, time_step=1, freq="D", ):
+    return add_time_window(date=tps,
+                           time_step=time_step, freq=freq)
+
+
+def add_time_step_tps_old(tps, time_step=1, freq="D", ):
     ntps = []
     if isinstance(tps, xr.DataArray):
         tps = tps.time
@@ -1082,7 +1123,9 @@ def add_time_step_tps(tps, time_step=1, time_unit="D", ):
         tps = [tps]
     for tp in tps:
         ntp = add_time_window(
-            date=tp, time_step=time_step, time_unit=time_unit)
+            date=tp,
+            time_step=time_step,
+            freq=freq)
         ntps.append(ntp)
     ntps = merge_time_arrays(ntps, multiple=None)
 
@@ -1117,35 +1160,35 @@ def get_tw_periods(
     all_time_periods = []
     all_tps = []
     while ep < ed:
-        ep = add_time_window(sd, time_step=tw_length, time_unit=tw_unit)
+        ep = add_time_window(sd, time_step=tw_length, freq=tw_unit)
         if ep < ed:
             tw_range = get_dates_of_time_range([sd, ep])
             all_time_periods.append(tw_range)
             all_tps.append(ep)
             sd = add_time_window(
-                sd, time_step=sliding_length, time_unit=sliding_unit)
+                sd, time_step=sliding_length, freq=sliding_unit)
 
     return {"range": all_time_periods, "tps": np.array(all_tps)}
 
 
-def get_periods_tps(tps, step=1, start=0, time_unit="D", include_start=True):
+def get_periods_tps(tps, step=1, start=0, freq="D", include_start=True):
     if step == 0:
         return tps
     else:
         if not include_start and start == 0:
             sign = math.copysign(step)
-            tps = add_time_step_tps(tps=tps, step=sign*1)
+            tps = add_time_step_tps(tps=tps, time_step=sign*1)
             step += sign  # because we have shifted the step
         if start > 0:
             stps = add_time_step_tps(
-                tps=tps, time_step=start, time_unit=time_unit)
+                tps=tps, time_step=start, freq=freq)
         else:
             stps = tps
-        etps = add_time_step_tps(tps=tps, time_step=step, time_unit=time_unit)
+        etps = add_time_step_tps(tps=tps, time_step=step, freq=freq)
         all_time_periods = []
         for idx, stp in enumerate(stps):
             etp = etps[idx]
-            tw_range = get_dates_of_time_range([stp, etp], freq=time_unit)
+            tw_range = get_dates_of_time_range([stp, etp], freq=freq)
             all_time_periods.append(tw_range)
 
         all_time_periods = np.concatenate(all_time_periods, axis=0)
@@ -1177,7 +1220,7 @@ def get_dates_of_time_range(time_range, freq='D'):
         sp, ep = np.sort([sp, ep])  # Order in time
         date_arr = get_dates_in_range(start_date=sp,
                                       end_date=ep,
-                                      time_unit=freq)
+                                      freq=freq)
         # Include as well last time point
         date_arr = np.concatenate(
             [date_arr, [date_arr[-1] + np.timedelta64(1, freq)]], axis=0
@@ -1206,13 +1249,13 @@ def get_dates_of_time_ranges(time_ranges, freq='D'):
     return arr
 
 
-def get_dates_in_range(start_date, end_date, time_unit='D'):
+def get_dates_in_range(start_date, end_date, freq='D'):
 
     if isinstance(start_date, xr.DataArray):
         start_date = np.datetime64(start_date.time.data)
     if isinstance(end_date, xr.DataArray):
         end_date = np.datetime64(end_date.time.data)
-    tps = np.arange(start_date, end_date, dtype=f'datetime64[{time_unit}]')
+    tps = np.arange(start_date, end_date, dtype=f'datetime64[{freq}]')
     return tps
 
 
@@ -1228,7 +1271,7 @@ def get_dates_for_time_steps(start='0-01-01', num_steps=1, freq='D'):
     dates = []
     for step in np.arange(num_steps):
         dates.append(add_time_window(start, time_step=step,
-                                     time_unit=freq).time.data)
+                                     freq=freq).time.data)
     return np.array(dates)
 
 

@@ -67,7 +67,7 @@ class CustomPCA(PCA):
         '''
         rotation: string, name of the rotation method.
                   'varimax': varimax rotation
-                  None: no rotation by by default
+                  None: no rotation by default
 
         feature_selection: string, Features selection method
                            'all': All features are selected, means principal

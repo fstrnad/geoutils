@@ -156,7 +156,7 @@ for plevel in plevels:
     var_names = ['u', 'v', 'z', 'pv']
     var_names = ['u', 'v']
     var_names = ['t', 'q']
-    var_names = ['u', 'v', 'sh', 'z', 'w', ]
+    var_names = ['u', 'v', 'q', 'z', 'w']
 
     for idx, var_name in enumerate(var_names):
         fname = fnames_dict[var_name]
@@ -169,7 +169,7 @@ for plevel in plevels:
                              var_name=var_name,
                              grid_step=grid_step,
                              large_ds=True,
-                             time_range=time_range,
+                            #  time_range=time_range,
                              )
             ds.save(dataset_file)
         else:

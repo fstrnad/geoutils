@@ -128,7 +128,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
 
         return self.vertical_shear
 
-    def compute_vorticity(self, group='JJAS'):
+    def compute_vorticity(self, group='JJAS', can=True):
         """Compute vorticity with windspharm package
         see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
         """
@@ -138,9 +138,10 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         gut.myprint('Compute relative vorticity...')
         rv = vw.vorticity()  # Relative Vorticity
         self.ds['rv'] = rv.rename('rv')
-        rv_an = tu.compute_anomalies(dataarray=self.ds['rv'], group=group)
-        self.ds[rv_an.name] = rv_an
-        return rv_an
+        if can:
+            rv_an = tu.compute_anomalies(dataarray=self.ds['rv'], group=group)
+            self.ds[rv_an.name] = rv_an
+        return self.ds
 
     def compute_vertical_velocity_gradient(self, group='JJAS', dp='plevel'):
         w = self.ds['w']
@@ -148,4 +149,28 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         self.w_grad_an = tu.compute_anomalies(
             dataarray=self.w_grad, group=group)
         return self.w_grad, self.w_grad_an
+
+    def compute_rossby_wave_source(self, can=True, group='JJAS'):
+        """Compute rossby wave source from u and v components
+        see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
+        """
+
+        vw = VectorWind(self.ds['u'], self.ds['v'])
+
+        gut.myprint(f'Compute Vorticity...')
+        eta = vw.absolutevorticity()
+        gut.myprint("Compute Rossby Wave Source...")
+        div = vw.divergence()
+        uchi, vchi = vw.irrotationalcomponent()
+        etax, etay = vw.gradient(eta)
+
+        # Combine the components to form the Rossby wave source term.
+        S = eta * -1. * div - (uchi * etax + vchi * etay)
+        self.ds['S'] = S.rename('S')
+        gut.myprint("... Computed Rossby Wave Source!")
+        if can:
+            self.ds[f'S_an_{group}'] = tu.compute_anomalies(dataarray=self.ds['S'], group=group)
+
+        return self.ds
+
 # %%

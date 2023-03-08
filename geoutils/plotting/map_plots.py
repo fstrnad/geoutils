@@ -291,6 +291,8 @@ def plot_map(dmap: xr.DataArray,
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
 
+    put.check_plot_type(plot_type)
+
     if ax is not None and projection is not None:
         raise ValueError(
             f'Axis already given, projection {projection} will have no effect. Please do not pass projection argument!')

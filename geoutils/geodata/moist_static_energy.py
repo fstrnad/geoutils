@@ -30,9 +30,9 @@ class MoistStaticEnergy(mp.MultiPressureLevelDataset):
     """
 
     def __init__(self,
-                 load_nc_arr_q=None,
-                 load_nc_arr_t=None,
-                 load_nc_arr_z=None,
+                 data_nc_arr_q=None,
+                 data_nc_arr_t=None,
+                 data_nc_arr_z=None,
                  plevels=None,
                  load_nc=None,
                  can=True,
@@ -47,7 +47,7 @@ class MoistStaticEnergy(mp.MultiPressureLevelDataset):
             q_name = kwargs.pop('q_name', 'q')
             t_name = kwargs.pop('t_name', 't')
 
-            ds_z = mp.MultiPressureLevelDataset(load_nc_arr=load_nc_arr_z,
+            ds_z = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_z,
                                                 plevels=plevels,
                                                 can=False,
                                                 **z_kwargs)
@@ -55,12 +55,12 @@ class MoistStaticEnergy(mp.MultiPressureLevelDataset):
                 ds_z.ds[z_name] * units.m**2 / units.seconds**2)
             z = z.rename('z')
 
-            ds_q = mp.MultiPressureLevelDataset(load_nc_arr=load_nc_arr_q,
+            ds_q = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_q,
                                                 plevels=plevels,
                                                 can=False,
                                                 **q_kwargs)
             q = ds_q.ds[q_name]
-            ds_t = mp.MultiPressureLevelDataset(load_nc_arr=load_nc_arr_t,
+            ds_t = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_t,
                                                 plevels=plevels,
                                                 can=False,
                                                 **t_kwargs)
@@ -82,9 +82,8 @@ class MoistStaticEnergy(mp.MultiPressureLevelDataset):
                                   z=z,
                                   moist_static_energy=moist_static_energy)
             self.vars = self.get_vars()
-            self.an_types = kwargs.pop('an_types', ['dayofyear'])
 
-            self.compute_all_anomalies()
+            self.compute_all_anomalies(**kwargs)
             # ds_q would be possible as well
             init_mask = kwargs.pop('init_mask', False)
             self.load_dataset_attributes(base_ds=ds_t,

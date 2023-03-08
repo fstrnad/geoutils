@@ -53,6 +53,8 @@ class SpatioTemporalPCA:
     def run_pca(self, n_components,
                 rotation=None, **kwargs):
         # run pca
+        if rotation not in ['varimax', 'None', None]:
+            raise ValueError(f'rotation {rotation} is not available!')
         gut.myprint(f"Now run PCA with rotation {rotation}!")
         self.pca = CustomPCA(n_components=n_components,
                              rotation=rotation,
