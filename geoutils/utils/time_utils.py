@@ -579,7 +579,7 @@ def str2datetime(string, dtype='D', numpy=True,
         date = np.datetime64(string, dtype)
         if not numpy:
             y, m, d, h = get_date2ymdh(date=date)
-            date = datetime(year=y, month=m, day=d, hour=h)
+            date = datetime.datetime(year=y, month=m, day=d, hour=h)
     else:
         date = string
         gut.myprint(f'WARNING {string} is not string!', verbose=verbose)
@@ -1099,13 +1099,21 @@ def add_time_window(date, time_step=1, freq='D'):
     elif freq == 'Y':
         tdelta = pd.DateOffset(years=time_step)
     else:
-        raise ValueError(f"Invalid frequency '{freq}', must be one of 'D', 'M', or 'Y'")
+        raise ValueError(
+            f"Invalid frequency '{freq}', must be one of 'D', 'M', or 'Y'")
+    if isinstance(date, xr.DataArray):
+        date = date.time
 
-    shifted_time = pd.to_datetime(date.time.values) + tdelta
-    # Convert the modified time dimension back to xarray.DataArray format
-    time_xr = xr.DataArray(shifted_time.values,
-                           dims='time',
-                           coords={'time': shifted_time})
+    if gut.is_single_tp(tps=date):
+        shifted_time = pd.to_datetime([np.datetime64(date.time.data)]) + tdelta
+        time_xr = xr.DataArray(shifted_time.values[0],
+                               coords={'time': shifted_time[0]})
+    else:
+        shifted_time = pd.to_datetime(date.time.data) + tdelta
+        # Convert the modified time dimension back to xarray.DataArray format
+        time_xr = xr.DataArray(shifted_time.values,
+                               dims='time',
+                               coords={'time': shifted_time})
 
     return time_xr
 
@@ -1137,7 +1145,7 @@ def merge_time_arrays(time_arrays, multiple='max'):
     combined_data = xr.concat(time_arrays, dim="time")
 
     if multiple is not None:
-        gut.myprint(f'Group multiple files by {multiple}')
+        gut.myprint(f'Group multiple files by {multiple} if time points occur twice!')
     if multiple == 'max':
         # Group the data by time and take the maximum value for each group
         combined_data = combined_data.groupby('time').max()
@@ -1195,7 +1203,8 @@ def get_periods_tps(tps, step=1, start=0, freq="D", include_start=True):
         # Removes duplicates of time points
         all_time_periods = np.unique(all_time_periods)
 
-        all_time_periods = create_xr_ts(data=all_time_periods, times=all_time_periods)
+        all_time_periods = create_xr_ts(
+            data=all_time_periods, times=all_time_periods)
 
         return all_time_periods
 
@@ -1932,7 +1941,8 @@ def filter_nan_values(dataarray, dims=['lon', 'lat'], th=1.):
     time_filter = non_nan_counts >= th
 
     rem_frac = 100 - np.count_nonzero(time_filter) / len(time_filter) * 100
-    gut.myprint(f'Remove {rem_frac:.1f}% of all time points with less than {th} non-nan values!')
+    gut.myprint(
+        f'Remove {rem_frac:.1f}% of all time points with less than {th} non-nan values!')
     # Filter the time dimension using boolean indexing
     filtered_dataarray = dataarray.isel(time=time_filter)
 

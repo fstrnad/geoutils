@@ -98,13 +98,14 @@ class BaseDataset():
                     self.lat_range,
                 ) = self.get_spatio_temp_range(ds)
                 ds_arr.append(ds)
+
+        self.set_var(var_name=var_name, ds=ds)
         if len(data_nc_arr) > 1:
             multiple = kwargs.pop('multiple', 'max')
             self.ds = sput.merge_datasets(datasets=ds_arr, multiple=multiple)
         else:
             self.ds = ds_arr[0]
 
-        self.set_var(var_name=var_name)
         # detrending
         if detrend is True:
             detrend_from = kwargs.pop('detrend_from', None)
@@ -131,7 +132,8 @@ class BaseDataset():
         self.set_ds_objects()
 
     def set_ds_objects(self):
-        self.time = self.ds.time
+        if 'time' in self.dims:
+            self.time = self.ds.time
         self.coords = self.ds.coords
 
     def open_ds(
@@ -434,7 +436,9 @@ class BaseDataset():
         if ds is None:
             ds = self.ds
         self.source_attrs = ds.attrs
-        self.var_attrs = ds[self.var_name].attrs
+        self.var_attrs = {}
+        for var in self.vars:
+            self.var_attrs[var] = ds[var].attrs
         self.lon_attrs = ds.lon.attrs
         self.lat_attrs = ds.lat.attrs
         self.time_attrs = None
@@ -456,7 +460,7 @@ class BaseDataset():
             raise ValueError('Source attributes is not set yet!')
         self.ds.attrs.update(self.source_attrs)
         for var in self.vars:
-            self.ds[var].attrs.update(self.var_attrs)
+            self.ds[var].attrs.update(self.var_attrs[var])
         self.ds.lon.attrs.update(self.lon_attrs)
         self.ds.lat.attrs.update(self.lat_attrs)
         if 'time' in self.dims:

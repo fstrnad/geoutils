@@ -5,7 +5,8 @@ import xarray as xr
 import geoutils.utils.general_utils as gut
 
 
-def find_files_with_string(folder_path: str, search_string: str = None) -> list:
+def find_files_with_string(folder_path: str, search_string: str = None,
+                           verbose: bool = True) -> list:
     """
     Finds all file paths that contain a certain string in a given folder and its subfolders.
 
@@ -33,7 +34,8 @@ def find_files_with_string(folder_path: str, search_string: str = None) -> list:
     for file_path in file_list:
         assert_file_exists(file_path=file_path)
 
-    gut.myprint(f'Found {len(file_list)} files!')
+    gut.myprint(f'Found {len(file_list)} files!',
+                verbose=verbose)
 
     return np.array(file_list)
 

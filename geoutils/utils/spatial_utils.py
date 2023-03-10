@@ -707,7 +707,6 @@ def get_corr_map(ds, var, sids=None, method='spearman', p_value_test='twosided')
     return da_corr
 
 
-
 def compute_correlation(data_array, ts, correlation_type='spearman'):
     """
     Compute the Pearson or Spearman correlation between a time series t_p and all time series in an xarray DataArray.
@@ -726,8 +725,10 @@ def compute_correlation(data_array, ts, correlation_type='spearman'):
     xarray.DataArray
         A DataArray with dimensions (lon, lat) containing the correlation values between t_p and the time series in data_array.
     """
-    corr_array = xr.DataArray(np.zeros((data_array.lon.size, data_array.lat.size)), dims=("lon", "lat"), name='corr')
-    p_array = xr.DataArray(np.zeros((data_array.lon.size, data_array.lat.size)), dims=("lon", "lat"), name='p')
+    corr_array = xr.DataArray(np.zeros(
+        (data_array.lon.size, data_array.lat.size)), dims=("lon", "lat"), name='corr')
+    p_array = xr.DataArray(np.zeros(
+        (data_array.lon.size, data_array.lat.size)), dims=("lon", "lat"), name='p')
 
     for i, lon in enumerate(tqdm(data_array.lon)):
         for j, lat in enumerate(data_array.lat):
@@ -737,7 +738,8 @@ def compute_correlation(data_array, ts, correlation_type='spearman'):
             elif correlation_type == 'spearman':
                 corr, p = st.spearmanr(ts, time_series)
             else:
-                raise ValueError(f"Invalid correlation_type: {correlation_type}. Must be either 'pearson' or 'spearman'.")
+                raise ValueError(
+                    f"Invalid correlation_type: {correlation_type}. Must be either 'pearson' or 'spearman'.")
             corr_array[i, j] = corr
             p_array[i, j] = p
     corr_array.coords["lon"] = data_array.lon
@@ -746,9 +748,6 @@ def compute_correlation(data_array, ts, correlation_type='spearman'):
     da_corr['p'] = p_array
     da_corr = da_corr.transpose().compute()
     return da_corr
-
-
-
 
 
 def get_quantile_map(ds, val_map):
@@ -920,6 +919,8 @@ def remove_useless_variables(ds):
             (gut.compare_lists(this_dims, ['lat', 'lon', 'time'])) or
             (gut.compare_lists(this_dims, ['lat', 'lon'])) or
             (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'plevel'])) or
+            (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'lev'])) or
+            (gut.compare_lists(this_dims, ['lat', 'lon', 'lev'])) or
             (gut.compare_lists(this_dims, ['lat', 'lon', 'plevel']))
         ):
             continue
@@ -929,7 +930,7 @@ def remove_useless_variables(ds):
 
     dims = gut.get_dims(ds=ds)
     for dim in dims:
-        if dim not in ['time', 'lat', 'lon', 'plevel']:
+        if dim not in ['time', 'lat', 'lon', 'plevel', 'lev']:
             ds = ds.drop_dims(dim)
             gut.myprint(f'Remove dim {dim}!')
 
@@ -940,8 +941,11 @@ def remove_single_dim(ds):
     dims = dict(ds.dims)
     for dim, num in dims.items():
         if num < 2:
-            ds = ds.mean(dim=dim)  # Removes the single variable axis
-            gut.myprint(f'Remove single value dimension {dim}!')
+            if dim != 'time':  # Time dimension is the only one that is allowed to be kept
+                ds = ds.mean(dim=dim)  # Removes the single variable axis
+                gut.myprint(f'Remove single value dimension {dim}!')
+            else:
+                gut.myprint(f'WARNING: Time dimension contains only 1 value!')
     return ds
 
 
@@ -963,10 +967,12 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
     reload(tu)
 
     lon_lat_names = ['longitude', 'latitude',
-                     't', 'month', 'time_counter', 'AR_key']
-    xr_lon_lat_names = ['lon', 'lat', 'time', 'time', 'time', 'time']
+                     't', 'month', 'time_counter', 'AR_key',
+                     'plevel']
+    xr_lon_lat_names = ['lon', 'lat',
+                        'time', 'time', 'time', 'time',
+                        'lev']
     dims = list(ds.dims)
-    dim3 = len(dims) > 2
     for idx, lon_lat in enumerate(lon_lat_names):
         if lon_lat in dims:
             gut.myprint(
@@ -976,21 +982,32 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
             gut.myprint(dims, verbose=verbose)
     ds = remove_single_dim(ds=ds)
     ds = remove_useless_variables(ds=ds)
+    dims = list(ds.dims)
+    numdims = len(dims)
 
-    if dim3:
+    if numdims == 4:
+        clim_dims = ['time', 'lev', 'lat', 'lon']
+    elif numdims == 3:
         clim_dims = ['time', 'lat', 'lon']
-    else:
+    elif numdims == 2:
         clim_dims = ['lat', 'lon']
+    else:
+        raise ValueError(f'Too few/many dimensions: {numdims}!')
     for dim in clim_dims:
         if dim not in dims:
             raise ValueError(
                 f"The dimension {dims} not consistent with required dims {clim_dims}!")
 
-    if dim3:
+    if numdims == 4:
+        # Actually change location in memory if necessary!
+        ds = ds.transpose("lat", "lon", "lev", "time").compute()
+        gut.myprint('object transposed to lat-lon-lev-time!', verbose=verbose)
+
+    elif numdims == 3:
         # Actually change location in memory if necessary!
         ds = ds.transpose("lat", "lon", "time").compute()
         gut.myprint('3d object transposed to lat-lon-time!', verbose=verbose)
-    else:
+    elif numdims == 2:
         ds = ds.transpose('lat', 'lon').compute()
         gut.myprint('2d oject transposed to lat-lon!')
 

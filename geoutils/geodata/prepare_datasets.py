@@ -1,6 +1,7 @@
 # %%
 from geoutils.geodata.base_dataset import BaseDataset
 import geoutils.utils.general_utils as gut
+import geoutils.utils.file_utils as fut
 import os
 output_folder = 'climate_data'
 time_range = ['1979-01-01', '2019-12-31']
@@ -106,13 +107,14 @@ fname_vimd = dirname_vimd + \
 
 # %%  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Wind and geopot fields on different pressure levels
-plevels = [5, 50, 100, 150, 200, 300, 400, 450, 500, 550,
-           600, 650, 700, 750, 800, 850, 1000]
-plevels = [150, 250, 300,
-           600, 850, 950, 1000]
-# plevels = [250, 600, 850, 1000]
-plevels = [800, 550, 650]
-plevels = [200, 850, 500]
+plevels = [5, 50, 100, 150, 200,
+           250, 300, 350, 400,
+           450, 500, 550, 600,
+           650, 700, 750, 800,
+           850, 900, 950, 1000]
+
+# plevels = [50, 150, 950, 600]
+
 name = 'era5'
 grid_step = 1
 
@@ -156,14 +158,14 @@ for plevel in plevels:
     var_names = ['u', 'v', 'z', 'pv']
     var_names = ['u', 'v']
     var_names = ['t', 'q']
-    var_names = ['u', 'v', 'q', 'z', 'w']
+    var_names = ['u', 'v', 'w', ]
 
     for idx, var_name in enumerate(var_names):
         fname = fnames_dict[var_name]
         dataset_file = output_dir + \
             f"/{output_folder}/{name}_{var_name}_{grid_step}_{plevel}_ds.nc"
 
-        if os.path.exists(dataset_file) is False:
+        if not fut.exist_file(dataset_file):
             gut.myprint(f'Create Dataset {dataset_file}')
             ds = BaseDataset(data_nc=fname,
                              var_name=var_name,
@@ -172,6 +174,7 @@ for plevel in plevels:
                             #  time_range=time_range,
                              )
             ds.save(dataset_file)
+            del ds
         else:
             gut.myprint(f'File {dataset_file} already exists!')
 

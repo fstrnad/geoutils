@@ -36,14 +36,15 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                  data_nc_arr_fac=None,
                  compute_ws=False,
                  plevels=None,
-                 load_nc=None,
                  can=True,
                  **kwargs):
         reload(mp)
         u_kwargs = copy.deepcopy(kwargs)
         v_kwargs = copy.deepcopy(kwargs)
         w_kwargs = copy.deepcopy(kwargs)
-        if load_nc is None:
+        self.u_name = kwargs.pop('u_name', 'u')
+        self.v_name = kwargs.pop('v_name', 'v')
+        if data_nc_arr_u is not None:
             ds_uwind = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_u,
                                                     plevels=plevels,
                                                     can=False,  # Anomalies are computed later all together
@@ -53,14 +54,15 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                     can=False,
                                                     **v_kwargs)
 
-            self.u_name = kwargs.pop('u_name', 'u')
-            self.v_name = kwargs.pop('v_name', 'v')
+
             u = ds_uwind.ds[self.u_name]
             v = ds_vwind.ds[self.v_name]
             if self.u_name == 'u':
                 u = u.rename('U')
+                self.u_name = 'U'
             if self.v_name == 'v':
                 v = v.rename('V')
+                self.v_name = 'V'
 
             if data_nc_arr_fac is not None:
                 ds_fac = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_fac,
@@ -84,6 +86,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                         **w_kwargs)
                 self.w_name = kwargs.pop('w_name', 'w')
                 w = ds_wwind.ds[self.w_name].rename('OMEGA')
+                self.w_name = 'OMEGA'
                 self.vert_velocity = True
 
             windspeed = None
@@ -102,7 +105,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
 
             del u, v, w, windspeed, ds_uwind, ds_vwind, ds_wwind
         else:
-            self.load(load_nc)
+            gut.myprint('Only Init the Wind Dataset object without data!')
 
     def get_ds(self, u, v, w=None, windspeed=None):
         ds = xr.merge([u, v])
@@ -133,7 +136,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
         """
 
-        vw = VectorWind(self.ds['u'], self.ds['v'])
+        vw = VectorWind(self.ds[self.u_name], self.ds[self.u_name])
 
         gut.myprint('Compute relative vorticity...')
         rv = vw.vorticity()  # Relative Vorticity
@@ -155,15 +158,17 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
         """
 
-        vw = VectorWind(self.ds['u'], self.ds['v'])
+        vw = VectorWind(self.ds[self.u_name], self.ds[self.v_name])
 
         gut.myprint(f'Compute Vorticity...')
         eta = vw.absolutevorticity()
-        gut.myprint("Compute Rossby Wave Source...")
+        gut.myprint(f'Compute Divergence...')
         div = vw.divergence()
+        gut.myprint(f'Compute Rotation and gradient...')
         uchi, vchi = vw.irrotationalcomponent()
         etax, etay = vw.gradient(eta)
 
+        gut.myprint("Compute Rossby Wave Source...")
         # Combine the components to form the Rossby wave source term.
         S = eta * -1. * div - (uchi * etax + vchi * etay)
         self.ds['S'] = S.rename('S')

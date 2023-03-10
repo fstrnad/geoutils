@@ -104,11 +104,13 @@ def set_extent(da, ax,
         projection = ccrs.PlateCarree(central_longitude=0)
 
     if not isinstance(da, xr.DataArray):
-        # expect list of tuple of type (lon, lat)
-        min_ext_lon = np.min(da[:, 0])
-        min_ext_lat = np.min(da[:, 1])
-        max_ext_lon = np.max(da[:, 0])
-        max_ext_lat = np.max(da[:, 1])
+        if da is not None:
+            if [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
+                # expect list of tuple of type (lon, lat)
+                min_ext_lon = np.min(da[:, 0])
+                min_ext_lat = np.min(da[:, 1])
+                max_ext_lon = np.max(da[:, 0])
+                max_ext_lat = np.max(da[:, 1])
 
     else:
         if [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
@@ -182,7 +184,7 @@ def create_map(
             if central_longitude != ax_central_longitude:
                 gut.myprint(
                     f'WARNING! Central longitude set to {central_longitude} but has no effect since axis argument is passed is {ax_central_longitude}!')
-
+        plt_grid = False  # Because this is already set from before!
     set_map = kwargs.pop('set_map', True)
     if projection != 'Nearside':
         ext_dict = set_extent(
@@ -284,21 +286,19 @@ def plot_map(dmap: xr.DataArray,
     reload(sput)
     plt.rcParams["pcolor.shading"] = "nearest"  # For pcolormesh
 
-    plt_grid = kwargs.pop("plt_grid", True)
     hatch_type = kwargs.pop('hatch_type', '..')
     set_map = kwargs.pop('set_map', True)
     figsize = kwargs.pop("figsize", (9, 6))
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
+    plt_grid = kwargs.pop("plt_grid", True)
 
     put.check_plot_type(plot_type)
-
     if ax is not None and projection is not None:
         raise ValueError(
             f'Axis already given, projection {projection} will have no effect. Please do not pass projection argument!')
     else:
-        if projection is None:
-            projection = 'PlateCarree'  # Set default to PlateCarree
+        projection = 'PlateCarree'  # Set default to PlateCarree
 
     if not isinstance(dmap, xr.DataArray) and plot_type != 'points':
         raise ValueError(
@@ -442,6 +442,7 @@ def plot_map(dmap: xr.DataArray,
                         projection=projection,
                         lw=2,
                         **kwargs)
+    print(1)
     return im
 
 
@@ -504,9 +505,11 @@ def plot_2D(
             raise ValueError(
                 f'Vmax has to be of type float or int but is of type {type(vmax)}!')
 
-    vmin = np.nanquantile(z, q=0.1) if vmin is None else vmin
-    vmax = np.nanquantile(z, q=0.9) if vmax is None else vmax
-
+    if z is not None:
+        vmin = np.nanquantile(z, q=0.1) if vmin is None else vmin
+        vmax = np.nanquantile(z, q=0.9) if vmax is None else vmax
+    else:
+        vmin = vmax = None
     if set_norm == 'log':
         base = kwargs.pop('base', 2)
         # vmin and vmax are now the exponentials
@@ -514,28 +517,33 @@ def plot_2D(
     elif levels is not None:
         levels = np.linspace(vmin, vmax, levels + 1, endpoint=True)
     round_dec = kwargs.pop("round_dec", None)
-    if plot_type != 'hatch':
-        expo = gut.get_exponent10(vmin) if float(
-            vmin) != 0. else gut.get_exponent10(vmax)
-        if sci is None:
-            sci = expo if np.abs(expo) > 1 else None
-        if sci is not None:
-            if sci < 0:
-                round_dec = abs(sci) + 1
-            elif sci > 0:
-                round_dec = -1*(sci-2)
-            else:
-                round_dec = 0
+    if z is not None:
+        if plot_type != 'hatch':
+            expo = gut.get_exponent10(vmin) if float(
+                vmin) != 0. else gut.get_exponent10(vmax)
+            if sci is None:
+                sci = expo if np.abs(expo) > 1 else None
+            if sci is not None:
+                if sci < 0:
+                    round_dec = abs(sci) + 1
+                elif sci > 0:
+                    round_dec = -1*(sci-2)
+                else:
+                    round_dec = 0
 
-        if levels is not None:
-            levels = np.around(
-                levels, round_dec) if round_dec is not None else levels
-        if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
-            # norm = mpl.colors.LogNorm(levels=levels)
-            norm = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)
-            # vmin = vmax = None
-        else:
-            norm = None
+            if levels is not None:
+                levels = np.around(
+                    levels, round_dec) if round_dec is not None else levels
+            if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
+                # norm = mpl.colors.LogNorm(levels=levels)
+                norm = mpl.colors.BoundaryNorm(
+                    levels, ncolors=cmap.N, clip=True)
+                # vmin = vmax = None
+            else:
+                norm = None
+    else:
+        sci = round_dec = norm = levels = None
+
     extend = put.set_cb_boundaries(data=z, im=None,
                                    vmin=vmin, vmax=vmax, **kwargs)
     if plot_type == "scatter":
