@@ -941,11 +941,11 @@ def remove_single_dim(ds):
     dims = dict(ds.dims)
     for dim, num in dims.items():
         if num < 2:
-            if dim != 'time':  # Time dimension is the only one that is allowed to be kept
+            if dim not in ['time', 'lev', 'plevel']:  # Time and pressure level dimension is the only one that is allowed to be kept
                 ds = ds.mean(dim=dim)  # Removes the single variable axis
                 gut.myprint(f'Remove single value dimension {dim}!')
             else:
-                gut.myprint(f'WARNING: Time dimension contains only 1 value!')
+                gut.myprint(f'WARNING: dimension {dim} contains only 1 value!')
     return ds
 
 

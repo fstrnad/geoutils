@@ -3,6 +3,7 @@
 Base class for the geodata datasets with lon-lat resolution.
 """
 
+import time
 import os
 import numpy as np
 import copy
@@ -11,6 +12,7 @@ import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
+from datetime import datetime
 from importlib import reload
 import xarray as xr
 reload(gut)
@@ -31,7 +33,6 @@ class BaseDataset():
         self,
         var_name=None,
         data_nc=None,
-        data_nc_arr=None,
         time_range=None,
         lon_range=[-180, 180],
         lat_range=[-90, 90],
@@ -64,47 +65,45 @@ class BaseDataset():
             decode_times (bool, optional): decode times if in nc file np.datetime64 format is provided. Defaults to True.
         """
         self.grid_type = 'rectangular'
-        if data_nc_arr is not None and data_nc is not None:
-            raise ValueError(f'Please either provide data_nc_arr OR data_nc!')
-        if data_nc_arr is None:
+        if isinstance(data_nc, list) or isinstance(data_nc, np.ndarray):
+            data_nc_arr = data_nc
+        elif isinstance(data_nc, str):
             data_nc_arr = [data_nc]
         else:
-            gut.myprint(f'Read multiple files (#files={len(data_nc_arr)})!')
+            raise ValueError(
+                f'Provide single or multiple files as strings but data_nc = {data_nc}!')
         # initialize dataset
-        ds_arr = []
-        for file in tqdm(data_nc_arr):
-            if file is not None:
-                # check if file exists
-                if not os.path.exists(file):
-                    gut.myprint(f"You are here: {PATH}!", verbose=verbose)
-                    gut.myprint(f'And this file is not here {file}!')
-                    raise ValueError(f"File does not exist {file}!")
-                self.grid_step = grid_step
-                ds = self.open_ds(
-                    nc_file=file,
-                    var_name=var_name,
-                    lat_range=lat_range,
-                    lon_range=lon_range,
-                    time_range=time_range,
-                    grid_step=grid_step,
-                    large_ds=large_ds,
-                    decode_times=decode_times,
-                    verbose=verbose,
-                    **kwargs,
-                )
-                (
-                    self.time_range,
-                    self.lon_range,
-                    self.lat_range,
-                ) = self.get_spatio_temp_range(ds)
-                ds_arr.append(ds)
+        # ds_arr = []
+        for file in data_nc_arr:
+            fut.print_file_location_and_size(file_path=file, verbose=verbose)
+        self.grid_step = grid_step
+        ds = self.open_ds(
+            nc_files=data_nc_arr,
+            var_name=var_name,
+            lat_range=lat_range,
+            lon_range=lon_range,
+            time_range=time_range,
+            grid_step=grid_step,
+            large_ds=large_ds,
+            decode_times=decode_times,
+            verbose=verbose,
+            **kwargs,
+        )
+        (
+            self.time_range,
+            self.lon_range,
+            self.lat_range,
+        ) = self.get_spatio_temp_range(ds)
+        # ds_arr.append(ds)
 
         self.set_var(var_name=var_name, ds=ds)
-        if len(data_nc_arr) > 1:
-            multiple = kwargs.pop('multiple', 'max')
-            self.ds = sput.merge_datasets(datasets=ds_arr, multiple=multiple)
-        else:
-            self.ds = ds_arr[0]
+        # if len(data_nc_arr) > 1:
+        #     multiple = kwargs.pop('multiple', 'max')
+        #     self.ds = sput.merge_datasets(datasets=ds_arr, multiple=multiple)
+        # else:
+        #     self.ds = ds_arr[0]
+
+        self.ds = ds
 
         # detrending
         if detrend is True:
@@ -138,7 +137,8 @@ class BaseDataset():
 
     def open_ds(
         self,
-        nc_file,
+        nc_files,
+        plevels=None,
         time_range=None,
         grid_step=None,
         large_ds=False,
@@ -149,20 +149,32 @@ class BaseDataset():
         verbose=True,
         **kwargs,
     ):
-        fut.print_file_location_and_size(file_path=nc_file, verbose=verbose)
         gut.myprint("Start processing data!", verbose=verbose)
 
         if large_ds:
-            ds = xr.open_dataset(nc_file, chunks={"time": 100})
+            gut.myprint('Chunk the data', verbose=verbose)
+            ds = xr.open_mfdataset(nc_files, chunks={"time": 100})
         else:
-            ds = xr.open_dataset(nc_file, decode_times=decode_times)
+            if plevels is None:
+                ds = xr.open_mfdataset(nc_files,
+                                       decode_times=decode_times,
+                                       parallel=True)
+            else:
+                ds = xr.open_mfdataset(nc_files, decode_times=decode_times,
+                                       preprocess=self.add_dummy_dim,
+                                       chunks={"time": 1000}
+                                       )
+                self.plevel_name = kwargs.pop('plevel_name', 'lev')
+
+                ds = ds.rename({'dummy': self.plevel_name})
+                ds[self.plevel_name] = plevels
 
         ds = self.check_dimensions(
-            ds, ts_days=decode_times, verbose=verbose, **kwargs)
+            ds, ts_days=decode_times, verbose=verbose,
+            **kwargs)
         self.dims = self.get_dims(ds=ds)
         ds = self.rename_var_era5(ds, verbose=verbose)
 
-        # da = ds[var_name]
         if len(self.dims) > 2:
             ds = self.get_data_timerange(ds, time_range)
 
@@ -192,8 +204,8 @@ class BaseDataset():
                                   grid_step_lon=grid_step_lon,
                                   grid_step_lat=grid_step_lat,
                                   use_ds_grid=use_ds_grid)
-        if large_ds:
-            ds.unify_chunks()
+
+        ds.unify_chunks()
         if lon_range != [-180, 180] or lat_range != [-90, 90]:
             gut.myprint(
                 f'Cut the dataset {lon_range}, {lat_range}!', verbose=verbose)
@@ -213,6 +225,12 @@ class BaseDataset():
         if timemax is not None:
             ds = tu.compute_timemax(ds=ds, timemean=timemax, verbose=verbose)
         return ds
+
+    def add_dummy_dim(self, xda):
+        time.sleep(0.1)  # To ensure that data is read in correct order!
+        xda = xda.expand_dims(dummy=[datetime.now()])
+        time.sleep(0.1)
+        return xda
 
     def load(self, load_nc, lon_range=[-180, 180], lat_range=[-90, 90]):
         """Load dataset object from file.
@@ -280,7 +298,7 @@ class BaseDataset():
             }
             ds_temp.attrs = param_class
 
-        gut.save_ds(ds=ds_temp, filepath=filepath,
+        fut.save_ds(ds=ds_temp, filepath=filepath,
                     unlimited_dim=unlimited_dim,
                     classic_nc=classic_nc,
                     zlib=zlib)
@@ -303,7 +321,7 @@ class BaseDataset():
             ds_temp = xr.where(self.mask, 1, np.nan)
         ds_temp.attrs = param_class
 
-        gut.save_ds(ds=ds_temp, filepath=filepath)
+        fut.save_ds(ds=ds_temp, filepath=filepath)
 
         return None
 
@@ -352,16 +370,19 @@ class BaseDataset():
             self.calender360 = False
         return ds
 
-    def rename_var(self, new_var_name):
+    def rename_var(self, new_var_name, ds=None):
         """Renames the dataset's variable name in self.ds and self.var_name
 
         Args:
             var_name (str): string of new var name
         """
-        self.ds = self.ds.rename({self.var_name: new_var_name})
+        if ds is None:
+            ds = self.ds
+        ds = ds.rename({self.var_name: new_var_name})
         gut.myprint(f"Rename {self.var_name} to {new_var_name}!")
         self.var_name = new_var_name
         self.vars = self.get_vars()
+        return ds
 
     def rename_var_era5(self, ds, verbose=True):
         names = gut.get_vars(ds=ds)
@@ -424,6 +445,8 @@ class BaseDataset():
     def set_var(self, ds=None, var_name=None):
         # select a main var name
         self.vars = self.get_vars(ds=ds)
+        if var_name is not None:
+            ds = self.rename_var(ds=ds, new_var_name=var_name)
         var_name = var_name if var_name is not None else self.vars[0]
         self.var_name = 'evs' if 'evs' in self.vars else var_name
         if self.var_name not in self.vars:
@@ -494,7 +517,7 @@ class BaseDataset():
             # Optional Land Sea Mask File
             if lsm_file is not None or mask_ds is not None:
                 if mask_ds is None:
-                    mask_ds = self.open_ds(nc_file=lsm_file,
+                    mask_ds = self.open_ds(nc_files=lsm_file,
                                            time_range=None,
                                            grid_step=self.grid_step,
                                            lon_range=self.lon_range,
@@ -1530,7 +1553,8 @@ class BaseDataset():
 
     def filter_nans(self, th=1, dims=['lon', 'lat']):
         da = self.ds[self.var_name]
-        self.ds = tu.filter_nan_values(dataarray=da, dims=dims, th=th).to_dataset()
+        self.ds = tu.filter_nan_values(
+            dataarray=da, dims=dims, th=th).to_dataset()
         self.set_var()
         return self.ds
 # %%

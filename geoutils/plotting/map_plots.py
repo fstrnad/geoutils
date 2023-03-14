@@ -99,7 +99,11 @@ def set_extent(da, ax,
     min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat = ax.get_extent()
     set_global = kwargs.pop('set_global', False)
     if dateline:
-        projection = ccrs.PlateCarree(central_longitude=180)
+        projection = ccrs.PlateCarree(central_longitude=0)
+        if lon_range is not None:
+            lon_range = sput.lon2_360(lon_range)
+        min_ext_lon += 180
+        max_ext_lon += 180
     else:
         projection = ccrs.PlateCarree(central_longitude=0)
 
@@ -138,20 +142,24 @@ def set_extent(da, ax,
     if not set_global:
         if abs(min_ext_lon) > 179 and abs(max_ext_lon) > 179 and abs(min_ext_lat) > 89 and abs(max_ext_lat) > 89:
             set_global = True
-            gut.myprint('WARNING! Set global map!')
+            if lon_range is not None or lat_range is not None:
+                gut.myprint('WARNING! Set global map!')
     if set_global:
         ax.set_global()
     else:
         ax.set_extent(
-            [min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat], projection
+            [min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat], crs=projection
         )
-    return dict(
+
+    ext_dict = dict(
         ax=ax,
         min_lon=min_ext_lon,
         max_lon=max_ext_lon,
         min_lat=min_ext_lat,
         max_lat=max_ext_lat
     )
+
+    return ext_dict
 
 
 def create_map(
@@ -161,7 +169,7 @@ def create_map(
     projection="EqualEarth",
     central_longitude=None,
     alpha=1,
-    plt_grid=True,
+    plt_grid=False,  # Because often this is already set from before!
     lat_range=None,
     lon_range=None,
     dateline=False,
@@ -172,19 +180,25 @@ def create_map(
     central_latitude = kwargs.pop("central_latitude", 0)
     proj = get_projection(projection=projection,
                           central_longitude=central_longitude,
-                          central_latitude=central_latitude,)
+                          central_latitude=central_latitude,
+                          dateline=dateline)
     figsize = kwargs.pop("figsize", (9, 6))
     # create figure
     if ax is None:
         fig, ax = plt.subplots(figsize=(figsize))
         ax = plt.axes(projection=proj)
+        plt_grid = True
     else:
         ax_central_longitude = ax.projection.proj4_params['lon_0']
+        if ax_central_longitude == 180:
+            dateline = True
+
         if central_longitude is not None:
             if central_longitude != ax_central_longitude:
                 gut.myprint(
                     f'WARNING! Central longitude set to {central_longitude} but has no effect since axis argument is passed is {ax_central_longitude}!')
-        plt_grid = False  # Because this is already set from before!
+        # Because this is already set from before!
+
     set_map = kwargs.pop('set_map', True)
     if projection != 'Nearside':
         ext_dict = set_extent(
@@ -218,9 +232,12 @@ def create_map(
     return ax, fig, kwargs
 
 
-def get_projection(projection, central_longitude=None, central_latitude=None):
+def get_projection(projection, central_longitude=None, central_latitude=None,
+                   dateline=False):
     central_longitude = 0 if central_longitude is None else central_longitude
     central_latitude = 0 if central_latitude is None else central_latitude
+    if dateline:
+        central_longitude = 180
     if not isinstance(central_longitude, float) and not isinstance(central_longitude, int):
         raise ValueError(
             f'central_longitude is not of type int or float, but of type {type(central_longitude)}!'
@@ -291,7 +308,7 @@ def plot_map(dmap: xr.DataArray,
     figsize = kwargs.pop("figsize", (9, 6))
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
-    plt_grid = kwargs.pop("plt_grid", True)
+    plt_grid = kwargs.pop("plt_grid", False)
 
     put.check_plot_type(plot_type)
     if ax is not None and projection is not None:
@@ -371,7 +388,7 @@ def plot_map(dmap: xr.DataArray,
                                              check=False)
             flat_idx = np.where(np.abs(flat_idx_lst) >
                                 1e-5)[0]  # get all points >0
-            print('WARNING! Plot all points that are > 0!')
+            gut.myprint('WARNING! Plot all points that are > 0!')
             x = []
             y = []
 
@@ -442,7 +459,6 @@ def plot_map(dmap: xr.DataArray,
                         projection=projection,
                         lw=2,
                         **kwargs)
-    print(1)
     return im
 
 
@@ -885,7 +901,8 @@ def plot_wind_field(
     return {'ax': ax}
 
 
-def create_multi_plot(nrows, ncols, ds=None, projection=None,
+def create_multi_plot(nrows, ncols, projection=None,
+                      lon_range=None, lat_range=None,
                       plt_grid=True, **kwargs):
     reload(put)
     figsize = kwargs.pop('figsize', None)
@@ -908,11 +925,13 @@ def create_multi_plot(nrows, ncols, ds=None, projection=None,
                           width_ratios=ratios_w,
                           hspace=hspace, wspace=wspace)
     if projection is not None:
-        central_longitude = kwargs.pop("central_longitude", 0)
-        central_latitude = kwargs.pop("central_latitude", 0)
+        central_longitude = kwargs.pop("central_longitude", None)
+        central_latitude = kwargs.pop("central_latitude", None)
+        dateline = kwargs.pop('dateline', False)
         proj = get_projection(projection=projection,
                               central_longitude=central_longitude,
-                              central_latitude=central_latitude,)
+                              central_latitude=central_latitude,
+                              dateline=dateline)
     else:
         proj = None
     axs = []
@@ -924,16 +943,16 @@ def create_multi_plot(nrows, ncols, ds=None, projection=None,
     for i in range(nrows):
         for j in range(ncols):
             axs.append(fig.add_subplot(gs[i, j], projection=proj))
-
-            if ds is not None:
-                ax, _, kwargs = create_map(
-                    da=ds,
-                    ax=axs[run_idx-1],
-                    projection=projection,
-                    central_longitude=central_longitude,
-                    plt_grid=plt_grid,
-                    **kwargs
-                )
+            ax, _, kwargs = create_map(
+                ax=axs[run_idx-1],
+                projection=projection,
+                central_longitude=central_longitude,
+                plt_grid=plt_grid,
+                lon_range=lon_range,
+                lat_range=lat_range,
+                dateline=dateline,
+                **kwargs
+            )
             run_idx += 1
             if run_idx > end_idx:
                 break

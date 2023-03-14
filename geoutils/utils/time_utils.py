@@ -573,10 +573,10 @@ def get_dates_of_ds(ds):
     return tps
 
 
-def str2datetime(string, dtype='D', numpy=True,
+def str2datetime(string, numpy=True,
                  verbose=False):
     if type(string) is str:
-        date = np.datetime64(string, dtype)
+        date = np.datetime64(string)
         if not numpy:
             y, m, d, h = get_date2ymdh(date=date)
             date = datetime.datetime(year=y, month=m, day=d, hour=h)

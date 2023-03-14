@@ -27,44 +27,23 @@ class MultiPressureLevelDataset(bds.BaseDataset):
         Variable name of interest
     """
 
-    def __init__(self, data_nc_arr=None,
+    def __init__(self, data_nc=None,
                  plevels=None,
                  can=True,
                  **kwargs):
 
-        if data_nc_arr is None:
-            raise ValueError(
-                'Please provide array of dataset files to read!')
         if plevels is None:
             gut.myprint(
                 'No Plevel provided! Assuming variable is vertically integrated!')
             plevels = [0]
-        init_mask = kwargs.pop('init_mask', False)
 
-        # Dimension name of pressure level
-        self.plevel_name = kwargs.pop('plevel_name', 'lev')
-
-        all_ds = []
+        super().__init__(data_nc=data_nc,
+                         plevels=plevels,
+                         can=can,
+                         **kwargs)
         gut.myprint(
             f'Load Pressure levels {plevels} as dimension {self.plevel_name}!')
-        for idx, plevel in enumerate(plevels):
-            load_nc_file = data_nc_arr[idx]
-            single_pl_ds = bds.BaseDataset(data_nc=load_nc_file,
-                                           can=False,  # is computed later
-                                           init_mask=False,  # is initialized later
-                                           **kwargs)
-            all_ds.append(single_pl_ds.ds.expand_dims(
-                {self.plevel_name: 1}).assign_coords({self.plevel_name: [plevel]}))
 
-        # To take all in init defined values also for multi-pressure levels
-        # self = single_pl_ds
-        gut.myprint(
-            f'Plevels {plevels}, now merge all single datasets into one!')
-        self.ds = xr.merge(all_ds)
-        self.can = can
-        self.compute_all_anomalies(**kwargs)
-        self.load_dataset_attributes(
-            base_ds=single_pl_ds, init_mask=init_mask)
         self.set_plevel_attrs()
 
     def load_dataset_attributes(self, base_ds, **kwargs):

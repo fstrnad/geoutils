@@ -30,10 +30,10 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
     """
 
     def __init__(self,
-                 data_nc_arr_u=None,
-                 data_nc_arr_v=None,
-                 data_nc_arr_w=None,
-                 data_nc_arr_fac=None,
+                 data_nc_u=None,
+                 data_nc_v=None,
+                 data_nc_w=None,
+                 data_nc_fac=None,
                  compute_ws=False,
                  plevels=None,
                  can=True,
@@ -44,12 +44,12 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         w_kwargs = copy.deepcopy(kwargs)
         self.u_name = kwargs.pop('u_name', 'u')
         self.v_name = kwargs.pop('v_name', 'v')
-        if data_nc_arr_u is not None:
-            ds_uwind = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_u,
+        if data_nc_u is not None:
+            ds_uwind = mp.MultiPressureLevelDataset(data_nc=data_nc_u,
                                                     plevels=plevels,
                                                     can=False,  # Anomalies are computed later all together
                                                     **u_kwargs)
-            ds_vwind = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_v,
+            ds_vwind = mp.MultiPressureLevelDataset(data_nc=data_nc_v,
                                                     plevels=plevels,
                                                     can=False,
                                                     **v_kwargs)
@@ -64,8 +64,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                 v = v.rename('V')
                 self.v_name = 'V'
 
-            if data_nc_arr_fac is not None:
-                ds_fac = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_fac,
+            if data_nc_fac is not None:
+                ds_fac = mp.MultiPressureLevelDataset(data_nc=data_nc_fac,
                                                       plevels=plevels,
                                                       can=False,
                                                       **w_kwargs)
@@ -79,8 +79,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             self.vert_velocity = False
             w = None
             ds_wwind = None
-            if data_nc_arr_w is not None:
-                ds_wwind = mp.MultiPressureLevelDataset(data_nc_arr=data_nc_arr_w,
+            if data_nc_w is not None:
+                ds_wwind = mp.MultiPressureLevelDataset(data_nc=data_nc_w,
                                                         plevels=plevels,
                                                         can=False,
                                                         **w_kwargs)
@@ -108,16 +108,20 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             gut.myprint('Only Init the Wind Dataset object without data!')
 
     def get_ds(self, u, v, w=None, windspeed=None):
-        ds = xr.merge([u, v])
+        gut.myprint(f'Merge u, v')
+        ds = xr.Dataset({self.u_name: u,
+                         self.v_name: v})
         if windspeed is not None:
-            ds = xr.merge([ds, windspeed])
+            gut.myprint(f'Merge u, v, omega')
+            ds[self.ws_name] = windspeed
         if w is not None:
-            ds = xr.merge([ds, w])
+            ds[self.w_name] = w
         return ds
 
     def compute_windspeed(self, u, v, ws_name='windspeed'):
         windspeed = np.sqrt(u ** 2 + v ** 2)
-        windspeed = windspeed.rename(ws_name)
+        self.ws_name = ws_name
+        windspeed = windspeed.rename(self.ws_name)
         gut.myprint(
             "Computed single components of wind dataset. Now compute windspeed!")
         return windspeed

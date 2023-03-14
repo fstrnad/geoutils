@@ -470,84 +470,8 @@ def get_quantile_of_ts(ts, q=0.95, verbose=False):
     return q_ts
 
 
-def save_np_dict(arr_dict, sp, verbose=False):
-    myprint(f'Store to {sp}', verbose=verbose)
-    np.save(sp, arr_dict, allow_pickle=True)
-    return None
-
-
-def save_pkl_dict(arr_dict, sp):
-    with open(sp, 'wb') as f:
-        # Pickle the 'data' dictionary using the highest protocol available.
-        pickle.dump(arr_dict, f, pickle.HIGHEST_PROTOCOL)
-    return None
-
-
 def get_varnames_ds(ds):
     return list(ds.keys())
-
-
-def save_ds(ds, filepath, unlimited_dim=None,
-            classic_nc=False,
-            zlib=True,
-            backup=False):
-    if os.path.exists(filepath):
-        myprint(f"File {filepath} already exists!")
-        if backup:
-            bak_file = f"{filepath}_backup"
-            os.rename(filepath, bak_file)
-            myprint(f"Old file stored as {bak_file} as backup written!")
-        else:
-            myprint(f"File {filepath} will be overwritten!")
-            os.remove(filepath)
-    dirname = os.path.dirname(filepath)
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
-
-    if classic_nc:
-        myprint('Store as NETCDF4_CLASSIC!')
-        ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
-                     format='NETCDF4_CLASSIC')
-    else:
-        ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
-                     engine='netcdf4')
-
-    if zlib:
-        encoding = {var: {'zlib': True} for var in ds.data_vars}
-        ds.to_netcdf(filepath, encoding=encoding)
-    myprint(f"File {filepath} written!")
-
-    return None
-
-
-def load_np_dict(sp):
-    print(f'Load {sp}')
-    return np.load(sp, allow_pickle=True).item()
-
-
-def load_npy(fname):
-    """Load .npy files and convert dict to xarray object.
-
-    Args:
-        fname (str): Filename
-
-    Returns:
-        converted_dic [dict]: dictionary of stored objects
-    """
-    dic = np.load(fname,
-                  allow_pickle=True).item()
-    converted_dic = {}
-    for key, item in dic.items():
-        # convert dict to xarray object
-        if isinstance(item, dict):
-            if 'data_vars' in item.keys():
-                item = xr.Dataset.from_dict(item)
-            elif 'data' in item.keys():
-                item = xr.DataArray.from_dict(item)
-        # store object to new dict
-        converted_dic[key] = item
-
-    return converted_dic
 
 
 def get_source_target_corr(corr, sids):
