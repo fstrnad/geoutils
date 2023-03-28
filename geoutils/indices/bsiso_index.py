@@ -1,9 +1,9 @@
 # %%
-import climnet.utils.statistic_utils as sut
-import climnet.utils.indices_utils as iut
+import geoutils.utils.statistic_utils as sut
+import geoutils.utils.indices_utils as iut
 import numpy as np
 import xarray as xr
-import climnet.utils.time_utils as tu
+import geoutils.utils.time_utils as tu
 from importlib import reload
 import pandas as pd
 

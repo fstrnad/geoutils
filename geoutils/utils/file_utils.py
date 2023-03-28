@@ -172,3 +172,9 @@ def load_npy(fname):
         converted_dic[key] = item
 
     return converted_dic
+
+
+def load_xr(filepath):
+    assert_file_exists(file_path=filepath)
+    data = xr.open_dataset(filepath)
+    return data

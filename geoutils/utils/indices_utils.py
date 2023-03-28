@@ -395,27 +395,6 @@ def get_nao(fname, time_range=None, timemean=None):
     return da
 
 
-def get_air(fname, time_range=None):
-    df = pd.read_csv(fname, skiprows=1,
-                     names=['YEAR', 'JUN', 'JUL', 'AUG', 'SEP', 'JUN-SEP'],
-                     # delim_whitespace=True
-                     )
-    time = []
-    for i, row in df.iterrows():
-        tp = np.datetime64(
-            f"{int(row['YEAR'])}-{int(6):02}",
-            'M')
-        time.append(tp)
-    da = xr.DataArray(data=df['JUN-SEP'], name='air', coords={"time": np.array(time)},
-                      dims=["time"])
-    # air_index = air_index['JUN-SEP'].loc[1998:2018]
-    if time_range is not None:
-        da = da.sel(time=slice(np.datetime64(time_range[0], "D"),
-                               np.datetime64(time_range[1], "D")))
-
-    return da
-
-
 def enso_events_noaa(oni):
     """Get time period of ENSO events based on the definition by NOAA,
         i.e. the ONI index is larger/smaller than +/- 0.5 for

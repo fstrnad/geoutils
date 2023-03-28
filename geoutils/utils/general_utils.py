@@ -225,7 +225,6 @@ def find_local_min_max_xy(data, x):
     max_dict['x_local_min'] = x[max_dict['local_maxima_indices']]
     max_dict['x_min'] = x[max_dict['min_idx']]
 
-
     return max_dict
 
 
@@ -286,42 +285,6 @@ def find_local_min_xy(data, x):
     max_dict['x_min'] = x[max_dict['min_idx']]
 
     return max_dict
-
-
-def get_values_above_val(dataarray, val=None, dim='time'):
-    """Return all values in the input xarray that are above a value.
-    The median is taken if no value is given.
-
-    Parameters:
-    -----------
-    dataarray : xarray.DataArray
-        The input data array to get values from.
-
-    Returns:
-    --------
-    xarray.DataArray
-        An xarray object containing only the values that are above the median.
-
-    Raises:
-    -------
-    ValueError:
-        If the input data array does not have a time dimension.
-    """
-    if dim not in dataarray.dims:
-        raise ValueError(f"Input data array must have a {dim} dimension")
-
-    if val == 'mean':
-        val = dataarray.mean(dim=dim)
-    else:
-        val = dataarray.median(dim=dim) if val is None else val
-    above_val = dataarray.where(dataarray >= val).dropna(dim=dim)
-    below_val = diff_xarray(arr1=dataarray, arr2=above_val)
-
-    return {
-        'val': val,
-        'above': above_val,
-        'below': below_val
-    }
 
 
 def get_locmax_of_score(ts, q=0.95):
@@ -675,8 +638,15 @@ def nans_array(size):
     return a
 
 
-def contains_nans(x):
+def count_nans(x):
     return np.count_nonzero(np.isnan(x.data))
+
+
+def contains_nan(arr):
+    if np.isnan(arr).any():
+        return True
+    else:
+        return False
 
 
 def remove_nans(x):
@@ -721,7 +691,8 @@ def merge_datasets(ds1, ds2):
     # Check if the dimensions are consistent between ds1 and ds2
     for dim in ["lat", "lon", "time"]:
         if not ds1[dim].equals(ds2[dim]):
-            raise ValueError(f"Inconsistent dimension {dim} between datasets")
+            raise ValueError(
+                f"Inconsistent dimension {dim} between datasets: {ds1[dim]} vs {ds2[dim]}!")
 
     # Merge the two Dataset objects into a single Dataset object
     merged_ds = xr.merge([ds1, ds2])
@@ -782,3 +753,29 @@ def diff_xarray(arr1, arr2):
     unique_values = arr1[np.isin(arr1, arr2, invert=True)]
 
     return unique_values
+
+
+def sort_by_frequency(arr: np.ndarray) -> np.ndarray:
+    """
+    Sorts the input NumPy array by the frequency of each element in descending order.
+
+    Parameters:
+    arr (np.ndarray): A NumPy array of objects (eg. integers)
+
+    Returns:
+    np.ndarray: A NumPy array of integers, sorted by the frequency of each element in descending order.
+
+    Example:
+    >>> arr = np.array([1, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 6, 7, 7, 7, 7, 7, 8, 9, 9])
+    >>> sorted_by_frequency = sort_by_frequency(arr)
+    >>> print(sorted_by_frequency)
+    [4 7 3 5 9 1 2 6 8 0 10]
+    """
+    # Get the unique elements and their counts using NumPy's unique function
+    unique, counts = np.unique(arr, return_counts=True)
+
+    # Sort the counts array in descending order using NumPy's argsort function
+    sorted_indices = np.argsort(-counts)
+
+    # Sort the unique elements array using the sorted indices
+    return unique[sorted_indices]

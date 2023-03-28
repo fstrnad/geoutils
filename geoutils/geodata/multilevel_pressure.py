@@ -42,7 +42,7 @@ class MultiPressureLevelDataset(bds.BaseDataset):
                          can=can,
                          **kwargs)
         gut.myprint(
-            f'Load Pressure levels {plevels} as dimension {self.plevel_name}!')
+            f'Loaded Pressure levels {plevels} as dimension {self.plevel_name}!')
 
         self.set_plevel_attrs()
 
@@ -59,6 +59,9 @@ class MultiPressureLevelDataset(bds.BaseDataset):
             self.mask = base_ds.mask
             self.indices_flat = base_ds.indices_flat
             self.idx_map = base_ds.idx_map
+            self.lon_range = base_ds.lon_range
+            self.lat_range = base_ds.lat_range
+        self.dims = base_ds.dims
 
     def set_plevel_attrs(self):
         self.plevel_attrs = self.ds[self.plevel_name].attrs
@@ -68,13 +71,6 @@ class MultiPressureLevelDataset(bds.BaseDataset):
         self.plevel_attrs['units'] = 'hPa'
         self.plevel_attrs['axis'] = 'Z'
         self.ds[self.plevel_name].attrs.update(self.plevel_attrs)
-
-    def cut_map(self,  lon_range=[-180, 180], lat_range=[-90, 90]):
-        ds = self.ds
-        if lon_range != [-180, 180] and lat_range != [-90, 90]:
-            ds = self.cut_map(self.ds, lon_range, lat_range)
-
-        return ds
 
     def vertical_integration(self, var, c=1):
         """Perform vertical integration over all pressure levels available.

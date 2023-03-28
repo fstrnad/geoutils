@@ -102,6 +102,7 @@ def set_extent(da, ax,
         projection = ccrs.PlateCarree(central_longitude=0)
         if lon_range is not None:
             lon_range = sput.lon2_360(lon_range)
+
         min_ext_lon += 180
         max_ext_lon += 180
     else:
@@ -166,7 +167,7 @@ def create_map(
     da=None,
     ax=None,
     fig=None,
-    projection="EqualEarth",
+    projection="PlateCarree",
     central_longitude=None,
     alpha=1,
     plt_grid=False,  # Because often this is already set from before!
@@ -176,7 +177,6 @@ def create_map(
     **kwargs,
 ):
     projection = 'PlateCarree' if lon_range is not None else projection
-    projection = 'PlateCarree' if lat_range is not None else projection
     central_latitude = kwargs.pop("central_latitude", 0)
     proj = get_projection(projection=projection,
                           central_longitude=central_longitude,
@@ -229,7 +229,7 @@ def create_map(
                               ext_dict=ext_dict,
                               **kwargs)
 
-    return ax, fig, kwargs
+    return dict(ax=ax, fig=fig, kwargs=kwargs)
 
 
 def get_projection(projection, central_longitude=None, central_latitude=None,
@@ -238,6 +238,7 @@ def get_projection(projection, central_longitude=None, central_latitude=None,
     central_latitude = 0 if central_latitude is None else central_latitude
     if dateline:
         central_longitude = 180
+
     if not isinstance(central_longitude, float) and not isinstance(central_longitude, int):
         raise ValueError(
             f'central_longitude is not of type int or float, but of type {type(central_longitude)}!'
@@ -321,7 +322,7 @@ def plot_map(dmap: xr.DataArray,
         raise ValueError(
             f'data needs to be xarray object for plot_type = {plot_type}!')
 
-    ax, fig, kwargs = create_map(
+    map_dict = create_map(
         da=dmap,
         ax=ax,
         projection=projection,
@@ -334,7 +335,9 @@ def plot_map(dmap: xr.DataArray,
         dateline=dateline,
         **kwargs
     )
-
+    ax = map_dict['ax']
+    fig = map_dict['fig']
+    kwargs = map_dict['kwargs']
     projection = ccrs.PlateCarree()  # nicht: central_longitude=central_longitude!
 
     if bar == "discrete":
@@ -754,7 +757,7 @@ def plot_edges(
 
     plt_grid = kwargs.pop("plt_grid", False)
     set_map = kwargs.pop("set_map", False)
-    ax, fig, kwargs = create_map(
+    map_dict = create_map(
         da=ds.ds,
         ax=ax,
         projection=projection,
@@ -763,7 +766,9 @@ def plot_edges(
         set_map=set_map,
         **kwargs
     )
-
+    ax = map_dict['ax']
+    fig = map_dict['fig']
+    kwargs = map_dict['kwargs']
     counter = 0
     lw = kwargs.pop("lw", 1)
     alpha = kwargs.pop("alpha", 1)
@@ -907,7 +912,7 @@ def create_multi_plot(nrows, ncols, projection=None,
     reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
-        figsize = (8*ncols, 4*nrows)
+        figsize = (9*ncols, 5*nrows)
 
     ratios_w = np.ones(ncols)
     ratios_h = np.ones(nrows)
@@ -943,16 +948,19 @@ def create_multi_plot(nrows, ncols, projection=None,
     for i in range(nrows):
         for j in range(ncols):
             axs.append(fig.add_subplot(gs[i, j], projection=proj))
-            ax, _, kwargs = create_map(
-                ax=axs[run_idx-1],
-                projection=projection,
-                central_longitude=central_longitude,
-                plt_grid=plt_grid,
-                lon_range=lon_range,
-                lat_range=lat_range,
-                dateline=dateline,
-                **kwargs
-            )
+
+            if projection is not None:
+                map_dict = create_map(
+                    ax=axs[run_idx-1],
+                    projection=projection,
+                    central_longitude=central_longitude,
+                    plt_grid=plt_grid,
+                    lon_range=lon_range,
+                    lat_range=lat_range,
+                    dateline=dateline,
+                    **kwargs
+                )
+                kwargs = map_dict['kwargs']
             run_idx += 1
             if run_idx > end_idx:
                 break
@@ -963,7 +971,7 @@ def create_multi_plot(nrows, ncols, projection=None,
         axs = axs[0]
 
     title = kwargs.pop('title', None)
-    y_title = kwargs.pop('y_title', .9)
+    y_title = kwargs.pop('y_title', 1.02)
     if title is not None:
         put.set_title(title=title, ax=None, fig=fig,
                       y_title=y_title)

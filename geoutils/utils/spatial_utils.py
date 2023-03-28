@@ -15,6 +15,26 @@ reload(gut)
 RADIUS_EARTH = 6371  # radius of earth in km
 
 
+def assert_has_grid_dims(da):
+    """
+    Assert that a given xarray DataArray has a lon-lat dimension.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        The input DataArray to check.
+
+    Raises
+    ------
+    ValueError
+        If the input DataArray does not have a lon-lat dimension.
+    """
+
+    if 'lon' not in da.dims or 'lat' not in da.dims:
+        raise ValueError(
+            f"The input DataArray '{da.name}' does not have a time dimension.")
+
+
 def def_sel_ids_ds(ds, ids):
     """Returns an dataset of climnet dataset class with the selected ids.
     note that ids are transformed to points first.
@@ -43,6 +63,10 @@ def get_mean_std_loc(locs):
             'mean_lat': mean_lat,
             'std_lon': std_lon,
             'std_lat': std_lat}
+
+
+def get_mean_lon_lat_range(lon_range, lat_range):
+    return np.mean(lon_range), np.mean(lat_range)
 
 
 def compute_rm(da, rm_val, dim='time', sm='Jan', em='Dec'):
@@ -921,7 +945,11 @@ def remove_useless_variables(ds):
             (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'plevel'])) or
             (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'lev'])) or
             (gut.compare_lists(this_dims, ['lat', 'lon', 'lev'])) or
-            (gut.compare_lists(this_dims, ['lat', 'lon', 'plevel']))
+            (gut.compare_lists(this_dims, ['lat', 'lon', 'plevel'])) or
+            (gut.compare_lists(this_dims, ['time', 'dimx_lon'])) or
+            (gut.compare_lists(this_dims, ['time', 'dimy_lon'])) or
+            (gut.compare_lists(this_dims, ['time', 'dimz_lon'])) or
+            (gut.compare_lists(this_dims, ['time', 'x']))
         ):
             continue
         else:
@@ -930,9 +958,9 @@ def remove_useless_variables(ds):
 
     dims = gut.get_dims(ds=ds)
     for dim in dims:
-        if dim not in ['time', 'lat', 'lon', 'plevel', 'lev']:
+        if dim not in ['time', 'lat', 'lon', 'plevel', 'lev', 'dimx_lon', 'dimy_lon', 'dimz_lon', 'x']:
             ds = ds.drop_dims(dim)
-            gut.myprint(f'Remove dim {dim}!')
+            gut.myprint(f'Remove dimension {dim}!')
 
     return ds
 
@@ -941,7 +969,8 @@ def remove_single_dim(ds):
     dims = dict(ds.dims)
     for dim, num in dims.items():
         if num < 2:
-            if dim not in ['time', 'lev', 'plevel']:  # Time and pressure level dimension is the only one that is allowed to be kept
+            # Time and pressure level dimension is the only one that is allowed to be kept
+            if dim not in ['time', 'lev', 'plevel']:
                 ds = ds.mean(dim=dim)  # Removes the single variable axis
                 gut.myprint(f'Remove single value dimension {dim}!')
             else:
@@ -968,10 +997,10 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
 
     lon_lat_names = ['longitude', 'latitude',
                      't', 'month', 'time_counter', 'AR_key',
-                     'plevel']
+                     'plevel', 'dimx_lon', 'dimy_lon', 'dimz_lon']
     xr_lon_lat_names = ['lon', 'lat',
                         'time', 'time', 'time', 'time',
-                        'lev']
+                        'lev', 'x', 'y', 'z']
     dims = list(ds.dims)
     for idx, lon_lat in enumerate(lon_lat_names):
         if lon_lat in dims:
@@ -990,9 +1019,15 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
     elif numdims == 3:
         clim_dims = ['time', 'lat', 'lon']
     elif numdims == 2:
-        clim_dims = ['lat', 'lon']
+        if 'time' in dims:
+            clim_dims = ['time', 'x']
+            sort = False
+        else:
+            clim_dims = ['lat', 'lon']
+    elif numdims == 1:
+        clim_dims = ['time']
     else:
-        raise ValueError(f'Too few/many dimensions: {numdims}!')
+        raise ValueError(f'Too many dimensions: {numdims}!')
     for dim in clim_dims:
         if dim not in dims:
             raise ValueError(
@@ -1008,24 +1043,28 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
         ds = ds.transpose("lat", "lon", "time").compute()
         gut.myprint('3d object transposed to lat-lon-time!', verbose=verbose)
     elif numdims == 2:
-        ds = ds.transpose('lat', 'lon').compute()
+        if 'lon' in dims:
+            ds = ds.transpose('lat', 'lon').compute()
         gut.myprint('2d oject transposed to lat-lon!')
+    elif numdims == 1:
+        gut.myprint('1d oject only!')
 
-    # If lon from 0 to 360 shift to -180 to 180
-    if lon360:
-        gut.myprint('Longitudes 0 - 360!')
-        if max(ds.lon) < 180:
-            ds = da_lon2_360(da=ds)
-    else:
-        if max(ds.lon) > 180:
-            gut.myprint("Shift longitude -180 - 180!", verbose=verbose)
-            ds = da_lon2_180(da=ds)
+    if numdims >= 2 and 'lon' in dims:
+        # If lon from 0 to 360 shift to -180 to 180
+        if lon360:
+            gut.myprint('Longitudes 0 - 360!')
+            if max(ds.lon) < 180:
+                ds = da_lon2_360(da=ds)
+        else:
+            if max(ds.lon) > 180:
+                gut.myprint("Shift longitude -180 - 180!", verbose=verbose)
+                ds = da_lon2_180(da=ds)
 
-    if sort:
-        ds = ds.sortby('lon')
-        ds = ds.sortby('lat')
-        gut.myprint(
-            'Sorted longitudes and latitudes in ascending order, respectively', verbose=verbose)
+        if sort:
+            ds = ds.sortby('lon')
+            ds = ds.sortby('lat')
+            gut.myprint(
+                'Sorted longitudes and latitudes in ascending order, respectively', verbose=verbose)
 
     if 'time' in dims:
         if ts_days:
@@ -1070,7 +1109,17 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
     return ds
 
 
-def get_grid_step(ds):
+def get_grid_range(da):
+    assert_has_grid_dims(da=da)
+    xmin = float(np.min(da.lon))
+    xmax = float(np.max(da.lon))
+    ymin = float(np.min(da.lat))
+    ymax = float(np.max(da.lat))
+
+    return xmin, xmax, ymin, ymax
+
+
+def get_grid_step(ds, verbose=True):
     """
     Calculates the grid step (distance between grid points) in longitude and latitude direction
     for an xarray dataarray or dataset object.
@@ -1099,7 +1148,8 @@ def get_grid_step(ds):
         grid_step = grid_step_lat
     else:
         gut.myprint(
-            f'Different grid step in lon {grid_step_lon} and lat {grid_step_lat} direction!')
+            f'Different grid step in lon {grid_step_lon} and lat {grid_step_lat} direction!',
+            verbose=verbose)
         grid_step = grid_step_lat
     return grid_step, grid_step_lon, grid_step_lat
 
@@ -1135,3 +1185,25 @@ def merge_datasets(datasets, multiple='max'):
         time_arrays=datasets, multiple=multiple)
 
     return merged_dataset
+
+
+def get_data_coord(da, coord, in3d=True, method='nearest'):
+    if in3d:
+        x_0, y_0, lev_0 = coord
+        if method == 'nearest':
+            da_coord = da.sel(lon=x_0, lat=y_0, lev=lev_0,
+                              method=method)
+        else:
+            da_coord = da.interp(lon=x_0, lat=y_0, lev=lev_0,
+                                 method=method,
+                                 kwargs={"fill_value": "extrapolate"}
+                                 )
+    else:
+        if method == 'nearest':
+            da_coord = da.sel(lon=x_0, lat=y_0,
+                              method=method)
+        else:
+            da_coord = da.interp(lon=x_0, lat=y_0,
+                                 method=method)
+
+    return da_coord

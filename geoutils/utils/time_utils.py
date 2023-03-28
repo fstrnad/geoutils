@@ -54,10 +54,45 @@ def assert_has_time_dimension(da):
     ValueError
         If the input DataArray does not have a time dimension.
     """
+    if not isinstance(da, xr.DataArray) and not isinstance(da, xr.Dataset):
+        raise ValueError(f'Data has to be of xarray type but is type {type(da)}')
 
     if 'time' not in da.dims:
         raise ValueError(
             f"The input DataArray '{da.name}' does not have a time dimension.")
+
+
+def check_timepoints_in_dataarray(dataarray, timepoints):
+    """
+    Check if all time points in a set exist in an xr.Dataarray with a time dimension.
+
+    Parameters:
+    -----------
+    dataarray : xr.Dataarray
+        The data array to check for the time points.
+    timepoints : xr.Dataarray
+        The set of time points to check for in the data array.
+
+    Returns:
+    --------
+    bool
+        True if all time points exist in the data array, False otherwise.
+    """
+    assert_has_time_dimension(dataarray)
+
+    # Get the time values in the data array
+    dataarray_times = dataarray.time
+
+    # Get the time values in the set of time points
+    timepoints_times = timepoints.time
+
+    # Check if all time points in the set exist in the data array
+    for time in timepoints_times:
+        if time.data not in dataarray_times.data:
+            gut.myprint(f'{time.data} not in dataset!')
+            return False
+
+    return True
 
 
 def get_index_of_month(month):
@@ -67,6 +102,17 @@ def get_index_of_month(month):
     # Attention, this idx starts with 0, so Jan=0, Feb=1, ... Dec=11
 
     return idx
+
+
+def days_in_month(month):
+    if isinstance(month, str):
+        month = get_index_of_month(month=month)
+    if month == 2:
+        return 28
+    elif month in [4, 6, 9, 11]:
+        return 30
+    else:
+        return 31
 
 
 # def get_month_number(month):
@@ -189,6 +235,40 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
     return ds_sel
 
 
+def get_sel_years_data(ds, years,
+                       start_day=None,
+                       start_month=None,
+                       end_day=None,
+                       end_month=None):
+    ds_range = select_month_day_range(da=ds,
+                                      start_day=start_day,
+                                      end_day=end_day,
+                                      start_month=start_month,
+                                      end_month=end_month)
+    ds_range_years = get_values_by_year(dataarray=ds_range,
+                                        years=years)
+    return ds_range_years
+
+
+def get_sel_years_dates(years,
+                        start_day=None,
+                        start_month=None,
+                        end_day=None,
+                        end_month=None,
+                        freq='D'):
+    sd, ed = get_start_end_date(data=years)
+    all_dates = get_dates_in_range(start_date=sd,
+                                   end_date=ed,
+                                   freq=freq)
+    sel_dates = get_sel_years_data(ds=all_dates, years=years,
+                                   start_day=start_day,
+                                   end_day=end_day,
+                                   start_month=start_month,
+                                   end_month=end_month)
+
+    return sel_dates
+
+
 def remove_consecutive_tps(tps, steps=1):
     """Removes consecutive steps in a set of time points until steps after.
 
@@ -276,11 +356,11 @@ def is_tp_smaller(date1, date2):
     return bool_date
 
 
-def get_sel_time_range(ds, time_range,
-                       start_month='Jan',
-                       end_month='Dec',
-                       freq='D',
-                       verbose=True):
+def get_time_range_data(ds, time_range,
+                        start_month='Jan',
+                        end_month='Dec',
+                        freq='D',
+                        verbose=True):
     if time_range is not None:
         sd, ed = get_time_range(ds)
         if isinstance(time_range[0], str):
@@ -362,7 +442,8 @@ def number2str(day):
     return day
 
 
-def select_month_day_range(da, start_month, start_day, end_month, end_day):
+def select_month_day_range(da, start_month=None, start_day=None,
+                           end_month=None, end_day=None):
     """
     Selects all values of an xarray DataArray that fall within a specified range of months and days, across all years.
 
@@ -385,22 +466,29 @@ def select_month_day_range(da, start_month, start_day, end_month, end_day):
         A new dataarray that includes all values within the specified range of months and days.
 
     """
-    sy, ey, num_years = get_time_range_years(dataarray=da)
-    start_month = get_month_number(start_month) if isinstance(
-        start_month, str) else start_month
-    end_month = get_month_number(end_month) if isinstance(
-        end_month, str) else end_month
-    start_day = number2str(start_day)
-    end_day = number2str(end_day)
-    smi = number2str(start_month)
-    emi = number2str(end_month)
-    ranges = []
-    for year in range(sy, ey+1, 1):
-        sd = str2datetime(f'{year}-{smi}-{start_day}')
-        ed = str2datetime(f'{year}-{emi}-{end_day}')
-        ranges.append([sd, ed])
-    dates = get_dates_of_time_ranges(ranges)
-    selected_data = get_sel_tps_ds(ds=da, tps=dates)
+
+    if start_month is None and end_month is None:
+        return da
+    else:
+        sy, ey, num_years = get_time_range_years(dataarray=da)
+        start_month = start_month if start_month is not None else 'Jan'
+        start_month = get_month_number(start_month) if isinstance(
+            start_month, str) else start_month
+        end_month = end_month if end_month is not None else 'Dec'
+
+        end_month = get_month_number(end_month) if isinstance(
+            end_month, str) else end_month
+        start_day = number2str(start_day) if start_day is not None else number2str(1)
+        end_day = number2str(end_day) if end_day is not None else number2str(days_in_month(end_month))
+        smi = number2str(start_month)
+        emi = number2str(end_month)
+        ranges = []
+        for year in range(sy, ey+1, 1):
+            sd = str2datetime(f'{year}-{smi}-{start_day}')
+            ed = str2datetime(f'{year}-{emi}-{end_day}')
+            ranges.append([sd, ed])
+        dates = get_dates_of_time_ranges(ranges)
+        selected_data = get_sel_tps_ds(ds=da, tps=dates)
 
     return selected_data
 
@@ -440,6 +528,28 @@ def get_idx_tps_times(tps, times):
     """
     tps_idx = np.where(np.in1d(times, tps))[0]
     return tps_idx
+
+
+def time_difference_in_hours(time1, time2):
+    """
+    Calculate the time difference in hours between two time points as xarray dataarrays.
+
+    Parameters:
+    time1 (xarray.DataArray): First time point.
+    time2 (xarray.DataArray): Second time point.
+
+    Returns:
+    time_diff (float): Time difference in hours.
+    """
+    # Convert time1 and time2 to pandas Timestamp objects
+    pd_time1 = pd.to_datetime(str(time1.values))
+    pd_time2 = pd.to_datetime(str(time2.values))
+
+    # Calculate the time difference in hours using the timedelta method
+    tdelta = pd_time2 - pd_time1
+    time_diff = tdelta.total_seconds() / 3600
+
+    return time_diff
 
 
 def get_time_range_years(dataarray: xr.DataArray) -> tuple:
@@ -580,6 +690,8 @@ def str2datetime(string, numpy=True,
         if not numpy:
             y, m, d, h = get_date2ymdh(date=date)
             date = datetime.datetime(year=y, month=m, day=d, hour=h)
+        date = xr.DataArray(date,
+                            coords={'time': date})
     else:
         date = string
         gut.myprint(f'WARNING {string} is not string!', verbose=verbose)
@@ -885,16 +997,16 @@ def detrend_dim(da, dim="time", deg=1, startyear=None, freq='D'):
             date_before_detrend = np.datetime64(f'{startyear-1}-12-31')
             date_start_detrend = np.datetime64(f'{startyear}-01-01')
         gut.myprint(f'Start detrending from {date_start_detrend}...')
-        da_no_detrend = get_sel_time_range(ds=da,
-                                           time_range=[start_date,
-                                                       date_before_detrend],
-                                           freq=freq,
-                                           verbose=False)
-        da_detrend = get_sel_time_range(ds=da,
-                                        time_range=[
-                                            date_start_detrend, end_date],
-                                        freq=freq,
-                                        verbose=False)
+        da_no_detrend = get_time_range_data(ds=da,
+                                            time_range=[start_date,
+                                                        date_before_detrend],
+                                            freq=freq,
+                                            verbose=False)
+        da_detrend = get_time_range_data(ds=da,
+                                         time_range=[
+                                             date_start_detrend, end_date],
+                                         freq=freq,
+                                         verbose=False)
         p = da_detrend.polyfit(dim=dim, deg=deg)
         fit = xr.polyval(da_detrend[dim], p.polyfit_coefficients)
         start_val = fit[0]
@@ -1145,7 +1257,8 @@ def merge_time_arrays(time_arrays, multiple='max'):
     combined_data = xr.concat(time_arrays, dim="time")
 
     if multiple is not None:
-        gut.myprint(f'Group multiple files by {multiple} if time points occur twice!')
+        gut.myprint(
+            f'Group multiple files by {multiple} if time points occur twice!')
     if multiple == 'max':
         # Group the data by time and take the maximum value for each group
         combined_data = combined_data.groupby('time').max()
@@ -1229,7 +1342,8 @@ def get_dates_of_time_range(time_range, freq='D'):
         sp, ep = np.sort([sp, ep])  # Order in time
         date_arr = get_dates_in_range(start_date=sp,
                                       end_date=ep,
-                                      freq=freq)
+                                      freq=freq,
+                                      make_xr=False)
         # Include as well last time point
         date_arr = np.concatenate(
             [date_arr, [date_arr[-1] + np.timedelta64(1, freq)]], axis=0
@@ -1258,13 +1372,17 @@ def get_dates_of_time_ranges(time_ranges, freq='D'):
     return arr
 
 
-def get_dates_in_range(start_date, end_date, freq='D'):
+def get_dates_in_range(start_date, end_date, freq='D', make_xr=True):
 
     if isinstance(start_date, xr.DataArray):
         start_date = np.datetime64(start_date.time.data)
     if isinstance(end_date, xr.DataArray):
         end_date = np.datetime64(end_date.time.data)
     tps = np.arange(start_date, end_date, dtype=f'datetime64[{freq}]')
+
+    if make_xr:
+        tps = create_xr_ts(data=tps, times=tps)
+
     return tps
 
 
@@ -1628,7 +1746,7 @@ def select_time_snippets(ds, time_snippets):
     ds_lst = []
     for time_range in time_snippets:
         # ds_lst.append(ds.sel(time=slice(time_range[0], time_range[1])))
-        ds_lst.append(get_sel_time_range(
+        ds_lst.append(get_time_range_data(
             ds=ds, time_range=time_range, verbose=False))
 
     ds_snip = xr.concat(ds_lst, dim='time')
@@ -1700,7 +1818,8 @@ def get_values_by_year(dataarray, years):
         xarray.DataArray: New dataarray with only the values belonging to the specified years.
     """
     assert_has_time_dimension(dataarray)
-
+    if isinstance(years, xr.DataArray):
+        years = years.time.dt.year
     # Extract years from dataarray time dimension
     years_in_data = xr.DataArray(dataarray.time.dt.year, dims=["time"])
 
@@ -1759,11 +1878,12 @@ def count_time_points(time_points, freq='Y'):
     return output
 
 
-def sort_time_points_by_year(tps, val='mean'):
+def sort_time_points_by_year(tps, val=None, q=None):
 
     yearly_tps = count_time_points(time_points=tps, freq='Y')
 
-    separate_year_arr = gut.get_values_above_val(dataarray=yearly_tps, val=val)
+    separate_year_arr = sut.get_values_above_val(
+        dataarray=yearly_tps, val=val, q=q)
     a_ys = separate_year_arr['above'].time.dt.year
     b_ys = separate_year_arr['below'].time.dt.year
 
@@ -1957,7 +2077,7 @@ def get_dates_later_as(times, date):
 
     sd, ed = get_start_end_date(data=times)
 
-    new_times = get_sel_time_range(ds=times, time_range=[date, ed])
+    new_times = get_time_range_data(ds=times, time_range=[date, ed])
 
     return new_times
 

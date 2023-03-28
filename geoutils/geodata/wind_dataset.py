@@ -112,9 +112,10 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         ds = xr.Dataset({self.u_name: u,
                          self.v_name: v})
         if windspeed is not None:
-            gut.myprint(f'Merge u, v, omega')
+            gut.myprint(f'Merge u, v, windspeed')
             ds[self.ws_name] = windspeed
         if w is not None:
+            gut.myprint(f'Merge u, v, omega')
             ds[self.w_name] = w
         return ds
 

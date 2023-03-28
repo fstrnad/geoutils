@@ -64,7 +64,7 @@ class BaseDataset():
             lsm_file (str, optional): additional land sea mask file. Defaults to None.
             decode_times (bool, optional): decode times if in nc file np.datetime64 format is provided. Defaults to True.
         """
-        self.grid_type = 'rectangular'
+
         if isinstance(data_nc, list) or isinstance(data_nc, np.ndarray):
             data_nc_arr = data_nc
         elif isinstance(data_nc, str):
@@ -96,7 +96,7 @@ class BaseDataset():
         ) = self.get_spatio_temp_range(ds)
         # ds_arr.append(ds)
 
-        self.set_var(var_name=var_name, ds=ds)
+        self.set_var(var_name=var_name, ds=ds, verbose=verbose)
         # if len(data_nc_arr) > 1:
         #     multiple = kwargs.pop('multiple', 'max')
         #     self.ds = sput.merge_datasets(datasets=ds_arr, multiple=multiple)
@@ -134,6 +134,8 @@ class BaseDataset():
         if 'time' in self.dims:
             self.time = self.ds.time
         self.coords = self.ds.coords
+        self.loc_dict = dict()
+        self.grid_type = 'rectangular'
 
     def open_ds(
         self,
@@ -153,7 +155,7 @@ class BaseDataset():
 
         if large_ds:
             gut.myprint('Chunk the data', verbose=verbose)
-            ds = xr.open_mfdataset(nc_files, chunks={"time": 100})
+            ds = xr.open_mfdataset(nc_files, chunks={"time": 1000})
         else:
             if plevels is None:
                 ds = xr.open_mfdataset(nc_files,
@@ -175,45 +177,45 @@ class BaseDataset():
         self.dims = self.get_dims(ds=ds)
         ds = self.rename_var_era5(ds, verbose=verbose)
 
-        if len(self.dims) > 2:
+        if 'time' in self.dims:
             ds = self.get_data_timerange(ds, time_range)
+        if 'lon' in self.dims and 'lat' in self.dims:
+            min_lon = kwargs.pop('min_lon', None)
+            max_lon = kwargs.pop('max_lon', None)
+            min_lat = kwargs.pop('min_lat', None)
+            max_lat = kwargs.pop('max_lat', None)
+            grid_step_lon = kwargs.pop('grid_step_lon', None)
+            grid_step_lat = kwargs.pop('grid_step_lat', None)
 
-        min_lon = kwargs.pop('min_lon', None)
-        max_lon = kwargs.pop('max_lon', None)
-        min_lat = kwargs.pop('min_lat', None)
-        max_lat = kwargs.pop('max_lat', None)
-        grid_step_lon = kwargs.pop('grid_step_lon', None)
-        grid_step_lat = kwargs.pop('grid_step_lat', None)
+            if grid_step_lat is not None and grid_step_lon is None:
+                gut.myprint(
+                    f'Grid_step_lon not specified, but grid_step_lat is!', verbose=verbose)
+                grid_step_lon = grid_step_lat
+            if grid_step_lon is not None and grid_step_lat is None:
+                gut.myprint(
+                    f'Grid_step_lat not specified, but grid_step_lon is!', verbose=verbose)
+                grid_step_lat = grid_step_lon
 
-        if grid_step_lat is not None and grid_step_lon is None:
-            gut.myprint(
-                f'Grid_step_lon not specified, but grid_step_lat is!', verbose=verbose)
-            grid_step_lon = grid_step_lat
-        if grid_step_lon is not None and grid_step_lat is None:
-            gut.myprint(
-                f'Grid_step_lat not specified, but grid_step_lon is!', verbose=verbose)
-            grid_step_lat = grid_step_lon
+            if grid_step_lat is not None or grid_step_lon is not None:
+                grid_step = 1  # Not to be None
 
-        if grid_step_lat is not None or grid_step_lon is not None:
-            grid_step = 1  # Not to be None
+            if grid_step is not None:
+                ds = self.common_grid(dataarray=ds, grid_step=grid_step,
+                                      min_lon=min_lon, max_lon=max_lon,
+                                      min_lat=min_lat, max_lat=max_lat,
+                                      grid_step_lon=grid_step_lon,
+                                      grid_step_lat=grid_step_lat,
+                                      use_ds_grid=use_ds_grid)
 
-        if grid_step is not None:
-            ds = self.common_grid(dataarray=ds, grid_step=grid_step,
-                                  min_lon=min_lon, max_lon=max_lon,
-                                  min_lat=min_lat, max_lat=max_lat,
-                                  grid_step_lon=grid_step_lon,
-                                  grid_step_lat=grid_step_lat,
-                                  use_ds_grid=use_ds_grid)
+            if lon_range != [-180, 180] or lat_range != [-90, 90]:
+                gut.myprint(
+                    f'Cut the dataset {lon_range}, {lat_range}!', verbose=verbose)
+                ds = self.cut_map(ds, lon_range, lat_range)
+
+            self.grid_step, self.grid_step_lon, self.grid_step_lat = sput.get_grid_step(
+                ds=ds)
 
         ds.unify_chunks()
-        if lon_range != [-180, 180] or lat_range != [-90, 90]:
-            gut.myprint(
-                f'Cut the dataset {lon_range}, {lat_range}!', verbose=verbose)
-            ds = self.cut_map(ds, lon_range, lat_range)
-
-        self.grid_step, self.grid_step_lon, self.grid_step_lat = sput.get_grid_step(
-            ds=ds)
-        # ds = da.to_dataset(name=var_name)
 
         gut.myprint("Finished processing data", verbose=verbose)
         self.info_dict = copy.deepcopy(ds.attrs)
@@ -442,17 +444,15 @@ class BaseDataset():
             gut.myprint(f'Variables in dataset: {vars}!')
         return vars
 
-    def set_var(self, ds=None, var_name=None):
+    def set_var(self, ds=None, var_name=None, verbose=True):
         # select a main var name
         self.vars = self.get_vars(ds=ds)
-        if var_name is not None:
-            ds = self.rename_var(ds=ds, new_var_name=var_name)
         var_name = var_name if var_name is not None else self.vars[0]
         self.var_name = 'evs' if 'evs' in self.vars else var_name
         if self.var_name not in self.vars:
             raise ValueError(
                 f'{var_name} not in variables available {self.vars}!')
-        gut.myprint(f'Set variable name to {self.var_name}!')
+        gut.myprint(f'Set variable name to {self.var_name}!', verbose=verbose)
         self.get_source_attrs(ds=ds)
 
     def get_source_attrs(self, ds=None):
@@ -494,21 +494,25 @@ class BaseDataset():
             gut.myprint(f'Added {key}: {val} to {self.var_name} attributes!')
             self.ds[self.var_name].attrs[key] = val
 
-    def init_mask(self, da=None, lsm_file=None, mask_ds=None, **kwargs):
+    def init_mask(self, da=None, lsm_file=None, mask_ds=None, verbose=True, **kwargs):
         init_mask = kwargs.pop('init_mask', False)
 
         if init_mask:
             if da is None:
                 da = self.get_da()
             dims = self.get_dims(ds=da)
+            if 'lev' in dims:
+                levs = da.lev
+                da = da.sel(lev=levs[0])
+
             # if len(dims) > 2 or dims == ['time', 'points'] or dims == ['points', 'time']:
             if 'time' in dims:
-                gut.myprint(f'Init spatial mask for shape: {da.shape}')
+                gut.myprint(f'Init spatial mask for shape: {da.shape}', verbose=verbose)
                 num_non_nans = xr.where(~np.isnan(da), 1, 0).sum(dim='time')
                 mask = xr.where(num_non_nans == len(da.time), 1, 0)
                 mask_dims = da.sel(time=da.time[0]).dims
                 mask_coords = da.sel(time=da.time[0]).coords
-                gut.myprint(f'... Finished Initialization spatial mask')
+                gut.myprint(f'... Finished Initialization spatial mask', verbose=verbose)
             else:
                 mask = xr.where(~np.isnan(da), 1, 0)
                 mask_dims = da.dims
@@ -954,9 +958,11 @@ class BaseDataset():
         dims = self.get_dims(ds=ds)
         time_range = [ds.time.data[0], ds.time.data[-1]
                       ] if len(dims) > 2 else None
-        lon_range = [float(ds.lon.min()), float(ds.lon.max())]
-        lat_range = [float(ds.lat.min()), float(ds.lat.max())]
-
+        if len(dims) >= 2:
+            lon_range = [float(ds.lon.min()), float(ds.lon.max())]
+            lat_range = [float(ds.lat.min()), float(ds.lat.max())]
+        else:
+            lon_range = lat_range = None
         return time_range, lon_range, lat_range
 
     def common_grid(self, dataarray, grid_step=1,
@@ -1096,6 +1102,16 @@ class BaseDataset():
         slat = float(map_dict["lat"])
 
         return slon, slat
+
+    def get_coords_for_range(self, lon_range, lat_range):
+        locs = self.get_locations_in_range(lon_range=lon_range,
+                                           lat_range=lat_range)
+        idx_lst = locs['idx']
+        coord_lst = []
+        for idx in idx_lst:
+            coord_lst.append(self.get_coord_for_idx(idx=idx))
+
+        return np.array(coord_lst)
 
     # def get_index_for_coord(self, lon, lat):
     #     """Get index of flatten array for specific lat, lon."""

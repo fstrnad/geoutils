@@ -569,7 +569,6 @@ def get_expt_ees(evs, tps, timemean='year'):
 
     # Get selected number of EEs
     sel_tps_data = tu.get_sel_tps_ds(ds=evs, tps=tps)
-
     # First fill time series with 0 to ensure continous time series results
     sel_tps_data = tu.fill_time_series_val(sel_tps_data)
     # Get the EE time series from the evs dataset

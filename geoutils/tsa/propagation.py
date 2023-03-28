@@ -170,6 +170,7 @@ def get_box_propagation(ds, loc_dict, tps,
                         normalize=True,
                         var='evs', step=1,
                         q=0.9,
+                        lev=None,
                         q_prog=None,
                         norm_grid_fac=2):  # four borders
     reload(sput)
@@ -178,11 +179,15 @@ def get_box_propagation(ds, loc_dict, tps,
         regions = list(loc_dict.keys())
     for region in tqdm(regions):
         # EE TS
+        gut.myprint(region)
         if 'points' in list(loc_dict[region]['data'].dims):
             pids = loc_dict[region]['pids']
             pr_data = ds.sel(points=pids)
         else:
-            pr_data = loc_dict[region]['data']
+            if lev is None:
+                pr_data = loc_dict[region]['data']
+            else:
+                pr_data = loc_dict[region]['data'].sel(lev=lev)
         # pr_data = loc_dict[region]['data']
         gut.myprint(f'data shape: {pr_data[var].data.shape}')
         composite_arrs = get_day_progression_arr(data=pr_data,
@@ -200,8 +205,6 @@ def get_box_propagation(ds, loc_dict, tps,
     box_data = np.zeros((len(regions), len(days)))
     for i, region in enumerate(regions):
         this_data = coll_data[region]
-        gut.myprint(region)
-
         if normalize:
             data = loc_dict[region]['data']
             tot_num_days = len(tps)

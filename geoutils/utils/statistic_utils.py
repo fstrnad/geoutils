@@ -127,7 +127,6 @@ def count_occ(occ_arr, count_arr, rel_freq=False, norm_fac=1.):
     return res_c_occ
 
 
-
 def normlize_time_slides(data, min=0, max=1):
     mean_data_arr = []
     times = data.time
@@ -572,9 +571,53 @@ def polyfit_regressor(data_array, predictor,  order=1):
             # Do something with the data_array.sel(lon=lon, lat=lat) time series
             this_ts = data_array.sel(lon=lon, lat=lat)
             coef = np.polyfit(predictor, this_ts, order)
-            regressed_arr.loc[dict(lon=lon, lat=lat)] = np.polyval(coef, this_ts)
+            regressed_arr.loc[dict(lon=lon, lat=lat)
+                              ] = np.polyval(coef, this_ts)
 
     return regressed_arr
 
 
+def get_values_above_val(dataarray, val=None, q=None, dim='time'):
+    """Return all values in the input xarray that are above a value.
+    The median is taken if no value is given.
 
+    Parameters:
+    -----------
+    dataarray : xarray.DataArray
+        The input data array to get values from.
+
+    Returns:
+    --------
+    xarray.DataArray
+        An xarray object containing only the values that are above the median.
+
+    Raises:
+    -------
+    ValueError:
+        If the input data array does not have a time dimension.
+    """
+    if dim not in dataarray.dims:
+        raise ValueError(f"Input data array must have a {dim} dimension")
+
+    if val == 'mean':
+        val = val_ = dataarray.mean(dim=dim)
+    elif q is not None:
+        if q < 1 and q > 0:
+            val = dataarray.quantile(q=q)
+            val_ = dataarray.quantile(q=(1-q))
+        else:
+            raise ValueError(f'q={q} has to be between 0 and 1')
+    else:
+        val = val_ = dataarray.median(dim=dim) if val is None else val
+    above_val = dataarray.where(dataarray >= val).dropna(dim=dim)
+    below_val = dataarray.where(dataarray <= val_).dropna(dim=dim)
+    between_val = gut.diff_xarray(arr1=dataarray, arr2=above_val)
+    between_val = gut.diff_xarray(arr1=between_val, arr2=below_val)
+
+    return {
+        'val': float(val),
+        'val_': float(val_),
+        'above': above_val,
+        'below': below_val,
+        'between': between_val
+    }

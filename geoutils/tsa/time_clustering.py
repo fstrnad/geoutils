@@ -17,9 +17,9 @@ reload(cplt)
 def k_means_clustering(data,
                        **kmeans_kwargs):
 
-    k_method = kmeans_kwargs.pop('k_method', ' elbow')
+    k_method = kmeans_kwargs.pop('k_method', 'silhouette')
     max_iter = kmeans_kwargs.pop('max_iter', 1000)
-    n_init = kmeans_kwargs.pop('n_init', 50)
+    n_init = kmeans_kwargs.pop('n_init', 100)
     plot_statistics = kmeans_kwargs.pop('plot_statistics', False)
     rem_outlayers = kmeans_kwargs.pop('rm_ol', False)
     sc_th = kmeans_kwargs.pop('sc_th', 0.05)
@@ -34,12 +34,12 @@ def k_means_clustering(data,
         kmeans.fit(data)
 
     else:
-        gut.myprint(f'Select number of clusters with {k_method}')
+        gut.myprint(f'Select number of clusters using the {k_method} method')
         sse = []
         sscore = []
         krange = np.arange(2, 11)
-        for k in tqdm(krange):
-            kmeans = KMeans(n_clusters=k,
+        for ki in tqdm(krange):
+            kmeans = KMeans(n_clusters=ki,
                             init="k-means++",
                             max_iter=max_iter,
                             **kmeans_kwargs)
@@ -58,8 +58,12 @@ def k_means_clustering(data,
                 krange, sse, curve="convex", direction="decreasing"
             )
             k = int(kl.elbow)
-        elif k_method == 'silhouette':
-            k = krange[np.argmax(sscore)]
+        if k_method == 'silhouette':
+            k = int(krange[np.argmax(sscore)])
+            print(sscore, np.argmax(sscore), k)
+        else:
+            k_method = 'None'
+            k = 2
         gut.myprint(f'Method:{k_method}: Get {k} number of clusters!')
 
         kmeans = KMeans(n_clusters=k,
@@ -77,13 +81,16 @@ def k_means_clustering(data,
                      ls_arr=['None'],
                      mk_arr=['.'],
                      ylabel="Shilhouette Score",
-                     ylim=(0., .1))
+                     ylim=(0., .5)
+                     )
 
-    if rem_outlayers:
+
+    if rem_outlayers or sc_th != 0.05:
         gut.myprint('Remove Outlayers...')
         sample_sc = skm.silhouette_samples(data, Z)
         sign_Z = np.where(sample_sc >= sc_th)[0]
-        gut.myprint(f'Removed {1 - np.count_nonzero(sign_Z)/len(Z)} of all tps!')
+        gut.myprint(
+            f'Removed {1 - np.count_nonzero(sign_Z)/len(Z)} of all inputs!')
         return Z, sign_Z
 
     return Z, None
@@ -176,7 +183,9 @@ def agglomerative_clustering(data, **kwargs):
     # The maximum distance between two samples for one to be considered as in the neighborhood of the other.
     n_clusters = kwargs.pop('n_clusters', None)
     # The metric to use when calculating distance between instances in a feature array
-    metric = kwargs.pop('metric', 'correlation')
+    metric = kwargs.pop('metric', 'l2')
+    if 'metric' == 'chebyshev':
+        metric = sp.spatial.distance.chebyshev
 
     linkage = kwargs.pop('linkage', 'complete')
 
@@ -192,7 +201,7 @@ def agglomerative_clustering(data, **kwargs):
 
     Z = clustering.labels_
 
-    return Z
+    return Z, None
 
 
 def tps_cluster_2d_data(data_arr, tps,
@@ -216,7 +225,7 @@ def tps_cluster_2d_data(data_arr, tps,
     # The data needs to be  reshped in a row-wise of array. Therefore, each row is an object or data.
     # We always check if data is 3d (x,y,time)
     coll_data = []
-    key_names = kwargs.pop('key_names', None)
+    cluster_names = kwargs.pop('cluster_names', None)
     for data in data_arr:
         if len(data.shape) != 3:
             raise ValueError('Data needs to be of shape 3 (time, x, y)')
@@ -262,16 +271,68 @@ def tps_cluster_2d_data(data_arr, tps,
         Z = Z[sign_Z]
         tps = tps[sign_Z]
 
-    grp_ids = np.unique(Z)
-    grp_tps_dict = dict()
-    for gid in grp_ids:
-        idx_grp = np.where(Z == gid)[0]
-        if key_names is not None:
-            if len(key_names) != len(grp_ids):
-                raise ValueError(f'Not same number of key names as groups!')
-            keyname = key_names[gid]
-            grp_tps_dict[keyname] = tps[idx_grp]
-        else:
-            grp_tps_dict[gid] = tps[idx_grp]
+    grp_tps_dict = get_cluster_dict(Z=Z, cluster_x=tps, cluster_names=None)
 
     return grp_tps_dict
+
+
+def get_cluster_dict(Z, cluster_x, cluster_names=None):
+    grp_ids = gut.sort_by_frequency(arr=Z)
+
+    grp_tps_dict = dict()
+    for idx, gid in enumerate(grp_ids):
+        idx_grp = np.where(Z == gid)[0]
+        if cluster_names is not None:
+            if len(cluster_names) != len(grp_ids):
+                raise ValueError(f'Not same number of key names as groups!')
+            keyname = cluster_names[idx]
+            gut.myprint(f'Cluster {keyname} : {len(idx_grp)} objects')
+            grp_tps_dict[keyname] = cluster_x[idx_grp]
+        else:
+            gut.myprint(f'Cluster {idx} : {len(idx_grp)} objects')
+            grp_tps_dict[idx] = cluster_x[idx_grp]
+    return grp_tps_dict
+
+
+def apply_cluster_data(data,
+                       objects=None,
+                       method='kmeans',
+                       cluster_names=None,
+                       standardize=True,
+                       **kwargs):
+
+    if len(data.shape) != 2:
+        raise ValueError(f'Data not in correct input 2D-format. Shape is {data.shape}!')
+
+    if standardize:
+        gut.myprint(f'Standardize data!')
+        data = sut.standardize(dataset=data, axis=0)
+        if gut.count_nans(data) != 0:
+            gut.myprint(f'Data contains Nans: {gut.count_nans(data)}!')
+    rm_ol = kwargs.pop('rm_ol', False)
+
+    if method == 'kmeans':
+        Z, sign_Z = k_means_clustering(data=data, rm_ol=rm_ol,
+                                       **kwargs)
+    elif method == 'gm':
+        Z, sign_Z = gm_clustering(data=data, **kwargs)
+    elif method == 'dbscan':
+        Z, sign_Z = dbscan_clustering(data=data, **kwargs)
+    elif method == 'optics':
+        Z, sign_Z = optics_clustering(data=data, **kwargs)
+    elif method == 'agglomerative':
+        Z, sign_Z = agglomerative_clustering(data=data, **kwargs)
+    else:
+        raise ValueError(f'Method {method} not implemented yet!')
+
+    if objects is None:
+        objects = np.arange(len(data))
+
+    if rm_ol:
+        Z = Z[sign_Z]
+        objects = objects[sign_Z]
+
+    grp_cluster_dict = get_cluster_dict(Z=Z, cluster_x=objects,
+                                        cluster_names=cluster_names)
+
+    return grp_cluster_dict

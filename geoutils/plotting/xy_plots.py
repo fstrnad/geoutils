@@ -126,10 +126,11 @@ def plot_xy(
 
         alpha = kwargs.pop('alpha', 1)
         inverted_z_order = kwargs.pop('inv_z_order', True)
+        linearize_xaxis = kwargs.pop('linearize_xaxis', False)
         for idx in range(num_items):
             x = x_arr[idx] if len(x_arr) > 1 else x_arr[0]
-            # if type(x) == xr.DataArray and ts_axis is False:
-            #     x = np.arange(0, len(x))
+            if linearize_xaxis:
+                x = np.arange(0, len(x))
 
             y = y_arr[idx] if len(y_arr) > 1 else y_arr[0]
             zorder = len(y_arr) - idx if inverted_z_order else idx
