@@ -169,7 +169,7 @@ def get_box_propagation(ds, loc_dict, tps,
                         num_days=1, regions=None,
                         normalize=True,
                         var='evs', step=1,
-                        q=0.9,
+                        q=None,
                         lev=None,
                         q_prog=None,
                         norm_grid_fac=2):  # four borders

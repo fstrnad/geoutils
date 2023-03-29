@@ -55,7 +55,8 @@ def assert_has_time_dimension(da):
         If the input DataArray does not have a time dimension.
     """
     if not isinstance(da, xr.DataArray) and not isinstance(da, xr.Dataset):
-        raise ValueError(f'Data has to be of xarray type but is type {type(da)}')
+        raise ValueError(
+            f'Data has to be of xarray type but is type {type(da)}')
 
     if 'time' not in da.dims:
         raise ValueError(
@@ -200,13 +201,16 @@ def get_max_num_tps(ds, q=None):
 
 def get_sel_tps_ds(ds, tps, remove_tp=False,
                    drop_dim=True,
-                   verbose=False):
+                   verbose=False,
+                   timemean='day'):
     if isinstance(tps, xr.DataArray):
-        tps = tps.time.data
+        tps = tps.time
+    else:
+        tps = create_xr_ts(data=tps, times=tps)
     stp = gut.is_single_tp(tps=tps)
     if stp:
         tps = [tps]
-
+    start_month, end_month = get_month_range(tps)
     if len(tps) == 0:
         gut.myprint(f'Empty list of time points')
         return []
@@ -217,7 +221,10 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
         if remove_tp:
             ds_sel = ds.sel(time=tps, method='nearest')
         else:
-            tps_sel = np.intersect1d(ds.time, tps)  # Build always intersection
+            # ds_max = compute_timemax(ds=ds, timemean=timemean)
+            # tps_max = compute_timemax(ds=tps, timemean=timemean)
+            # Build always intersection
+            tps_sel = np.intersect1d(ds.time, tps)
             if len(tps_sel) != len(tps):
                 gut.myprint('WARNING! Not all tps in ds', verbose=verbose)
                 if verbose:
@@ -225,9 +232,16 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
                         if x not in ds.time.data:
                             gut.myprint(f'WARNING! tp not in ds: {x}')
             if len(tps_sel) == 0:
-                gut.myprint('No tps not in dataset!')
-                return []
-            ds_sel = ds.sel(time=tps_sel, method='nearest')
+                gut.myprint('No tps in intersection of dataset!')
+            ds_sel = ds.sel(time=tps, method='nearest')
+            # Remove duplicates
+            ds_sel = remove_duplicate_times(da=ds_sel)
+            # restrict to month range
+
+            ds_sel = get_month_range_data(dataset=ds_sel,
+                                          start_month=start_month,
+                                          end_month=end_month,
+                                          verbose=False)
 
     if stp and drop_dim:
         ds_sel = ds_sel.mean(dim='time')
@@ -410,7 +424,7 @@ def is_in_month_range(month, start_month, end_month):
     return mask
 
 
-def get_month_range_data(dataset, start_month="Jan", end_month="Dec"):
+def get_month_range_data(dataset, start_month="Jan", end_month="Dec", verbose=True):
     """
     This function generates data within a given month range.
     It can be from smaller month to higher (eg. Jul-Sep) but as well from higher month
@@ -429,7 +443,8 @@ def get_month_range_data(dataset, start_month="Jan", end_month="Dec"):
         array that contains only data within month-range.
 
     """
-    gut.myprint(f'Select data from {start_month} - {end_month}!')
+    if verbose:
+        gut.myprint(f'Select data from {start_month} - {end_month}!')
     seasonal_data = dataset.sel(
         time=is_in_month_range(dataset["time.month"], start_month, end_month)
     )
@@ -478,8 +493,10 @@ def select_month_day_range(da, start_month=None, start_day=None,
 
         end_month = get_month_number(end_month) if isinstance(
             end_month, str) else end_month
-        start_day = number2str(start_day) if start_day is not None else number2str(1)
-        end_day = number2str(end_day) if end_day is not None else number2str(days_in_month(end_month))
+        start_day = number2str(
+            start_day) if start_day is not None else number2str(1)
+        end_day = number2str(end_day) if end_day is not None else number2str(
+            days_in_month(end_month))
         smi = number2str(start_month)
         emi = number2str(end_month)
         ranges = []
@@ -550,6 +567,27 @@ def time_difference_in_hours(time1, time2):
     time_diff = tdelta.total_seconds() / 3600
 
     return time_diff
+
+
+def get_month_range(da):
+    """
+    Get the month range of an xarray DataArray with a time dimension.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        The input DataArray. It should have a time dimension.
+
+    Returns
+    -------
+    tuple of two integers
+        The first and last month of the year present in the DataArray's time dimension.
+    """
+    months = da.time.dt.month
+    min_month, max_month = int(months.min()), int(months.max())
+    start_month = get_month_name(month_number=min_month)
+    end_month = get_month_name(month_number=max_month)
+    return start_month, end_month
 
 
 def get_time_range_years(dataarray: xr.DataArray) -> tuple:
@@ -756,7 +794,7 @@ def get_mean_time_series(da, lon_range, lat_range, time_roll=0):
     return ts_mean, ts_std
 
 
-def compute_timemean(ds, timemean, dropna=False, verbose=True):
+def compute_timemean(ds, timemean, dropna=True, verbose=True):
     """Computes the monmean average on a given xr.dataset
 
     Args:
@@ -778,7 +816,7 @@ def compute_timemean(ds, timemean, dropna=False, verbose=True):
     return ds
 
 
-def compute_timemax(ds, timemean,  dropna=False, verbose=True):
+def compute_timemax(ds, timemean,  dropna=True, verbose=True):
     """Computes the monmax on a given xr.dataset
 
     Args:
@@ -792,10 +830,10 @@ def compute_timemax(ds, timemean,  dropna=False, verbose=True):
     gut.myprint(
         f"Compute {timemean}ly maximum of all variables!", verbose=verbose)
     if dropna:
-        ds = ds.resample(time=tm).mean(
+        ds = ds.resample(time=tm).max(
             dim="time", skipna=True).dropna(dim="time")
     else:
-        ds = ds.resample(time=tm).mean(dim="time", skipna=True)
+        ds = ds.resample(time=tm).max(dim="time", skipna=True)
 
     return ds
 
@@ -845,6 +883,24 @@ def averge_out_nans_ts(ts, av_range=1):
             raise ValueError(f"Still nans in ts {idx_nans}")
 
         return ts
+
+
+def remove_duplicate_times(da):
+    """
+    Remove duplicate time points from an xarray DataArray.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        The input DataArray. It should have a time dimension.
+
+    Returns
+    -------
+    xarray.DataArray
+        The DataArray with duplicate time points removed.
+    """
+    _, index = np.unique(da.time, return_index=True)
+    return da.isel(time=index)
 
 
 def compute_anomalies(dataarray, climatology_array=None,

@@ -495,8 +495,10 @@ class BaseDataset():
             self.ds[self.var_name].attrs[key] = val
 
     def init_mask(self, da=None, lsm_file=None, mask_ds=None, verbose=True, **kwargs):
-        init_mask = kwargs.pop('init_mask', False)
 
+        init_mask = kwargs.pop('init_mask', False)
+        if lsm_file is not None:
+            init_mask = True
         if init_mask:
             if da is None:
                 da = self.get_da()
@@ -507,12 +509,14 @@ class BaseDataset():
 
             # if len(dims) > 2 or dims == ['time', 'points'] or dims == ['points', 'time']:
             if 'time' in dims:
-                gut.myprint(f'Init spatial mask for shape: {da.shape}', verbose=verbose)
+                gut.myprint(
+                    f'Init spatial mask for shape: {da.shape}', verbose=verbose)
                 num_non_nans = xr.where(~np.isnan(da), 1, 0).sum(dim='time')
                 mask = xr.where(num_non_nans == len(da.time), 1, 0)
                 mask_dims = da.sel(time=da.time[0]).dims
                 mask_coords = da.sel(time=da.time[0]).coords
-                gut.myprint(f'... Finished Initialization spatial mask', verbose=verbose)
+                gut.myprint(
+                    f'... Finished Initialization spatial mask', verbose=verbose)
             else:
                 mask = xr.where(~np.isnan(da), 1, 0)
                 mask_dims = da.dims
@@ -926,7 +930,7 @@ class BaseDataset():
 
     def cut_map(
         self, ds=None, lon_range=[-180, 180], lat_range=[-90, 90], dateline=False,
-        set_ds=False,
+        set_ds=False, **kwargs,
     ):
         """Cut an area in the map. Use always smallest range as default.
         It lon ranges accounts for regions (eg. Pacific) that are around the -180/180 region.
@@ -952,6 +956,8 @@ class BaseDataset():
         )
         if set_ds:
             self.ds = ds_cut
+            self.init_mask(da=self.ds[self.var_name],
+                           **kwargs)
         return ds_cut
 
     def get_spatio_temp_range(self, ds):

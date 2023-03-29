@@ -25,8 +25,28 @@ ds_hadcm = bds.BaseDataset(data_nc=hadcm_file,
                            grid_step=grid_step,
                            decode_times=False,
                            lsm_file=mask_file_eocene,
+                           init_mask=True,
                            max_lat=86.25
                            )
+# %%
+reload(gplt)
+mean_t = ds_hadcm.get_da().mean(dim='time')
+im_comp = gplt.plot_map(dmap=mean_t,
+                        plot_type='contourf',
+                        cmap='cividis',
+                        levels=12,
+                        # vmin=290,
+                        # vmax=310,
+                        title=f"HadCM ",
+                        label=f'Global Mean {ds_hadcm.var_name}',
+                        orientation='horizontal',
+                        tick_step=3,
+                        # round_dec=2,
+                        set_map=False,
+                        # sci=1,
+                        # central_longitude=180
+                        )
+
 # %%
 ds_cesm = bds.BaseDataset(data_nc=cesm_file,
                           var_name=None,
@@ -44,15 +64,15 @@ ds_ocean = bds.BaseDataset(data_nc=ocean_file,
                            )
 # %%
 reload(bds)
-cosmos_file = f'{data_folder}/COSMOS-landveg_r2413-deepmip_stand_3xCO2-pr-v1.0.time_series.nc'
+cosmos_file = f'{data_folder}/COSMOS-landveg_r2413-deepmip_stand_3xCO2-tas-v1.0.time_series.nc'
 
 ds_cosmos = bds.BaseDataset(data_nc=cosmos_file,
                             var_name=None,
                             grid_step=grid_step,
-                            lsm_file=None,
                             sort=False,
                             lon360=True,
                             init_mask=True,
+                            lsm_file=mask_file_eocene,
                             decode_times=False,
                             freq='M'
                             )

@@ -151,6 +151,21 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             self.ds[rv_an.name] = rv_an
         return self.ds
 
+    def compute_divergence(self, group='JJAS', can=True):
+        """Compute vorticity with windspharm package
+        see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
+        """
+
+        vw = VectorWind(self.ds[self.u_name], self.ds[self.u_name])
+
+        gut.myprint('Compute divergence...')
+        div = vw.divergence()  # divergence
+        self.ds['div'] = div.rename('div')
+        if can:
+            div_an = tu.compute_anomalies(dataarray=self.ds['div'], group=group)
+            self.ds[div_an.name] = div_an
+        return self.ds
+
     def compute_vertical_velocity_gradient(self, group='JJAS', dp='plevel'):
         w = self.ds['w']
         self.w_grad = w.differentiate(dp).rename(f'w_grad_{dp}')

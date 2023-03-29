@@ -641,7 +641,7 @@ def get_bsiso_index(time_range=['1981-01-01', '2020-01-01'],
     # BSISO Index
     bsiso_index = xr.open_dataset('/home/strnad/data/bsiso/BSISO.nc')
 
-    bsiso_index = tu.get_sel_time_range(bsiso_index, time_range=time_range)
+    bsiso_index = tu.get_time_range_data(bsiso_index, time_range=time_range)
     bsiso_index = tu.get_month_range_data(bsiso_index,
                                           start_month=start_month,
                                           end_month=end_month)

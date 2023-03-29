@@ -36,11 +36,14 @@ def is_single_tp(tps):
         bool: True if single time point
     """
     if isinstance(tps, xr.DataArray):
-        tps = tps.time.data
-    if len(np.array([tps]).shape) == 1:
-        return True
+        tps = tps.time
+        if len(np.array([tps.time.data]).shape) == 1:
+            return True
     else:
-        return False
+        if len(np.array([tps]).shape) == 1:
+            return True
+
+    return False
 
 
 def is_datetime360(time):
