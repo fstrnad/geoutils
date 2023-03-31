@@ -253,12 +253,14 @@ def get_sel_years_data(ds, years,
                        start_day=None,
                        start_month=None,
                        end_day=None,
-                       end_month=None):
+                       end_month=None,
+                       include_last=True):
     ds_range = select_month_day_range(da=ds,
                                       start_day=start_day,
                                       end_day=end_day,
                                       start_month=start_month,
-                                      end_month=end_month)
+                                      end_month=end_month,
+                                      include_last=include_last,)
     ds_range_years = get_values_by_year(dataarray=ds_range,
                                         years=years)
     return ds_range_years
@@ -269,8 +271,11 @@ def get_sel_years_dates(years,
                         start_month=None,
                         end_day=None,
                         end_month=None,
-                        freq='D'):
+                        freq='D',
+                        include_last=True):
     sd, ed = get_start_end_date(data=years)
+    if include_last:
+        ed = add_time_window(ed, time_step=1, freq='Y')
     all_dates = get_dates_in_range(start_date=sd,
                                    end_date=ed,
                                    freq=freq)
@@ -458,7 +463,8 @@ def number2str(day):
 
 
 def select_month_day_range(da, start_month=None, start_day=None,
-                           end_month=None, end_day=None):
+                           end_month=None, end_day=None,
+                           include_last=False):
     """
     Selects all values of an xarray DataArray that fall within a specified range of months and days, across all years.
 
@@ -486,6 +492,9 @@ def select_month_day_range(da, start_month=None, start_day=None,
         return da
     else:
         sy, ey, num_years = get_time_range_years(dataarray=da)
+        if include_last:
+            ey += 1
+            num_years += 1
         start_month = start_month if start_month is not None else 'Jan'
         start_month = get_month_number(start_month) if isinstance(
             start_month, str) else start_month
@@ -665,7 +674,12 @@ def get_sy_ey_time(times, sy=None, ey=None, sm=None, em=None):
 def get_start_end_date(data):
     base_period = np.array(
         [data.time.data.min(), data.time.data.max()])
-    return base_period
+
+    sd = xr.DataArray(base_period[0],
+                      coords={'time': base_period[0]})
+    ed = xr.DataArray(base_period[1],
+                      coords={'time': base_period[1]})
+    return sd, ed
 
 
 def get_start_end_date_shift(time, sm, em, shift=0):
@@ -1911,9 +1925,11 @@ def count_time_points(time_points, freq='Y'):
 
     # Compute the number of years or months between start and end time points
     if freq == 'Y':
-        time_range = pd.date_range(start=start_time, end=end_time, freq='YS')
+        time_range = pd.date_range(
+            start=start_time.values, end=end_time.values, freq='YS')
     elif freq == 'M':
-        time_range = pd.date_range(start=start_time, end=end_time, freq='MS')
+        time_range = pd.date_range(
+            start=start_time.values, end=end_time.values, freq='MS')
     else:
         raise ValueError(
             f"Invalid frequency: {freq}. Valid options are 'Y' (per year) and 'M' (per month in the year).")
@@ -2145,3 +2161,54 @@ def equalize_time_points(ts1, ts2):
     ts2 = get_sel_tps_ds(ts2, tps=ts1.time)
 
     return ts1, ts2
+
+
+def check_time_overlap(da1, da2, return_overlap=False):
+    """
+    Check if there is any overlap in the time dimension between two xarray dataarrays
+
+    Parameters:
+    -----------
+    da1 : xarray DataArray
+        First input dataarray
+    da2 : xarray DataArray
+        Second input dataarray
+
+    Returns:
+    --------
+    bool
+        True if there is any overlap in the time dimension between both dataarrays, False if not
+    """
+    assert_has_time_dimension(da1)
+    assert_has_time_dimension(da2)
+    time1 = set(da1.time.values)
+    time2 = set(da2.time.values)
+    if return_overlap:
+        time1 = da1.time.values
+        time2 = da2.time.values
+        common_times = np.intersect1d(time1, time2)
+        if common_times.size > 0:
+            return True, common_times
+        else:
+            return False, np.array([])
+    else:
+        return bool(time1.intersection(time2))
+
+
+def select_random_timepoints(dataarray, sample_size=1):
+    """
+    Returns a random sample of time points from an xarray dataarray along the time dimension.
+    The time points are sorted in time.
+
+    Parameters:
+        dataarray (xarray.DataArray): The input dataarray.
+        sample_size (int): The number of time points to sample.
+
+    Returns:
+        xarray.DataArray: A DataArray containing a random sample of time points, sorted in time.
+    """
+    time_vals = dataarray.time.values
+    random_sample = np.random.choice(
+        time_vals, size=sample_size, replace=False)
+    random_sample.sort()
+    return dataarray.sel(time=random_sample)

@@ -372,7 +372,7 @@ class BaseDataset():
             self.calender360 = False
         return ds
 
-    def rename_var(self, new_var_name, ds=None):
+    def rename_var(self, new_var_name, old_var_name=None, ds=None):
         """Renames the dataset's variable name in self.ds and self.var_name
 
         Args:
@@ -380,10 +380,20 @@ class BaseDataset():
         """
         if ds is None:
             ds = self.ds
-        ds = ds.rename({self.var_name: new_var_name})
-        gut.myprint(f"Rename {self.var_name} to {new_var_name}!")
-        self.var_name = new_var_name
+            set_ds = True
+        else:
+            set_ds = False
+        if old_var_name is None:
+            old_var_name = self.var_name
+        if old_var_name not in self.get_vars(ds=ds):
+            raise ValueError(
+                f'This variable {old_var_name} does not exist in dataset!')
+        ds = ds.rename({old_var_name: new_var_name})
+        if set_ds:
+            self.ds = ds
+        gut.myprint(f"Rename {old_var_name} to {new_var_name}!")
         self.vars = self.get_vars()
+        self.set_var(verbose=False)
         return ds
 
     def rename_var_era5(self, ds, verbose=True):
@@ -392,6 +402,9 @@ class BaseDataset():
         if "precipitation" in names:
             ds = ds.rename({"precipitation": "pr"})
             gut.myprint("Rename precipitation: pr!")
+        if "precip" in names:
+            ds = ds.rename({"precip": "pr"})
+            gut.myprint("Rename precip: pr!")
         if "tp" in names:
             ds = ds.rename({"tp": "pr"})
             gut.myprint("Rename tp: pr!")

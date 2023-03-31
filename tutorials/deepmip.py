@@ -19,7 +19,7 @@ cosmos_file = f'{data_folder}/COSMOS-landveg_r2413-deepmip_stand_3xCO2-tas-v1.0.
 
 ocean_file = f'{data_folder}/ocean_r360x180_jan.nc'
 grid_step = 1
-
+# %%
 ds_hadcm = bds.BaseDataset(data_nc=hadcm_file,
                            var_name=None,
                            grid_step=grid_step,
@@ -70,7 +70,7 @@ ds_cosmos = bds.BaseDataset(data_nc=cosmos_file,
                             var_name=None,
                             grid_step=grid_step,
                             sort=False,
-                            lon360=True,
+                            lon360=False,
                             init_mask=True,
                             lsm_file=mask_file_eocene,
                             decode_times=False,
@@ -205,3 +205,41 @@ im_comp = gplt.plot_map(dmap=ds_hadcm.mask,
                         set_map=False,
                         central_longitude=180
                         )
+
+# %%
+# GFDL
+reload(bds)
+gfdl_file = f'{data_folder}/surf_c1.nc'
+grid_step = None
+ds_gfdl = bds.BaseDataset(data_nc=gfdl_file,
+                          var_name=None,
+                          grid_step=grid_step,
+                          decode_times=False,
+                          # lsm_file=mask_file_eocene,
+                          init_mask=True,
+                          #   max_lat=86.25
+                          )
+# %%
+reload(gplt)
+mean_t = ds_gfdl.ds['precip'].mean(dim='time')
+im_comp = gplt.plot_map(dmap=mean_t,
+                        plot_type='contourf',
+                        cmap='cividis',
+                        levels=12,
+                        # vmin=290,
+                        # vmax=310,
+                        title=f"GFDL ",
+                        label=f'Global Mean precip',
+                        orientation='horizontal',
+                        tick_step=3,
+                        # round_dec=2,
+                        set_map=False,
+                        # sci=1,
+                        # central_longitude=180
+                        )
+# %%
+var_names = ds_gfdl.vars
+for var_name in var_names:
+    filepath = f'{data_folder}/gfdl_surf_c1_{var_name}.nc'
+    ds_gfdl.save(filepath, var_list=[var_name])
+# %%

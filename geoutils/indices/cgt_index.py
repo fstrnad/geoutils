@@ -21,7 +21,7 @@ reload(tut)
 
 
 def get_cgt_index(z200, monthly=False, time_range=None):
-    """Returns the cgti index based on the 50hPa zonal winds dataset.
+    """Returns the cgti index based on the 200hPa GPH dataset.
 
     Args:
         z200 (xr.dataarray): Zonal winds fields.
