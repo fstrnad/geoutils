@@ -454,6 +454,7 @@ class BaseDataset():
         else:
             self.ds = self.ds.drop_vars(names=var_name)
             gut.myprint(f'Deleted variable: {var_name}!')
+        self.set_var()
 
     def get_vars(self, ds=None, verbose=False):
         # vars = []

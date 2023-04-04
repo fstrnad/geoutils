@@ -137,9 +137,10 @@ ds_ipsl_pr = bds.BaseDataset(data_nc=ipsl_file,
                              init_mask=True,
                              decode_times=False,
                              )
-# ds_ipsl_pr.rename_var(
-#     new_var_name='temp',
-#     old_var_name='tas')
+ds_ipsl_pr.rename_var(
+    new_var_name='temp',
+    old_var_name='tas')
+ds_ipsl_pr.delete_var(var_name='areas')
 
 ds_ipsl_pr.set_source_attrs()
 # ds_ipsl.save(filepath=ipsl_file_new)
