@@ -652,6 +652,7 @@ def plot_2D(
         # im = ScalarMappable(cmap=im.get_cmap())
     elif plot_type == "contour":
         cmap = cmap if color is None else None
+        ls = kwargs.pop('ls', 'solid')
         im = ax.contour(
             x,
             y,
@@ -662,7 +663,13 @@ def plot_2D(
             colors=color,  # color all levels with the same color, see documentation
             linewidths=lw,  # maybe linewidth=
             alpha=alpha,
+            linestyles=ls,
         )
+        clabel = kwargs.pop('clabel', False)
+        if clabel:
+            print(clabel)
+            ax.clabel(im, inline=True, fontsize=10)
+
     elif plot_type == "discrete":
         vmin = np.nanmin(z)
         vmax = np.nanmax(z)

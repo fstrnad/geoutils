@@ -63,7 +63,7 @@ def assert_has_time_dimension(da):
             f"The input DataArray '{da.name}' does not have a time dimension.")
 
 
-def check_timepoints_in_dataarray(dataarray, timepoints):
+def check_timepoints_in_dataarray(dataarray, timepoints, verbose=True):
     """
     Check if all time points in a set exist in an xr.Dataarray with a time dimension.
 
@@ -85,12 +85,15 @@ def check_timepoints_in_dataarray(dataarray, timepoints):
     dataarray_times = dataarray.time
 
     # Get the time values in the set of time points
-    timepoints_times = timepoints.time
+    if gut.is_single_tp(tps=timepoints):
+        timepoints_times = [timepoints.time]
+    else:
+        timepoints_times = timepoints.time
 
     # Check if all time points in the set exist in the data array
     for time in timepoints_times:
         if time.data not in dataarray_times.data:
-            gut.myprint(f'{time.data} not in dataset!')
+            gut.myprint(f'{time.data} not in dataset!', verbose=verbose)
             return False
 
     return True
@@ -208,12 +211,12 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
     else:
         tps = create_xr_ts(data=tps, times=tps)
     stp = gut.is_single_tp(tps=tps)
-    if stp:
-        tps = [tps]
-    start_month, end_month = get_month_range(tps)
-    if len(tps) == 0:
-        gut.myprint(f'Empty list of time points')
-        return []
+    if not stp:
+        start_month, end_month = get_month_range(tps)
+    if not stp:
+        if len(tps) == 0:
+            gut.myprint(f'Empty list of time points')
+            return []
     if gut.is_datetime360(tps):
         tps_sel = tps
         ds_sel = ds.sel(time=tps_sel, method='nearest')
@@ -223,28 +226,33 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
         else:
             # ds_max = compute_timemax(ds=ds, timemean=timemean)
             # tps_max = compute_timemax(ds=tps, timemean=timemean)
+
             # Build always intersection
-            tps_sel = np.intersect1d(ds.time, tps)
-            if len(tps_sel) != len(tps):
-                gut.myprint('WARNING! Not all tps in ds', verbose=verbose)
-                if verbose:
-                    for x in tps.data:
-                        if x not in ds.time.data:
-                            gut.myprint(f'WARNING! tp not in ds: {x}')
-            if len(tps_sel) == 0:
-                gut.myprint('No tps in intersection of dataset!')
+            if not stp:
+                check_timepoints_in_dataarray(dataarray=ds, timepoints=tps, verbose=verbose)
+
+                tps_sel = np.intersect1d(ds.time, tps)
+                if len(tps_sel) == 0:
+                    gut.myprint('No tps in intersection of dataset!')
+            else:
+                if not check_timepoints_in_dataarray(dataarray=ds, timepoints=tps, verbose=verbose):
+                    gut.myprint(f'WARNING: Single {tps} not in dataset!')
+                    return []
+
+
             ds_sel = ds.sel(time=tps, method='nearest')
             # Remove duplicates
-            ds_sel = remove_duplicate_times(da=ds_sel)
-            # restrict to month range
-
-            ds_sel = get_month_range_data(dataset=ds_sel,
-                                          start_month=start_month,
-                                          end_month=end_month,
-                                          verbose=False)
-
-    if stp and drop_dim:
-        ds_sel = ds_sel.mean(dim='time')
+            if not stp:
+                ds_sel = remove_duplicate_times(da=ds_sel)
+                # restrict to month range
+                ds_sel = get_month_range_data(dataset=ds_sel,
+                                              start_month=start_month,
+                                              end_month=end_month,
+                                              verbose=False)
+            else:
+                if drop_dim:
+                    if 'time' in list(ds_sel.dims):
+                        ds_sel = ds_sel.mean(dim='time')
 
     return ds_sel
 

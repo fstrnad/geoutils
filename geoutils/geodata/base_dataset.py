@@ -125,7 +125,8 @@ class BaseDataset():
         if nan_filter is not None:
             self.ds = self.filter_nans(th=nan_filter)
         # Init Mask
-        self.init_mask(da=self.ds[self.var_name], lsm_file=lsm_file, **kwargs)
+        self.init_mask(da=self.ds[self.var_name], lsm_file=lsm_file,
+                       verbose=verbose, **kwargs)
         self.set_source_attrs()
 
         self.set_ds_objects()
@@ -213,7 +214,7 @@ class BaseDataset():
                 ds = self.cut_map(ds, lon_range, lat_range)
 
             self.grid_step, self.grid_step_lon, self.grid_step_lat = sput.get_grid_step(
-                ds=ds)
+                ds=ds, verbose=verbose)
 
         ds.unify_chunks()
 
@@ -446,6 +447,14 @@ class BaseDataset():
                 "Rename ar_binary_tag (atmospheric rivers) to: ar!", verbose=verbose)
         return ds
 
+    def delete_var(self, var_name):
+        vars = self.get_vars()
+        if var_name not in vars:
+            raise ValueError(f'Variable {var_name} not in dataset. Available variables are {vars}')
+        else:
+            self.ds = self.ds.drop_vars(names=var_name)
+            gut.myprint(f'Deleted variable: {var_name}!')
+
     def get_vars(self, ds=None, verbose=False):
         # vars = []
         # for name, da in self.ds.data_vars.items():
@@ -563,7 +572,7 @@ class BaseDataset():
             self.ds = self.ds.assign_attrs(self.info_dict)
             init_indices = kwargs.pop('init_indices', True)
             if init_indices:
-                self.indices_flat, self.idx_map = self.init_map_indices()
+                self.indices_flat, self.idx_map = self.init_map_indices(verbose=verbose)
             else:
                 gut.myprint('WARNING! Index dictionaries not initialized!')
                 self.indices_flat = self.idx_map = None
@@ -685,14 +694,14 @@ class BaseDataset():
         idx_lst_map = self.get_map(flat_idx_arr)
         return idx_lst_map
 
-    def init_map_indices(self):
+    def init_map_indices(self, verbose=True):
         """
         Initializes the flat indices of the map.
         Usefule if get_map_index is called multiple times.
         Also defined spatial lon, lat locations are initialized.
         """
         reload(gut)
-        gut.myprint('Init the point-idx dictionaries')
+        gut.myprint('Init the point-idx dictionaries', verbose=verbose)
         mask_arr = np.where(self.mask.data.flatten() == 1, True, False)
         if np.count_nonzero(mask_arr) == 0:
             raise ValueError('ERROR! Mask is the whole dataset!')
@@ -943,7 +952,7 @@ class BaseDataset():
 
     def cut_map(
         self, ds=None, lon_range=[-180, 180], lat_range=[-90, 90], dateline=False,
-        set_ds=False, **kwargs,
+        set_ds=False, verbose=True, **kwargs,
     ):
         """Cut an area in the map. Use always smallest range as default.
         It lon ranges accounts for regions (eg. Pacific) that are around the -180/180 region.
@@ -970,6 +979,7 @@ class BaseDataset():
         if set_ds:
             self.ds = ds_cut
             self.init_mask(da=self.ds[self.var_name],
+                           verbose=verbose,
                            **kwargs)
         return ds_cut
 

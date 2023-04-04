@@ -114,3 +114,50 @@ ds_cosmos_pr.rename_var(new_var_name='prec')
 prec = ds_cosmos_pr.ds['prec']
 ds_cosmos_pr.ds['prec'] = xr.where(prec < 0, 0, prec)
 ds_cosmos_pr.set_source_attrs()
+
+# %%
+# IPSL
+# Read files
+reload(bds)
+data_folder = '/home/strnad/data/paleo/IPSL_GFDL/IPSL/1.5xCO2'
+ipsl_file = f'{data_folder}/IPSLCM5A2-deepmip_sens_1.5xCO2-tas-v1.0.time_series.nc'
+ipsl_file_new = f'{data_folder}/IPSLCM5A2-deepmip_sens_1.5xCO2-temp-v1.0.time_series.nc'
+
+# lpj_mask_file_pi = f'{data_folder}/mask_1_Preindustrial_.nc'
+# mask_file_eocene = f'{data_folder}/mask_1_Eocene_.nc'
+
+grid_step = None
+
+ds_ipsl_pr = bds.BaseDataset(data_nc=ipsl_file,
+                             var_name=None,
+                             grid_step=grid_step,
+                             lsm_file=None,
+                             sort=True,
+                             lon360=True,
+                             init_mask=True,
+                             decode_times=False,
+                             )
+# ds_ipsl_pr.rename_var(
+#     new_var_name='temp',
+#     old_var_name='tas')
+
+ds_ipsl_pr.set_source_attrs()
+# ds_ipsl.save(filepath=ipsl_file_new)
+
+# %%
+im_comp = gplt.plot_map(dmap=ds_ipsl_pr.get_da().mean(dim='time'),
+                        plot_type='contourf',
+                        cmap='cividis',
+                        # levels=12,
+                        # vmin=0,
+                        # vmax=1,
+                        title=f"Mask lpj PI",
+                        bar=True,
+                        plt_grid=True,
+                        label=f'Global Mean Temperature [K]',
+                        orientation='horizontal',
+                        tick_step=2,
+                        round_dec=2,
+                        set_map=False,
+                        # central_longitude=180
+                        )
