@@ -121,32 +121,32 @@ ds_cosmos_pr.set_source_attrs()
 reload(bds)
 data_folder = '/home/strnad/data/paleo/IPSL_GFDL/IPSL/1.5xCO2'
 ipsl_file = f'{data_folder}/IPSLCM5A2-deepmip_sens_1.5xCO2-tas-v1.0.time_series.nc'
-ipsl_file_new = f'{data_folder}/IPSLCM5A2-deepmip_sens_1.5xCO2-temp-v1.0.time_series.nc'
+ipsl_file_new = f'{data_folder}/IPSLCM5A2-deepmip_sens_1.5xCO2-temp-v1.0.time_series_new.nc'
 
 # lpj_mask_file_pi = f'{data_folder}/mask_1_Preindustrial_.nc'
 # mask_file_eocene = f'{data_folder}/mask_1_Eocene_.nc'
 
 grid_step = None
 
-ds_ipsl_pr = bds.BaseDataset(data_nc=ipsl_file,
-                             var_name=None,
-                             grid_step=grid_step,
-                             lsm_file=None,
-                             sort=True,
-                             lon360=True,
-                             init_mask=True,
-                             decode_times=False,
-                             )
-ds_ipsl_pr.rename_var(
+ds_ipsl = bds.BaseDataset(data_nc=ipsl_file,
+                          var_name=None,
+                          grid_step=grid_step,
+                          lsm_file=None,
+                          sort=True,
+                          lon360=True,
+                          init_mask=True,
+                          decode_times=False,
+                          )
+ds_ipsl.rename_var(
     new_var_name='temp',
     old_var_name='tas')
-ds_ipsl_pr.delete_var(var_name='areas')
+ds_ipsl.delete_var(var_name='areas')
 
-ds_ipsl_pr.set_source_attrs()
-# ds_ipsl.save(filepath=ipsl_file_new)
+ds_ipsl.set_source_attrs()
+ds_ipsl.save(filepath=ipsl_file_new)
 
 # %%
-im_comp = gplt.plot_map(dmap=ds_ipsl_pr.get_da().mean(dim='time'),
+im_comp = gplt.plot_map(dmap=ds_ipsl.get_da().mean(dim='time'),
                         plot_type='contourf',
                         cmap='cividis',
                         # levels=12,
@@ -160,5 +160,47 @@ im_comp = gplt.plot_map(dmap=ds_ipsl_pr.get_da().mean(dim='time'),
                         tick_step=2,
                         round_dec=2,
                         set_map=False,
-                        # central_longitude=180
+                        central_longitude=180
+                        )
+
+# %%
+# GFDL
+
+data_folder = '/home/strnad/data/paleo/IPSL_GFDL/GFDL/3xCO2'
+gfdl_file = f'{data_folder}/GFDL_CM2.1-deepmip_stand_3xCO2-temp-v1.0.time_series.nc'
+gfdl_file_new = f'{data_folder}/GFDL_CM2.1-deepmip_stand_3xCO2-temp-v1.0.time_series_new.nc'
+
+# lpj_mask_file_pi = f'{data_folder}/mask_1_Preindustrial_.nc'
+# mask_file_eocene = f'{data_folder}/mask_1_Eocene_.nc'
+
+grid_step = None
+
+ds_gfdl = bds.BaseDataset(data_nc=gfdl_file,
+                          var_name=None,
+                          grid_step=grid_step,
+                          lsm_file=None,
+                          sort=True,
+                          lon360=True,
+                          init_mask=True,
+                          decode_times=False,
+                          )
+ds_gfdl.set_source_attrs()
+ds_gfdl.save(filepath=gfdl_file_new)
+
+# %%
+im_comp = gplt.plot_map(dmap=ds_gfdl.get_da().mean(dim='time'),
+                        plot_type='contourf',
+                        cmap='cividis',
+                        # levels=12,
+                        # vmin=0,
+                        # vmax=1,
+                        title=f"lpj input GFDL",
+                        bar=True,
+                        plt_grid=True,
+                        label=f'Global Mean Temperature [K]',
+                        orientation='horizontal',
+                        tick_step=2,
+                        round_dec=2,
+                        set_map=False,
+                        central_longitude=180
                         )
