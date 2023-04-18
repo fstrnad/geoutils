@@ -736,6 +736,29 @@ class BaseDataset():
 
         return self.indices_flat, self.idx_map
 
+    def get_coordinates_flatten(self):
+        """Get coordinates of flatten array with removed NaNs.
+
+        Return:
+        -------
+        coord_deg:
+        coord_rad:
+        map_idx:
+        """
+        # length of the flatten array with NaNs removed
+        # length = self.flatten_array().shape[1]
+        length = len(self.indices_flat)
+        coord_deg = []
+        map_idx = []
+        for i in range(length):
+            buff = self.get_map_index(i)
+            coord_deg.append([buff["lat"], buff["lon"]])
+            map_idx.append(buff["point"])
+
+        coord_rad = np.radians(coord_deg)  # transforms to np.array
+
+        return np.array(coord_deg), coord_rad, np.array(map_idx)
+
     def get_dims(self, ds=None):
         if ds is None:
             ds = self.ds
@@ -890,6 +913,7 @@ class BaseDataset():
                 else:
 
                     rep_ids = self.get_n_ids(loc=mean_loc, num_nn=n_rep_ids)
+                    rep_locs = self.get_locs_for_indices(rep_ids)
                     pids = self.get_points_for_idx(ids_lst)
                     if 'points' in self.dims:
                         data = self.ds.sel(points=pids)
@@ -900,6 +924,7 @@ class BaseDataset():
                     this_loc_dict["rep_ids"] = np.array(rep_ids)
                     this_loc_dict["loc"] = loc
                     this_loc_dict["locs"] = locs
+                    this_loc_dict["rep_locs"] = rep_locs
                     this_loc_dict['ids'] = ids_lst
                     this_loc_dict['pids'] = pids
                     this_loc_dict['data'] = data
@@ -1603,4 +1628,141 @@ class BaseDataset():
             dataarray=da, dims=dims, th=th).to_dataset()
         self.set_var()
         return self.ds
+
+
+    #  #################### EVS time series ##############
+    def create_evs_ds(
+        self, var_name,
+        q=0.95,
+        min_threshold=1,
+        th_eev=15,
+        min_evs=20,
+        month_range=None
+    ):
+        """Genereates an event time series of the variable of the dataset.
+        Attention, if month range is provided all values not in the month range are
+        set to 0, not deleted, therefore the number of dates is retained
+
+        Args:
+            var_name (str): variable name
+            q (float, optional): Quantile that defines extreme events. Defaults to 0.95.
+            th (float, optional): threshold of minimum value in a time series. Defaults to 1.
+            th_eev (float, optional): Threshold of minimum value of an extreme event. Defaults to 15.
+            min_evs (int, optional): Minimum number of extreme events in the whole time Series. Defaults to 20.
+            month_range (list, optional): list of strings as [start_month, end_month]. Defaults to None.
+
+        Returns:
+            xr.Dataset: Dataset with new values of variable and event series
+        """
+        self.q = q
+        self.min_threshold = min_threshold
+        self.th_eev = th_eev
+        self.min_evs = min_evs
+        gut.myprint(f'Create EVS with EE defined by q > {q}')
+        if month_range is None:
+            da_es, self.mask = self.compute_event_time_series(
+                var_name=var_name,)
+        else:
+            da_es, self.mask = self.compute_event_time_series_month_range(
+                start_month=month_range[0], end_month=month_range[1]
+            )
+        da_es.attrs = {"var_name": var_name}
+
+        self.set_ds_attrs_evs(ds=da_es)
+        self.ds["evs"] = da_es
+
+        return self.ds
+
+    def get_q_maps(self, var_name):
+
+        if var_name is None:
+            var_name = self.var_name
+        gut.myprint(f"Apply Event Series on variable {var_name}")
+
+        dataarray = self.ds[var_name]
+
+        q_val_map, ee_map, data_above_quantile, rel_frac_q_map = tu.get_ee_ds(
+            dataarray=dataarray, q=self.q, th=self.th, th_eev=self.th_eev
+        )
+
+        return q_val_map, ee_map, data_above_quantile
+
+    def compute_event_time_series(
+        self, var_name=None,
+    ):
+        reload(tu)
+        if var_name is None:
+            var_name = self.var_name
+        gut.myprint(f"Apply Event Series on variable {var_name}")
+
+        dataarray = self.ds[var_name]
+
+        event_series, mask = tu.compute_evs(
+            dataarray=dataarray,
+            q=self.q,
+            th=self.min_threshold,
+            th_eev=self.th_eev,
+            min_evs=self.min_evs,
+        )
+
+        return event_series, mask
+
+    def compute_event_time_series_month_range(
+        self, start_month="Jan", end_month="Dec",
+    ):
+        """
+        This function generates data within a given month range.
+        It can be from smaller month to higher (eg. Jul-Sep) but as well from higher month
+        to smaller month (eg. Dec-Feb)
+
+        Parameters
+        ----------
+        start_month : string, optional
+            Start month. The default is 'Jan'.
+        end_month : string, optional
+            End Month. The default is 'Dec'.
+
+        Returns
+        -------
+        seasonal_data : xr.dataarray
+            array that contains only data within month-range.
+
+        """
+        reload(tu)
+        times = self.ds["time"]
+        start_year, end_year = tu.get_sy_ey_time(times, sy=None, ey=None)
+        gut.myprint(
+            f"Get month range data from year {start_year} to {end_year}!")
+
+        da = self.ds[self.var_name]
+        # Sets the data outside the month range to 0, but retains the dates
+        da_mr = self.get_month_range_data(
+            dataarray=da, start_month=start_month, end_month=end_month, set_zero=True
+        )
+        # Computes the Event Series
+        evs_mr, mask = tu.compute_evs(
+            dataarray=da_mr,
+            q=self.q,
+            th=self.th,
+            th_eev=self.th_eev,
+            min_evs=self.min_evs,
+        )
+
+        return evs_mr, mask
+
+    def set_ds_attrs_evs(self, ds):
+        param_class = {
+            "grid_step": self.grid_step,
+            "grid_type": self.grid_type,
+            "q": self.q,
+            "min_evs": self.min_evs,
+            "min_threshold": self.min_threshold,
+            "th_eev": self.th_eev,
+            "an": int(self.can),
+            **self.info_dict
+        }
+        ds.attrs = param_class
+        return ds
+
+
 # %%

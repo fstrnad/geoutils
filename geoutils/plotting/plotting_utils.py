@@ -1,5 +1,6 @@
 from matplotlib.offsetbox import AnchoredText
 import matplotlib as mpl
+from matplotlib.cm import ScalarMappable
 import matplotlib.pyplot as plt
 import copy
 import numpy as np
@@ -135,18 +136,20 @@ def prepare_axis(ax, log=False, **kwargs):
         ax.ticklabel_format(style="sci", axis="x", scilimits=(sci, sci))
 
     flip_x = kwargs.pop('flip_x', False)
-    if flip_x:
+    invert_x = kwargs.pop('invert_x', False)
+
+    if flip_x or invert_x:
         ax.invert_xaxis()
 
     flip_y = kwargs.pop('flip_y', False)
-    if flip_y:
+    invert_y = kwargs.pop('invert_y', False)
+    if flip_y or invert_y:
         ax.invert_yaxis()
 
     return ax, kwargs
 
 
 def make_colorbar_discrete(ax, im, fig=None, vmin=None, vmax=None, **kwargs):
-    from mpl.cm import ScalarMappable
     if vmin is None:
         vmin = im.get_clim()[0]
     if vmax is None:
@@ -554,6 +557,7 @@ def text_box(ax, text, pos="upper right", fsize=pst.MEDIUM_SIZE, **kwargs):
 
 
 def check_plot_type(plot_type):
-    if plot_type not in ['contour', 'contourf', 'scatter', 'points', 'colormesh']:
+    avail_types = ['contour', 'contourf', 'scatter', 'points', 'colormesh', 'discrete']
+    if plot_type not in avail_types:
         raise ValueError(f'ERROR plot_type {plot_type} not available!')
     return True

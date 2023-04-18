@@ -62,25 +62,6 @@ class HelmholtzDecomposition(wds.Wind_Dataset):
             self.load(load_nc=load_nc)
 
 
-    def helmholtz_decomposition(self, ds):
-        """
-        Compute Helmholtz decomposition from u and v components
-        see https://ajdawson.github.io/windspharm/latest/api/windspharm.standard.html
-        """
-        gut.myprint(f'Init Helmholtz decomposition wind vector...')
-        vw = VectorWind(ds[self.u_name], ds[self.v_name])
-        return_dict = dict(w=vw)
-        # Compute variables
-        gut.myprint(f'Compute Helmholtz decomposition...')
-        u_chi, v_chi, upsi, vpsi = vw.helmholtz()
-
-        return_dict['u_chi'] = u_chi
-        return_dict['v_chi'] = v_chi
-        return_dict['u_psi'] = upsi
-        return_dict['v_psi'] = vpsi
-
-        return return_dict
-
     def get_ds(self, S_dict,
                ds_wind=None):
 
@@ -98,52 +79,7 @@ class HelmholtzDecomposition(wds.Wind_Dataset):
             S_dict['v_psi']])
         return self.ds
 
-    def get_streamfunction(self):
-        vw = VectorWind(self.u, self.v)
-        return_dict = dict(w=vw)
-        print(f'Compute Stream Function...', flush=True)
-        sf, vp = vw.sfvp()
-        return_dict['sf'] = sf
-        return_dict['vp'] = vp
-
-        return return_dict
-
-    def get_massstreamfunction(self,
-                               a=6376.0e3,
-                               g=9.81,
-                               meridional=True,
-                               c=None,
-                               ):
-        """Calculate the mass streamfunction for the atmosphere.
-        Based on a vertical integral of the meridional wind.
-        Ref: Physics of Climate, Peixoto & Oort, 1992.  p158.
-
-        `a` is the radius of the planet (default Isca value 6376km).
-        `g` is surface gravity (default Earth 9.8m/s^2).
-        lon_range allows a local area to be used by specifying boundaries as e.g. [70,100]
-        dp_in - if no phalf and if using regularly spaced pressure levels, use this increment for
-                integral. Units hPa.
-        intdown - choose integratation direction (i.e. from surface to TOA, or TOA to surface).
-
-        Returns an xarray DataArray of mass streamfunction.
-
-        """
-
-        if meridional:
-            var = 'v_chi'
-            lats = v_bar.lat
-            lats = np.cos(lats*np.pi/180)
-        else:
-            var = 'u_chi'
-            lats = 1 # No cosine factor for longitudes
-
-        if c is None:
-            c = 2*np.pi*a*lats / g
-
-        # Compute Vertical integral of the Mass Streamfunction
-        Psi = self.vertical_integration(var=var)
-
-        return Psi
+    
 
     def set_massstreamfunction(self,
                                a=6376.0e3,

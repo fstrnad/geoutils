@@ -54,7 +54,6 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                     can=False,
                                                     **v_kwargs)
 
-
             u = ds_uwind.ds[self.u_name]
             v = ds_vwind.ds[self.v_name]
             if self.u_name == 'u':
@@ -127,16 +126,20 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             "Computed single components of wind dataset. Now compute windspeed!")
         return windspeed
 
-    def compute_vertical_shear(self, group='JJAS'):
-        shear_wind = self.ds['u'].sel(
-            plevel=200) - self.ds['u'].sel(plevel=900)
-        shear_wind = shear_wind.rename('vertical_shear')
-        shear_wind_an = tu.compute_anomalies(dataarray=shear_wind, group=group)
-        self.vertical_shear = xr.merge([shear_wind, shear_wind_an])
+    def compute_vertical_shear(self, plevel_up=200, plevel_low=850,
+                               group='JJAS'):
+        gut.myprint(f'Compute Vertical shear winds.')
+        shear_wind = self.ds[self.u_name].sel(
+            lev=plevel_up) - self.ds[self.u_name].sel(lev=plevel_low)
+        self.ds['vertical_shear'] = shear_wind.rename('vertical_shear')
+        for group in self.an_types:
+            shear_wind_an = tu.compute_anomalies(
+                dataarray=self.ds['vertical_shear'], group=group)
+            self.ds[shear_wind_an.name] = shear_wind_an
 
-        return self.vertical_shear
+        return self.ds
 
-    def compute_vorticity(self, group='JJAS', can=True):
+    def compute_vorticity(self, can=True):
         """Compute vorticity with windspharm package
         see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
         """
@@ -147,11 +150,13 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         rv = vw.vorticity()  # Relative Vorticity
         self.ds['rv'] = rv.rename('rv')
         if can:
-            rv_an = tu.compute_anomalies(dataarray=self.ds['rv'], group=group)
-            self.ds[rv_an.name] = rv_an
+            for group in self.an_types:
+                rv_an = tu.compute_anomalies(
+                    dataarray=self.ds['rv'], group=group)
+                self.ds[rv_an.name] = rv_an
         return self.ds
 
-    def compute_divergence(self, group='JJAS', can=True):
+    def compute_divergence(self, can=True):
         """Compute vorticity with windspharm package
         see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
         """
@@ -162,8 +167,10 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         div = vw.divergence()  # divergence
         self.ds['div'] = div.rename('div')
         if can:
-            div_an = tu.compute_anomalies(dataarray=self.ds['div'], group=group)
-            self.ds[div_an.name] = div_an
+            for group in self.an_types:
+                div_an = tu.compute_anomalies(
+                    dataarray=self.ds['div'], group=group)
+                self.ds[div_an.name] = div_an
         return self.ds
 
     def compute_vertical_velocity_gradient(self, group='JJAS', dp='plevel'):
@@ -173,7 +180,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             dataarray=self.w_grad, group=group)
         return self.w_grad, self.w_grad_an
 
-    def compute_rossby_wave_source(self, can=True, group='JJAS'):
+    def compute_rossby_wave_source(self, can=True):
         """Compute rossby wave source from u and v components
         see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
         """
@@ -182,8 +189,10 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
 
         gut.myprint(f'Compute Vorticity...')
         eta = vw.absolutevorticity()
-        gut.myprint(f'Compute Divergence...')
-        div = vw.divergence()
+        if 'div' not in self.get_dims():
+            gut.myprint(f'Compute Divergence...')
+            self.compute_divergence(can=can)
+        div = self.ds['div']
         gut.myprint(f'Compute Rotation and gradient...')
         uchi, vchi = vw.irrotationalcomponent()
         etax, etay = vw.gradient(eta)
@@ -194,8 +203,103 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         self.ds['S'] = S.rename('S')
         gut.myprint("... Computed Rossby Wave Source!")
         if can:
-            self.ds[f'S_an_{group}'] = tu.compute_anomalies(dataarray=self.ds['S'], group=group)
+            for group in self.an_types:
+                self.ds[f'S_an_{group}'] = tu.compute_anomalies(
+                    dataarray=self.ds['S'], group=group)
 
         return self.ds
+
+    def compute_streamfunction(self, can=True):
+        vw = VectorWind(self.ds[self.u_name], self.ds[self.v_name])
+
+        gut.myprint(f'Compute Stream Function...')
+        sf, vp = vw.sfvp()
+        self.ds['sf'] = sf.rename('sf')
+        self.ds['vp'] = vp.rename('vp')
+
+        if can:
+            for an_type in self.an_types:
+                sf_an = tu.compute_anomalies(
+                    dataarray=self.ds['sf'], group=an_type)
+                self.ds[sf_an.name] = sf_an
+                vp_an = tu.compute_anomalies(
+                    dataarray=self.ds['vp'], group=an_type)
+                self.ds[vp_an.name] = vp_an
+
+        return self.ds
+
+    def helmholtz_decomposition(self):
+        """
+        Compute Helmholtz decomposition from u and v components
+        see https://ajdawson.github.io/windspharm/latest/api/windspharm.standard.html
+        """
+        gut.myprint(f'Init Helmholtz decomposition wind vector...')
+        vw = VectorWind(self.ds[self.u_name], self.ds[self.v_name])
+
+        # Compute variables
+        gut.myprint(f'Compute Helmholtz decomposition...')
+        u_chi, v_chi, upsi, vpsi = vw.helmholtz()
+
+        self.ds['u_chi'] = u_chi
+        self.ds['v_chi'] = v_chi
+        self.ds['u_psi'] = upsi
+        self.ds['v_psi'] = vpsi
+
+        return self.ds
+
+    def compute_massstreamfunction(self,
+                                   a=6376.0e3,
+                                   g=9.81,
+                                   meridional=True,
+                                   c=None,
+                                   can=True,
+                                   ):
+        """Calculate the mass streamfunction for the atmosphere.
+        Based on a vertical integral of the meridional wind.
+        Ref: Physics of Climate, Peixoto & Oort, 1992.  p158.
+
+        `a` is the radius of the planet (default Isca value 6376km).
+        `g` is surface gravity (default Earth 9.8m/s^2).
+        lon_range allows a local area to be used by specifying boundaries as e.g. [70,100]
+        dp_in - if no phalf and if using regularly spaced pressure levels, use this increment for
+                integral. Units hPa.
+        intdown - choose integratation direction (i.e. from surface to TOA, or TOA to surface).
+
+        Returns an xarray DataArray of mass streamfunction.
+
+        """
+
+        if meridional:
+            var = 'v_chi'
+            lats = self.ds.lat
+            lats = np.cos(lats*np.pi/180)
+        else:
+            var = 'u_chi'
+            lats = 1  # No cosine factor for longitudes
+
+        if var not in self.get_dims():
+            self.helmholtz_decomposition()
+
+        if c is None:
+            c = 2*np.pi*a*lats / g
+
+        # Compute Vertical integral of the Mass Streamfunction
+        Psi = self.vertical_integration(var=var, c=c)
+
+        if meridional:
+            vname = 'msf_v'
+        else:
+            vname = 'msf_u'
+
+        self.ds[vname] = Psi.rename(vname)
+
+        if can:
+            for an_type in self.an_types:
+                sf_an = tu.compute_anomalies(
+                    dataarray=self.ds[vname], group=an_type)
+                self.ds[sf_an.name] = sf_an
+
+        return self.ds
+
 
 # %%

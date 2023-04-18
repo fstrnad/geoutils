@@ -42,6 +42,7 @@ def get_grid_dist(ext_dict):
 
 
 def set_grid(ax, alpha=0.5,
+             proj='PlateCarree',
              ext_dict={},
              **kwargs):
     """Generates a grid for a spatial map.
@@ -59,9 +60,13 @@ def set_grid(ax, alpha=0.5,
         gs_lat = kwargs.pop('gs_lat', None)
         if gs_lon is None:
             gs_lon, gs_lat = get_grid_dist(ext_dict=ext_dict)
+        if proj != 'PlateCarree':
+            gs_lon = 60
+            gs_lat = 30
     else:
         gs_lon = 30
         gs_lat = 20
+
     # Generate the grid
     gl = ax.gridlines(
         draw_labels=True,
@@ -226,6 +231,7 @@ def create_map(
             ax.add_feature(ctp.feature.LAND, alpha=alpha, zorder=-1)
     if plt_grid:
         ax, kwargs = set_grid(ax, alpha=alpha,
+                              proj=projection,
                               ext_dict=ext_dict,
                               **kwargs)
 
@@ -316,7 +322,8 @@ def plot_map(dmap: xr.DataArray,
         raise ValueError(
             f'Axis already given, projection {projection} will have no effect. Please do not pass projection argument!')
     else:
-        projection = 'PlateCarree'  # Set default to PlateCarree
+        # Set default to PlateCarree
+        projection = 'PlateCarree' if projection is None else projection
 
     if not isinstance(dmap, xr.DataArray) and plot_type != 'points':
         raise ValueError(

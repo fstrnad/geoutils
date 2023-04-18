@@ -110,15 +110,15 @@ def plot_xy(
         else:
             fig, ax = plt.subplots(figsize=(figsize), nrows=1, ncols=1,
                                    subplot_kw={'projection': 'polar'})
-    else:
-        fig = ax.get_figure()
-
-    if plot_type != 'bar':
         if ts_axis:
             ax = prepare_ts_x_axis(ax, dates=x_arr[0], **kwargs)
         else:
             ax, kwargs = put.prepare_axis(ax, plot_type=plot_type, **kwargs)
 
+    else:
+        fig = ax.get_figure()
+
+    if plot_type != 'bar':
         num_items = len(y_arr) if len(y_arr) >= len(x_arr) else len(x_arr)
         if lcmap is not None:
             lcmap, evenly_spaced_interval, ccolors = put.get_arr_colorbar(
@@ -152,7 +152,10 @@ def plot_xy(
             if lcmap is None:
                 if color is None:
                     if color_arr is None:
-                        c = pst.colors[idx]
+                        if len(y_arr) <= len(pst.colors):
+                            c = pst.colors[idx]
+                        else:
+                            c = pst.colors[0]
                     else:
                         if idx < len(color_arr):
                             c = color_arr[idx]

@@ -1,3 +1,4 @@
+import networkx as nx
 import pickle
 import numpy as np
 import os
@@ -178,3 +179,12 @@ def load_xr(filepath):
     assert_file_exists(file_path=filepath)
     data = xr.open_dataset(filepath)
     return data
+
+
+def load_nx(filepath):
+    gut.myprint(f"Load {filepath}...")
+    assert_file_exists(file_path=filepath)
+    cnx = nx.read_gml(filepath, destringizer=int)
+    gut.myprint(f"... Loading {filepath} successful!")
+
+    return cnx

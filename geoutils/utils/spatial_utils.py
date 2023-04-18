@@ -1,3 +1,4 @@
+from typing import List, Tuple
 from tqdm import tqdm
 from sklearn.neighbors import KernelDensity
 import scipy.stats as st
@@ -63,6 +64,47 @@ def get_mean_std_loc(locs):
             'mean_lat': mean_lat,
             'std_lon': std_lon,
             'std_lat': std_lat}
+
+
+def location_stats(locations):
+    """
+    A function that takes a list of latitude, longitude pairs and returns
+    a dictionary containing the mean, standard deviation, and quantile values
+    from 0.05 to 0.95 in steps of 0.05 for both the latitudes and longitudes.
+
+    Args:
+    - locations: list of tuples, where each tuple contains a longitude,latitude pair
+
+    Returns:
+    - dict with the following keys:
+        - lat_mean : float, mean latitude
+        - lon_mean : float, mean longitude
+        - lat_std : float, standard deviation of latitudes
+        - lon_std : float, standard deviation of longitudes
+        - lat_qX : float, single quantile value for X percentile, where X is a two-digit integer representing the percentile (e.g., 'lat_q90' for the 90th percentile of latitudes)
+        - lon_qX : float, single quantile value for X percentile, where X is a two-digit integer representing the percentile (e.g., 'lon_q90' for the 90th percentile of longitudes)
+    """
+
+    lats = [loc[1] for loc in locations]
+    lons = [loc[0] for loc in locations]
+    lat_mean = np.mean(lats)
+    lon_mean = np.mean(lons)
+    lat_std = np.std(lats)
+    lon_std = np.std(lons)
+
+    # Create key-value pairs for quantiles
+    lat_quantiles = {}
+    lon_quantiles = {}
+    quantile_values = np.arange(0.05, 1, 0.05)
+    for q in quantile_values:
+        # Convert quantile values to integers for use in dictionary keys
+        q_int = int(q * 100)
+        lat_quantiles[f"lat_q{q_int}"] = np.quantile(lats, q=q)
+        lon_quantiles[f"lon_q{q_int}"] = np.quantile(lons, q=q)
+
+    return {'lat_mean': lat_mean, 'lon_mean': lon_mean,
+            'lat_std': lat_std, 'lon_std': lon_std,
+            **lat_quantiles, **lon_quantiles}
 
 
 def get_mean_lon_lat_range(lon_range, lat_range):
@@ -539,6 +581,35 @@ def neighbor_distance(lon, lat, radius=RADIUS_EARTH):
     return np.array(distances)
 
 
+def far_locations(locations: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+    """
+    A function that takes a list of longitude-latitude pairs and returns
+    only those locations that have at least two other locations in the list that
+    are closer than in total 2.5 degrees.
+
+    Args:
+    - locations: list of tuples, where each tuple contains a longitude-latitude pair
+
+    Returns:
+    - a list of tuples, containing only the longitude-latitude pairs of locations that meet the criteria.
+    """
+
+    min_dist = degree2distance_equator(2.5)
+
+    def is_close(loc1: Tuple[float, float], loc2: Tuple[float, float]) -> bool:
+        """Check whether two locations are closer than 2.5 degrees."""
+        return haversine(loc1[0], loc1[1], loc2[0], loc2[0], radius=RADIUS_EARTH) <= min_dist
+
+    # Filter out locations that don't have at least two locations within 2.5 degrees
+    far_locs = []
+    for loc1 in locations:
+        close_locs = [loc2 for loc2 in locations if is_close(loc1, loc2)]
+        if len(close_locs) < 3:  # Add loc1 to far_locs if it has less than two close locations
+            far_locs.append(loc1)
+
+    return far_locs
+
+
 def find_nearest_lat_lon(lon, lat, lon_arr, lat_arr):
     """Find nearest lon-lat position for array of lon arr and lat arr
 
@@ -593,7 +664,7 @@ def spherical_kde(link_points, coord_rad, bw_opt=None):
     link_points: np.array (num_links, 2)
         List of latidude and longitudes.
     coord_rad : array
-        Array of all links provided as [lon, lat]
+        Array of all locations provided as [lon, lat]
     bw_opt: float
         bandwidth of the kde, used Scott rule here
 
@@ -622,13 +693,15 @@ def spherical_kde(link_points, coord_rad, bw_opt=None):
     return Z
 
 
-def get_kde_map(ds, data, nn_points=None, bandwidth='scott'):
+def get_kde_map(ds, data, coord_rad=None, nn_points=None, bandwidth='scott'):
     if nn_points is not None:
         bandwidth = get_nn_bw(nn_points=nn_points, grid_step=ds.grid_step)
 
-    coord_deg, coord_rad, map_idx = ds.get_coordinates_flatten()
+    if coord_rad is None:
+        coord_deg, coord_rad, map_idx = ds.get_coordinates_flatten()
 
-    link_points = np.where(data > 0)[0]
+    link_points = ds.get_idx_point_lst(np.where(data > 0)[0])
+
     links_rad = coord_rad[link_points]
     Z_kde = spherical_kde(link_points=links_rad,
                           coord_rad=coord_rad,
