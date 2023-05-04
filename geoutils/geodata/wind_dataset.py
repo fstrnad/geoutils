@@ -173,12 +173,16 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                 self.ds[div_an.name] = div_an
         return self.ds
 
-    def compute_vertical_velocity_gradient(self, group='JJAS', dp='plevel'):
-        w = self.ds['w']
-        self.w_grad = w.differentiate(dp).rename(f'w_grad_{dp}')
-        self.w_grad_an = tu.compute_anomalies(
-            dataarray=self.w_grad, group=group)
-        return self.w_grad, self.w_grad_an
+    def compute_vertical_velocity_gradient(self, dp='lev', can=True):
+        w = self.ds[self.w_name]
+        w_grad = w.differentiate(dp).rename(f'w_grad_{dp}')
+        self.ds['vert_grad'] = w_grad
+        if can:
+            for group in self.an_types:
+                vert_grad_an = tu.compute_anomalies(
+                    dataarray=self.ds['vert_grad'], group=group)
+                self.ds[vert_grad_an.name] = vert_grad_an
+        return self.ds
 
     def compute_rossby_wave_source(self, can=True):
         """Compute rossby wave source from u and v components
@@ -189,7 +193,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
 
         gut.myprint(f'Compute Vorticity...')
         eta = vw.absolutevorticity()
-        if 'div' not in self.get_dims():
+        if 'div' not in self.get_vars()():
             gut.myprint(f'Compute Divergence...')
             self.compute_divergence(can=can)
         div = self.ds['div']
@@ -269,29 +273,29 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
 
         """
 
-        if meridional:
-            var = 'v_chi'
-            lats = self.ds.lat
-            lats = np.cos(lats*np.pi/180)
-        else:
-            var = 'u_chi'
-            lats = 1  # No cosine factor for longitudes
+        for var in ['v_chi', 'u_chi']:
+            if var == 'v_chi':
+                lats = self.ds.lat
+                lats = np.cos(lats*np.pi/180)
+            else:
+                var = 'u_chi'
+                lats = 1  # No cosine factor for longitudes
 
-        if var not in self.get_dims():
-            self.helmholtz_decomposition()
+            if var not in self.get_vars():
+                self.helmholtz_decomposition()
 
-        if c is None:
-            c = 2*np.pi*a*lats / g
+            if c is None:
+                c = 2*np.pi*a*lats / g
 
-        # Compute Vertical integral of the Mass Streamfunction
-        Psi = self.vertical_integration(var=var, c=c)
+            # Compute Vertical integral of the Mass Streamfunction
+            Psi = self.vertical_integration(var=var, c=c)
 
-        if meridional:
-            vname = 'msf_v'
-        else:
-            vname = 'msf_u'
+            if meridional:
+                vname = 'msf_v'
+            else:
+                vname = 'msf_u'
 
-        self.ds[vname] = Psi.rename(vname)
+            self.ds[vname] = Psi.rename(vname)
 
         if can:
             for an_type in self.an_types:

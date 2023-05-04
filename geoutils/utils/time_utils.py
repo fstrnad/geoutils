@@ -63,6 +63,31 @@ def assert_has_time_dimension(da):
             f"The input DataArray '{da.name}' does not have a time dimension.")
 
 
+def reset_time(dataset, time_dim='time'):
+    """
+    Resets the time dimension of an xarray dataset to always have 0 hours.
+
+    Parameters:
+    -----------
+    dataset: xarray dataset
+        The dataset to reset the time dimension for.
+
+    Returns:
+    --------
+    xarray dataset
+        The dataset with the time dimension reset.
+    """
+    # Set the hour of each time value to 0
+    time_values = dataset.time.values.astype('M8[s]').astype(datetime.datetime)
+    time_values = np.array([dt.replace(hour=0) for dt in time_values])
+    time_values = time_values.astype('M8[s]')
+
+    # Update the dataset with the new time dimension
+    dataset = dataset.assign_coords({time_dim: time_values})
+
+    return dataset
+
+
 def check_timepoints_in_dataarray(dataarray, timepoints, verbose=True):
     """
     Check if all time points in a set exist in an xr.Dataarray with a time dimension.
@@ -229,18 +254,16 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
 
             # Build always intersection
             if not stp:
-                check_timepoints_in_dataarray(dataarray=ds, timepoints=tps, verbose=verbose)
-
                 tps_sel = np.intersect1d(ds.time, tps)
                 if len(tps_sel) == 0:
                     gut.myprint('No tps in intersection of dataset!')
+                    return []
             else:
                 if not check_timepoints_in_dataarray(dataarray=ds, timepoints=tps, verbose=verbose):
                     gut.myprint(f'WARNING: Single {tps} not in dataset!')
                     return []
 
-
-            ds_sel = ds.sel(time=tps, method='nearest')
+            ds_sel = ds.sel(time=tps_sel, method='nearest')
             # Remove duplicates
             if not stp:
                 ds_sel = remove_duplicate_times(da=ds_sel)

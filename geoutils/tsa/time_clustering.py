@@ -271,7 +271,7 @@ def tps_cluster_2d_data(data_arr, tps,
         Z = Z[sign_Z]
         tps = tps[sign_Z]
 
-    grp_tps_dict = get_cluster_dict(Z=Z, cluster_x=tps, cluster_names=None)
+    grp_tps_dict = get_cluster_dict(Z=Z, cluster_x=tps, cluster_names=cluster_names)
 
     return grp_tps_dict
 

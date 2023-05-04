@@ -99,6 +99,7 @@ def plot_xy(
     ts_axis=False,
     kde=False,
     plot_type='xy',
+    set_axis=True,
     **kwargs,
 ):
     reload(sut)
@@ -110,13 +111,14 @@ def plot_xy(
         else:
             fig, ax = plt.subplots(figsize=(figsize), nrows=1, ncols=1,
                                    subplot_kw={'projection': 'polar'})
+    else:
+        fig = ax.get_figure()
+
+    if set_axis:
         if ts_axis:
             ax = prepare_ts_x_axis(ax, dates=x_arr[0], **kwargs)
         else:
             ax, kwargs = put.prepare_axis(ax, plot_type=plot_type, **kwargs)
-
-    else:
-        fig = ax.get_figure()
 
     if plot_type != 'bar':
         num_items = len(y_arr) if len(y_arr) >= len(x_arr) else len(x_arr)

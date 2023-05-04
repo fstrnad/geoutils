@@ -782,3 +782,21 @@ def sort_by_frequency(arr: np.ndarray) -> np.ndarray:
 
     # Sort the unique elements array using the sorted indices
     return unique[sorted_indices]
+
+
+def remove_non_dim_coords(ds):
+    """
+    Removes all coordinates that are not a dimension of an xarray dataset.
+
+    Parameters:
+    ds (xarray.Dataset): The input xarray dataset.
+
+    Returns:
+    xarray.Dataset: The output xarray dataset with only dimension coordinates.
+    """
+    dims = set(ds.dims)
+    coords = set(ds.coords)
+
+    non_dim_coords = coords - dims
+
+    return ds.drop(non_dim_coords)

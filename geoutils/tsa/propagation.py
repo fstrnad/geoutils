@@ -60,6 +60,7 @@ def get_day_progression_arr(data, tps, start,
             # signum of thisstep
             av_step = step * -1 * math.copysign(1, thisstep)
             this_tps = tu.get_periods_tps(tps=this_tps, step=av_step)
+
         this_comp_ts = tu.get_sel_tps_ds(ds=data, tps=this_tps, drop_dim=False)
         if var == 'evs':
             this_comp_ts = xr.where(
@@ -68,16 +69,18 @@ def get_day_progression_arr(data, tps, start,
             mean_ts = this_comp_ts.sum(dim='time')
         elif var is not None:
             if q is None:
-                mean_ts = this_comp_ts[var].mean(dim='time')
+                if not gut.is_single_tp(tps):
+                    mean_ts = this_comp_ts[var].mean(dim='time')
+                else:
+                    mean_ts = this_comp_ts[var]
             else:
                 mean_ts = this_comp_ts[var].quantile(q=q,
                                                      dim='time')
         else:
             mean_ts = this_comp_ts.mean(dim='time')
-
+        mean_ts = gut.remove_non_dim_coords(mean_ts)
         mean_ts = mean_ts.expand_dims(
             {'day': 1}).assign_coords({'day': [thisstep]})
-
         composite_arrs.append(mean_ts)
 
     gut.myprint(
@@ -110,7 +113,7 @@ def get_hovmoeller(ds, tps, sps=None, eps=None, num_days=0,
                    dateline=False):
     reload(sput)
     if num_days > 0:
-        composite_arrs = get_day_progression_arr(ds=ds,
+        composite_arrs = get_day_progression_arr(data=ds,
                                                  tps=tps,
                                                  sps=sps, eps=eps,
                                                  start=start,

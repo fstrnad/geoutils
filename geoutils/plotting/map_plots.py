@@ -126,15 +126,15 @@ def set_extent(da, ax,
         if [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
             if da is None and lat_range is None and lon_range is None:
                 set_global = True
-            else:
-                min_ext_lon = float(
-                    np.min(da.coords["lon"])) if da is not None else min_ext_lon
-                max_ext_lon = float(
-                    np.max(da.coords["lon"])) if da is not None else max_ext_lon
-                min_ext_lat = float(
-                    np.min(da.coords["lat"])) if da is not None else min_ext_lat
-                max_ext_lat = float(
-                    np.max(da.coords["lat"])) if da is not None else max_ext_lat
+        else:
+            min_ext_lon = float(
+                np.min(da.coords["lon"])) if da is not None else min_ext_lon
+            max_ext_lon = float(
+                np.max(da.coords["lon"])) if da is not None else max_ext_lon
+            min_ext_lat = float(
+                np.min(da.coords["lat"])) if da is not None else min_ext_lat
+            max_ext_lat = float(
+                np.max(da.coords["lat"])) if da is not None else max_ext_lat
     if lat_range is not None or lon_range is not None:
         lat_range = lat_range if lat_range is not None else [
             min_ext_lat, max_ext_lat]
@@ -144,18 +144,17 @@ def set_extent(da, ax,
         max_ext_lon = np.max(lon_range)
         min_ext_lat = np.min(lat_range)
         max_ext_lat = np.max(lat_range)
-
     if not set_global:
         if abs(min_ext_lon) > 179 and abs(max_ext_lon) > 179 and abs(min_ext_lat) > 89 and abs(max_ext_lat) > 89:
             set_global = True
             if lon_range is not None or lat_range is not None:
                 gut.myprint('WARNING! Set global map!')
+    final_extent = [min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat]
+    # print(final_extent)
     if set_global:
         ax.set_global()
     else:
-        ax.set_extent(
-            [min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat], crs=projection
-        )
+        ax.set_extent(final_extent, crs=projection)
 
     ext_dict = dict(
         ax=ax,
@@ -175,7 +174,7 @@ def create_map(
     projection="PlateCarree",
     central_longitude=None,
     alpha=1,
-    plt_grid=False,  # Because often this is already set from before!
+    plt_grid=True,  # Because often this is already set from before!
     lat_range=None,
     lon_range=None,
     dateline=False,
@@ -229,6 +228,7 @@ def create_map(
         if land_ocean:
             ax.add_feature(ctp.feature.OCEAN, alpha=alpha, zorder=-1)
             ax.add_feature(ctp.feature.LAND, alpha=alpha, zorder=-1)
+
     if plt_grid:
         ax, kwargs = set_grid(ax, alpha=alpha,
                               proj=projection,
@@ -859,8 +859,8 @@ def plot_wind_field(
 
     lw = kwargs.pop("lw", 1)
     scale = kwargs.pop("scale", None)
-    headwidth = kwargs.pop('headwidth', 7)
-    width = kwargs.pop('width', 0.002)
+    headwidth = kwargs.pop('headwidth', 8)
+    width = kwargs.pop('width', 0.004)
     headaxislength = kwargs.pop('headaxislength', 2)
     headlength = kwargs.pop('headlength', 4)
     if stream:
