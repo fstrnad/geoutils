@@ -1006,9 +1006,9 @@ def compute_anomalies(dataarray, climatology_array=None,
     return anomalies
 
 
-def get_ee_ds(dataarray, q=0.95, th=1, th_eev=15):
+def get_ee_ds(dataarray, q=0.95, min_threshold=1, th_eev=15):
     # Remove days without rain
-    data_above_th = dataarray.where(dataarray > th)
+    data_above_th = dataarray.where(dataarray > min_threshold)
     # Gives the quanile value for each cell
     q_val_map = data_above_th.quantile(q, dim="time")
     # Set values below quantile to 0
@@ -1036,13 +1036,17 @@ def get_ee_count_ds(ds, q=0.95):
     return evs_cnt
 
 
-def compute_evs(dataarray, q=0.9, th=1, th_eev=5, min_evs=3):
+def compute_evs(dataarray,
+                q=0.9,
+                min_threshold=1,
+                th_eev=5, #
+                min_evs=3):
     """Creates an event series from an input time series.
 
     Args:
         dataarray (xr.dataarray): The time series of a variable of
         q (float, optional): Quantile for defining an extreme event. Defaults to 0.95.
-        th (int, optional): Threshold. Removes all values in time series.
+        min_threshold (int, optional): Threshold. Removes all values in time series.
             Eg. important to get wet days. Defaults to 1.
         th_eev (int, optional): Minimum value of an extreme event. Defaults to 15.
         min_evs (int, optional): Minimum number of extreme event within 1 time series. Defaults to 20.
@@ -1057,15 +1061,15 @@ def compute_evs(dataarray, q=0.9, th=1, th_eev=5, min_evs=3):
     """
     if q > 1 or q < 0:
         raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
-    if th <= 0:
+    if min_threshold <= 0:
         raise ValueError(
-            f"ERROR! Threshold for values th = {th} has to be > 0!")
+            f"ERROR! min_thresholdreshold for values min_threshold = {min_threshold} has to be > 0!")
 
     # Compute percentile data, remove all values below percentile, but with a minimum of threshold q
     gut.myprint(
         f"Start remove values below q={q} and at least with q_value >= {th_eev} ...")
     _, ee_map, data_above_quantile, _ = get_ee_ds(
-        dataarray=dataarray, q=q, th=th, th_eev=th_eev
+        dataarray=dataarray, q=q, min_threshold=min_threshold, th_eev=th_eev
     )
     # Create mask for which cells are left out
     gut.myprint(f"Remove cells without min number of events: {min_evs}")

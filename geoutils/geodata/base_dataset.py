@@ -296,10 +296,13 @@ class BaseDataset():
             gut.myprint(f'Save variables {var_list}!')
             ds_temp = self.ds[list(var_list)]
         if save_params and self.grid_step is not None:
-            param_class = {
-                "grid_step": self.grid_step,
-            }
-            ds_temp.attrs = param_class
+            if len(ds_temp.attrs) == 0:
+                gut.myprint(f'Attention, attribute list is empty!')
+                param_class = {
+                    "grid_step": self.grid_step,
+                    "grid_type": self.grid_type,
+                }
+                ds_temp.attrs = param_class
 
         fut.save_ds(ds=ds_temp, filepath=filepath,
                     unlimited_dim=unlimited_dim,
@@ -450,7 +453,8 @@ class BaseDataset():
     def delete_var(self, var_name):
         vars = self.get_vars()
         if var_name not in vars:
-            raise ValueError(f'Variable {var_name} not in dataset. Available variables are {vars}')
+            raise ValueError(
+                f'Variable {var_name} not in dataset. Available variables are {vars}')
         else:
             self.ds = self.ds.drop_vars(names=var_name)
             gut.myprint(f'Deleted variable: {var_name}!')
@@ -502,10 +506,11 @@ class BaseDataset():
             self.time_attrs['axis'] = 'T'
 
     def set_source_attrs(self):
+        gut.myprint(f'Set dataset source attributes!')
         if self.source_attrs is None:
             raise ValueError('Source attributes is not set yet!')
         self.ds.attrs.update(self.source_attrs)
-        for var in self.vars:
+        for var in list(self.var_attrs.keys()):
             self.ds[var].attrs.update(self.var_attrs[var])
         self.ds.lon.attrs.update(self.lon_attrs)
         self.ds.lat.attrs.update(self.lat_attrs)
@@ -573,7 +578,8 @@ class BaseDataset():
             self.ds = self.ds.assign_attrs(self.info_dict)
             init_indices = kwargs.pop('init_indices', True)
             if init_indices:
-                self.indices_flat, self.idx_map = self.init_map_indices(verbose=verbose)
+                self.indices_flat, self.idx_map = self.init_map_indices(
+                    verbose=verbose)
             else:
                 gut.myprint('WARNING! Index dictionaries not initialized!')
                 self.indices_flat = self.idx_map = None
@@ -1629,7 +1635,6 @@ class BaseDataset():
         self.set_var()
         return self.ds
 
-
     #  #################### EVS time series ##############
     def create_evs_ds(
         self, var_name,
@@ -1668,8 +1673,9 @@ class BaseDataset():
             )
         da_es.attrs = {"var_name": var_name}
 
-        self.set_ds_attrs_evs(ds=da_es)
+        da_es = self.set_ds_attrs_evs(ds=da_es)
         self.ds["evs"] = da_es
+        self.ds = self.set_ds_attrs_evs(ds=self.ds) # set also to dataset object the attrs.
 
         return self.ds
 
@@ -1688,7 +1694,7 @@ class BaseDataset():
         return q_val_map, ee_map, data_above_quantile
 
     def compute_event_time_series(
-        self, var_name=None,
+        self, var_name=None, **kwargs,
     ):
         reload(tu)
         if var_name is None:
@@ -1700,7 +1706,7 @@ class BaseDataset():
         event_series, mask = tu.compute_evs(
             dataarray=dataarray,
             q=self.q,
-            th=self.min_threshold,
+            min_threshold=self.min_threshold,
             th_eev=self.th_eev,
             min_evs=self.min_evs,
         )
@@ -1743,7 +1749,7 @@ class BaseDataset():
         evs_mr, mask = tu.compute_evs(
             dataarray=da_mr,
             q=self.q,
-            th=self.th,
+            min_threshold=self.min_threshold,
             th_eev=self.th_eev,
             min_evs=self.min_evs,
         )
@@ -1763,6 +1769,3 @@ class BaseDataset():
         }
         ds.attrs = param_class
         return ds
-
-
-# %%

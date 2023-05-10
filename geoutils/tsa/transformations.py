@@ -44,8 +44,11 @@ def compute_fft(ts, freq_m=1,
             window = sig.hamming(N)
         elif window == 'hannig':
             window = sig.hannig(N)
-        else:
+        elif window == 1 or window == 'linear':
+            gut.myprint('No window size for FFT!')
             window = 1
+        else:
+            raise ValueError(f'This window does not exist: {window}!')
 
         ts_fft = fft(data*window, N)[:N//2]  # only positive values
         power = np.abs(ts_fft)[0:N//2]
@@ -113,7 +116,7 @@ def ar1(x, lags=1):
     return param_dict
 
 
-def ar1_surrogates(x, N=1000):
+def ar1_surrogates(data, N=1000):
     """In an AR(1) model
         x(t) - <x> = \gamma(x(t-1) - <x>) + \alpha z(t) ,
     where <x> is the process mean, \gamma and \alpha are process
@@ -123,13 +126,13 @@ def ar1_surrogates(x, N=1000):
         x (np.ndarraarray): array of the time series.
     """
     reload(sut)
-    ar1_dict = ar1(x, lags=1)
-    x = sut.standardize(dataset=x)
-    T = np.size(x)
-    surr_arr = [x]
+    ar1_dict = ar1(data, lags=1)
+    data = sut.standardize(dataset=x)
+    T = np.size(data)
+    surr_arr = [data]
     # x_shift = np.roll(x, 1)
     for n in tqdm(range(N)):
-        surr_ts = [x[0]]
+        surr_ts = [data[0]]
         rand_nums = np.random.normal(0, 1, T)
         for t in range(T-1):
             # or + ar1_dict['a0']
@@ -139,13 +142,50 @@ def ar1_surrogates(x, N=1000):
     return sut.standardize(np.array(surr_arr), axis=1)
 
 
+def generate_ar1_surrogates(data, N):
+    """
+    Generate surrogates of a time series based on the AR(1) model.
+
+    Parameters:
+        data (array-like): The original time series data.
+        N (int): The number of surrogates to generate.
+
+    Returns:
+        array-like: An array of surrogates generated based on the AR(1) model.
+
+    """
+
+    # Estimate AR(1) model parameters
+    mu = np.mean(data)
+    sigma = np.std(data)
+    rho = np.corrcoef(data[:-1], data[1:])[0, 1]
+
+    surrogates = [data]
+    T = len(data)
+    for _ in tqdm(range(N)):
+        # Generate white noise with the same length as the data
+        noise = np.random.normal(0, sigma, T)
+
+        # Initialize the surrogate series
+        surrogate = np.zeros_like(data)
+        surrogate[0] = data[0]
+
+        # Generate the surrogate series based on the AR(1) model
+        for i in range(1, T):
+            surrogate[i] = mu + rho * (surrogate[i - 1] - mu) + noise[i]
+
+        surrogates.append(surrogate)
+
+    return np.array(surrogates)
+
+
 def ar1_surrogates_spectrum(x, N=1000, cutoff=1,
-                            window=1,
+                            window='blackman',
                             fft_prop='Power'):
     """Compute the power spectrum of an AR1 model
     """
     surr_arr = []
-    surr_ts_arr = ar1_surrogates(x=x, N=N)
+    surr_ts_arr = generate_ar1_surrogates(data=x, N=N)
     for surr_ts in surr_ts_arr:
         surr_fft = compute_fft(ts=surr_ts, cutoff=cutoff, window=window)
         surr_arr.append(surr_fft[fft_prop])
@@ -155,7 +195,7 @@ def ar1_surrogates_spectrum(x, N=1000, cutoff=1,
     return {
         'period': surr_fft['period'],
         'freq': surr_fft['freq'],
-        'Power': surr_arr[0],
+        fft_prop: surr_arr[0],
         'surr': surr_arr,
         'lb': lb, 'ub': ub,
         'surr_ts': surr_ts_arr}

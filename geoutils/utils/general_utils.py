@@ -424,7 +424,7 @@ def get_exponent10(x, verbose=False):
     return exp
 
 
-def get_quantile_of_ts(ts, q=0.95, verbose=False):
+def get_quantile_of_ts(ts, q=0.9, verbose=False):
     q_value = np.quantile(ts, q)
     if q >= 0.5:
         q_ts = ts[np.where(ts >= q_value)[0]]

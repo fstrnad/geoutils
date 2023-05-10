@@ -6,8 +6,8 @@ import xarray as xr
 import geoutils.utils.time_utils as tu
 from importlib import reload
 import pandas as pd
-
-
+# %%
+# Lee et al. 2013
 bsiso_file = '/home/strnad/data/bsiso/BSISO.INDEX.NORM.data'
 bsiso_file = '/home/strnad/data/bsiso/BSISO.INDEX.NORM.data_new'
 
@@ -25,7 +25,7 @@ bsiso1_1_index = xr.DataArray(
     coords=dict(
         time=tps_bsiso
     ),
-    name='BSISO1-1'
+    name='BSISO1'
 )
 savepath_bsiso1_1 = '/home/strnad/data/bsiso/BSISO1-1.nc'
 bsiso1_1_index.to_netcdf(savepath_bsiso1_1)
@@ -36,7 +36,7 @@ bsiso1_2_index = xr.DataArray(
     coords=dict(
         time=tps_bsiso
     ),
-    name='BSISO1-2'
+    name='BSISO2'
 )
 savepath_bsiso1_2 = '/home/strnad/data/bsiso/BSISO1-2.nc'
 bsiso1_2_index.to_netcdf(savepath_bsiso1_2)
@@ -57,7 +57,7 @@ bsiso1_phase = xr.DataArray(
     coords=dict(
         time=tps_bsiso
     ),
-    name='BSISO1-phase'
+    name='BSISO-phase'
 )
 savepath_bsiso1_phase = '/home/strnad/data/bsiso/BSISO1-phase.nc'
 bsiso1_phase.to_netcdf(savepath_bsiso1_phase)
@@ -70,9 +70,9 @@ bsiso1_index = xr.DataArray(
     coords=dict(
         time=tps_bsiso
     ),
-    name='BSISO1'
+    name='BSISO-ampl'
 )
-savepath_bsiso1 = '/home/strnad/data/bsiso/BSISO1.nc'
+savepath_bsiso1 = '/home/strnad/data/bsiso/BSISO_ampl.nc'
 bsiso1_index.to_netcdf(savepath_bsiso1)
 
 # %%
@@ -123,7 +123,7 @@ bsiso2_index = xr.DataArray(
     coords=dict(
         time=tps_bsiso
     ),
-    name='BSISO2'
+    name='BSISO2-ampl'
 )
 savepath_bsiso2 = '/home/strnad/data/bsiso/BSISO2.nc'
 bsiso2_index.to_netcdf(savepath_bsiso2)
@@ -134,4 +134,58 @@ bsiso_index = xr.merge([bsiso1_1_index, bsiso1_2_index, bsiso1_index,
                         bsiso1_phase, bsiso2_phase])
 savepath_bsiso = '/home/strnad/data/bsiso/BSISO.nc'
 bsiso_index.to_netcdf(savepath_bsiso)
+# %%
+# Kickuchi et al. 2012 index (https://iprc.soest.hawaii.edu/users/kazuyosh/Bimodal_ISO.html)
+
+
+bsiso_file = '/home/strnad/data/kikuchi_bsiso/BSISO_25-90bpfil_pc.extension.txt'
+
+raw_data = pd.read_csv(bsiso_file, delim_whitespace=True, header=0)
+
+# %%
+tps_bsiso = tu.get_dates_of_time_range(
+    time_range=['1979-03-22', '2021-10-22'])  # Downloaded 14.06.2022
+tps_bsiso = tu.get_month_range_data(tps_bsiso,
+                                    start_month='Jan',
+                                    end_month='Dec'
+                                    )
+
+len(tps_bsiso)
+bsiso1_index = xr.DataArray(
+    data=raw_data['PCx'],
+    dims=['time'],
+    coords=dict(
+        time=tps_bsiso
+    ),
+    name='BSISO1'
+)
+bsiso2_index = xr.DataArray(
+    data=raw_data['PCy'],
+    dims=['time'],
+    coords=dict(
+        time=tps_bsiso
+    ),
+    name='BSISO2'
+)
+bsiso_phase = xr.DataArray(
+    data=raw_data['phase'],
+    dims=['time'],
+    coords=dict(
+        time=tps_bsiso
+    ),
+    name='BSISO-phase'
+)
+bsiso_ampl = xr.DataArray(
+    data=raw_data['Amp(nrm)'],
+    dims=['time'],
+    coords=dict(
+        time=tps_bsiso
+    ),
+    name='BSISO-ampl'
+)
+
+bsiso_index = xr.merge([bsiso1_index, bsiso2_index, bsiso_phase, bsiso_ampl])
+savepath_bsiso1 = '/home/strnad/data/kikuchi_bsiso/BSISO_index.nc'
+bsiso_index.to_netcdf(savepath_bsiso1)
+
 # %%

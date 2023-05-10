@@ -252,8 +252,11 @@ def plot_xy(
             X=x_arr
         ))
 
+        label_arr_tmp = [0] if len(label_arr) == 0 else label_arr
+
         for idx, arr in enumerate(y_arr):
-            df[label_arr[idx]] = arr
+            # print(idx, len(label_arr_tmp), len(y_arr))
+            df[label_arr_tmp[idx]] = arr
 
         if color_arr is None:
             color_arr = sns.color_palette('hls', len(y_arr))

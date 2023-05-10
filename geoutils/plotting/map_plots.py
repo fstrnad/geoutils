@@ -96,13 +96,13 @@ def set_extent(da, ax,
                lat_range=None,
                lon_range=None,
                dateline=False,
+               set_global=False,
                **kwargs):
     if not isinstance(ax, ctp.mpl.geoaxes.GeoAxesSubplot) and not isinstance(ax, ctp.mpl.geoaxes.GeoAxes):
         raise ValueError(
             f'Axis is not of type Geoaxis, but of type {type(ax)}!')
 
     min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat = ax.get_extent()
-    set_global = kwargs.pop('set_global', False)
     if dateline:
         projection = ccrs.PlateCarree(central_longitude=0)
         if lon_range is not None:
@@ -123,8 +123,8 @@ def set_extent(da, ax,
                 max_ext_lat = np.max(da[:, 1])
 
     else:
-        if [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
-            if da is None and lat_range is None and lon_range is None:
+        if da is None and [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
+            if lat_range is None and lon_range is None:
                 set_global = True
         else:
             min_ext_lon = float(
@@ -204,12 +204,15 @@ def create_map(
         # Because this is already set from before!
 
     set_map = kwargs.pop('set_map', True)
+    set_global = kwargs.pop('set_global', False)
+
     if projection != 'Nearside':
         ext_dict = set_extent(
             da=da, ax=ax,
             lat_range=lat_range,
             lon_range=lon_range,
             dateline=dateline,
+            set_global=set_global,
             **kwargs)
     else:
         ext_dict = None

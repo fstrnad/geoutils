@@ -417,7 +417,8 @@ def plot_vline(ax, x, **kwargs):
                linestyle=ls,
                label=label)
 
-    return ax
+    return {'ax': ax, 'x': x}
+
 
 
 def plot_arrow(ax, x1, y1, x2, y2, **kwargs):

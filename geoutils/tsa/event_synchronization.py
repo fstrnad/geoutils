@@ -5,6 +5,7 @@ Created on Tue Oct 20 11:09:03 2020
 
 @author: Felix Strnad
 """
+import geoutils.utils.file_utils as fut
 import geoutils.utils.general_utils as gut
 from importlib import reload
 import os
@@ -208,7 +209,7 @@ def parallel_event_synchronization(event_data,
     end = time.time()
     print(f'{end-start}', flush=True)
     # sys.exit(0)
-    gut.save_np_dict(arr_dict=adj_matrix_edge_list, sp=savepath)
+    fut.save_np_dict(arr_dict=adj_matrix_edge_list, sp=savepath)
     gut.myprint(f'Finished for job ID {job_id}')
 
     return adj_matrix_edge_list
@@ -438,7 +439,7 @@ def get_adj_from_E(E_matrix_folder, num_time_series,
 
     if savepath is not None:
         np.save(savepath, adj_matrix)
-    print(
+    gut.myprint(
         f'Finished computing Adjency Matrix for Null model with {num_time_series} time series!')
 
     return adj_matrix, weight_matrix
@@ -490,20 +491,22 @@ def null_model_one_series(i,
     return i, list_thresholds_i
 
 
-def null_model_distribution(length_time_series, taumax=10,
-                            min_num_events=1, max_num_events=1000,
+def null_model_distribution(length_time_series,
+                            taumax=10,
+                            min_num_events=1,
+                            max_num_events=1000,
                             num_permutations=3000,
                             q=[0.25, 0.5, 0.75, 0.95, 0.98, 0.99, 0.995, 0.999],
                             savepath=None,
                             nnelems=True):
-    print("Start creating Null model of Event time series!")
-    print(f"Model distribution size: {num_permutations}")
+    gut.myprint(
+        f"Start creating ES Null model for Model distribution size: {num_permutations}")
     le = length_time_series
     double_taumax = 2*taumax
 
     size = max_num_events-min_num_events
     # num_ij_pairs = ceil(size*(size + 1) / 2) #  "Kleiner Gauss"
-    print(f"Size of Null_model Matrix: {size}")
+    gut.myprint(f"Size of Null_model Matrix: {size}")
 
     size = max_num_events
     num_q_vals = len(q)  # lq, med, hq, th05, th02, th01, th005, th001
@@ -513,7 +516,7 @@ def null_model_distribution(length_time_series, taumax=10,
     # For parallel Programming
     num_cpus_avail = mpi.cpu_count()
     # num_cpus_avail=1
-    print(f"Number of available CPUs: {num_cpus_avail}")
+    gut.myprint(f"Number of available CPUs: {num_cpus_avail}")
     backend = 'multiprocessing'
     # backend='loky'
     # backend='threading'
@@ -530,7 +533,7 @@ def null_model_distribution(length_time_series, taumax=10,
                       )
                      )
 
-    print(f"Now store results in numpy array to {savepath}!")
+    gut.myprint(f"Now store results in numpy array to {savepath}!")
     for process in tqdm(parallelArray):
         i, list_thresholds_i = process
         for j_thresholds in list_thresholds_i:
@@ -543,7 +546,7 @@ def null_model_distribution(length_time_series, taumax=10,
 
     q_dict = {q[idx_q]: P_arr for idx_q, P_arr in enumerate(null_model_arr_q)}
     if savepath is not None:
-        print(f'Save null model to {savepath}')
+        gut.myprint(f'Save null model to {savepath}')
         # save and load a dictionary to a file using NumPy, pickle would work as well
         np.save(savepath, q_dict, allow_pickle=True)
     return q_dict

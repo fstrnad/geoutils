@@ -257,7 +257,7 @@ def count_tps_occ_evs(evs, counter='month', count_arr=None,
         list: list of freq of occurence per month
     """
     tps_arr = get_tps_evs(evs=evs)
-    if counter == 'month':
+    if counter == 'month' or counter == 'week':
         res_c_occ = count_tps_occ(
             tps_arr=tps_arr, counter=counter, count_arr=count_arr, rel_freq=rel_freq,
             norm_fac=norm_fac)

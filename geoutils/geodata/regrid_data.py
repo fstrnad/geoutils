@@ -39,7 +39,7 @@ if os.path.exists(dataset_file) is False:
                          var_name=var_name,
                          grid_step=grid_step,
                          large_ds=True,
-                         time_range=['1998-01-01', '2020-01-01'],
+                        #  time_range=['1998-01-01', '2020-01-01'],
                          )
     ds.save(dataset_file)
 else:

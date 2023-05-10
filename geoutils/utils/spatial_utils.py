@@ -1137,7 +1137,7 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
             ds = ds.sortby('lon')
             ds = ds.sortby('lat')
             gut.myprint(
-                'Sorted longitudes and latitudes in ascending order, respectively', verbose=verbose)
+                'Sorted longitudes and latitudes in ascending order!', verbose=verbose)
 
     if 'time' in dims:
         if ts_days:
