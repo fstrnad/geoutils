@@ -449,6 +449,26 @@ def get_time_range_data(ds, time_range,
     return ds_sel
 
 
+def split_by_year(ds, start_month='Jan', end_month='Dec'):
+    """
+    Splits an xarray object with a time dimension spanning multiple years into
+    individual datasets for each year.
+
+    Parameters:
+        ds (xarray.DataArray or xarray.Dataset): The xarray object to split.
+
+    Returns:
+        list: A list of xarray datasets, with each dataset representing one year.
+    """
+    if start_month != 'Jan' or end_month != 'Dec':
+        ds = get_month_range_data(dataset=ds, start_month=start_month,
+                                  end_month=end_month)
+
+    time_dim = ds.time.dims[0]
+    grouped = ds.groupby(time_dim + '.year')
+    return [group for _, group in grouped]
+
+
 def is_in_month_range(month, start_month, end_month):
     start_month_idx = get_month_number(start_month)
     end_month_idx = get_month_number(end_month)

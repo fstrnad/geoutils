@@ -1,4 +1,5 @@
 # %%
+import geoutils.utils.file_utils as fut
 import geoutils.utils.statistic_utils as sut
 import geoutils.utils.indices_utils as iut
 import numpy as np
@@ -45,7 +46,8 @@ bsiso1_2_index.to_netcdf(savepath_bsiso1_2)
 reload(iut)
 
 angle_1 = np.rad2deg(np.arctan2(sut.standardize(data['BSISO1-2']),  # X-axis is PC2
-                                sut.standardize(data['BSISO1-1'])   # Y-axis is PC1
+                                # Y-axis is PC1
+                                sut.standardize(data['BSISO1-1'])
                                 ))
 # angle_1 = np.rad2deg(np.arctan2(data['BSISO1-2'],
 #                                 data['BSISO1-1']
@@ -186,6 +188,7 @@ bsiso_ampl = xr.DataArray(
 
 bsiso_index = xr.merge([bsiso1_index, bsiso2_index, bsiso_phase, bsiso_ampl])
 savepath_bsiso1 = '/home/strnad/data/kikuchi_bsiso/BSISO_index.nc'
-bsiso_index.to_netcdf(savepath_bsiso1)
+fut.save_ds(ds=bsiso_index,
+            filepath=savepath_bsiso1)
 
 # %%

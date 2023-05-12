@@ -636,10 +636,14 @@ def get_phase_of_angle(angle):
     return int(phase)
 
 
-def get_bsiso_index(time_range=['1981-01-01', '2020-01-01'],
-                    start_month='Jan', end_month='Dec'):
+def get_bsiso_index(time_range=['1980-01-01', '2020-01-01'],
+                    start_month='Jan', end_month='Dec',
+                    index_def='Lee'):
     # BSISO Index
-    bsiso_index = xr.open_dataset('/home/strnad/data/bsiso/BSISO.nc')
+    if index_def == 'Lee':
+        bsiso_index = xr.open_dataset('/home/strnad/data/bsiso/BSISO.nc')
+    elif index_def == 'Kikuchi':
+        bsiso_index = xr.open_dataset('/home/strnad/data/kikuchi_bsiso/BSISO_index.nc')
 
     bsiso_index = tu.get_time_range_data(bsiso_index, time_range=time_range)
     bsiso_index = tu.get_month_range_data(bsiso_index,

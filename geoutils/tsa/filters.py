@@ -3,6 +3,9 @@ from scipy.signal import filtfilt, cheby1, argrelmax,  find_peaks
 import numpy as np
 from scipy.fftpack import fft, fftfreq
 import scipy.ndimage as ndim
+import geoutils.utils.general_utils as gut
+from importlib import reload
+reload(gut)
 
 
 def cheby_lowpass(cutoff, fs, order, rp):
@@ -73,6 +76,8 @@ def apply_butter_filter(ts,
                 coords=ts.coords,
                 name=ts.name
             )
+    elif cutoff < 1:
+        gut.myprint(f'High-pass filter not implemented yet!')
     else:
         ts_lp = ts
 

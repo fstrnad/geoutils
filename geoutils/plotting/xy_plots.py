@@ -114,13 +114,13 @@ def plot_xy(
     else:
         fig = ax.get_figure()
 
-    if set_axis:
-        if ts_axis:
-            ax = prepare_ts_x_axis(ax, dates=x_arr[0], **kwargs)
-        else:
-            ax, kwargs = put.prepare_axis(ax, plot_type=plot_type, **kwargs)
-
     if plot_type != 'bar':
+        if set_axis:
+            if ts_axis:
+                ax = prepare_ts_x_axis(ax, dates=x_arr[0], **kwargs)
+            else:
+                ax, kwargs = put.prepare_axis(ax, plot_type=plot_type, **kwargs)
+
         num_items = len(y_arr) if len(y_arr) >= len(x_arr) else len(x_arr)
         if lcmap is not None:
             lcmap, evenly_spaced_interval, ccolors = put.get_arr_colorbar(
@@ -142,10 +142,10 @@ def plot_xy(
             if stdize is True:
                 y = sut.standardize(y)
                 if len(y_err_arr) > 0:
-                    y_err_arr[idx] = sut.normalize(y_err_arr[idx])
+                    y_err_arr[idx] = sut.standardize(y_err_arr[idx])
                 if len(y_lb_arr) > 0:
-                    y_lb_arr[idx] = sut.normalize(y_lb_arr[idx])
-                    y_ub_arr[idx] = sut.normalize(y_ub_arr[idx])
+                    y_lb_arr[idx] = sut.standardize(y_lb_arr[idx]) if y_lb_arr[idx] is not None else None
+                    y_ub_arr[idx] = sut.standardize(y_ub_arr[idx]) if y_lb_arr[idx] is not None else None
 
             lw = lw_arr[idx] if idx < len(lw_arr) else lw_arr[-1]
             mk = mk_arr[idx] if idx < len(mk_arr) else mk_arr[-1]
@@ -223,8 +223,8 @@ def plot_xy(
                 if len(x_err_arr) > idx or len(y_err_arr) > idx or len(y_lb_arr) > idx:
 
                     if len(y_lb_arr) > idx:
-                        y_lb = y_lb_arr[idx]
-                        y_ub = y_ub_arr[idx]
+                        y_lb = y_lb_arr[idx] if y_lb_arr[idx] is not None else None
+                        y_ub = y_ub_arr[idx] if y_lb_arr[idx] is not None else None
                     else:
                         y_err = y_err_arr[idx] if len(y_err_arr) > 0 else None
                         x_err = x_err_arr[idx] if len(x_err_arr) > 0 else None
@@ -232,19 +232,21 @@ def plot_xy(
                         y_ub = np.array(y + y_err / 2, dtype=float)
 
                     if len(y_err_arr) < 1:
-                        c = color_arr_ci[idx] if color_arr_ci is not None else c
-                        im = ax.fill_between(
-                            x,
-                            y_lb,
-                            y_ub,
-                            color=c,
-                            alpha=0.5,
-                            # label=label,
-                        )
+                        if y_lb_arr[idx] is not None:
+                            # c = color_arr_ci[idx] if color_arr_ci is not None else c
+                            im = ax.fill_between(
+                                x,
+                                y_lb,
+                                y_ub,
+                                color=c,
+                                alpha=0.5,
+                                # label=label,
+                            )
                     else:
-                        ax.errorbar(x, y, xerr=x_err, yerr=y_err,
-                                    label=label, lw=lw, marker=mk, ls=ls, color=c,
-                                    capsize=2)
+                        if y_err is not None:
+                            ax.errorbar(x, y, xerr=x_err, yerr=y_err,
+                                        label=label, lw=lw, marker=mk, ls=ls, color=c,
+                                        capsize=2)
     else:
         # Bar plot
         stacked = kwargs.pop('stacked', False)

@@ -55,8 +55,11 @@ def prepare_axis(ax, log=False, **kwargs):
     ylim = kwargs.pop("ylim", None)
     xticks = kwargs.pop('xticks', None)
     xticklabels = kwargs.pop('xticklabels', None)
+    ylabel = kwargs.pop("ylabel", None)
+    xlabel = kwargs.pop("xlabel", None)
+    xpos = kwargs.pop("xlabel_pos", None)
 
-    if plot_type == 'xy':
+    if plot_type != 'polar':
         ax.spines["right"].set_visible(False)
         ax.spines["top"].set_visible(False)
 
@@ -64,9 +67,7 @@ def prepare_axis(ax, log=False, **kwargs):
         ax.tick_params(
             direction="out", length=pst.SMALL_SIZE / 2, width=1, colors="k", grid_alpha=0.5
         )
-        ylabel = kwargs.pop("ylabel", None)
-        xlabel = kwargs.pop("xlabel", None)
-        xpos = kwargs.pop("xlabel_pos", None)
+
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
 
@@ -88,7 +89,7 @@ def prepare_axis(ax, log=False, **kwargs):
         if xticklabels is not None:
             ax.set_xticklabels(xticklabels)
 
-    elif plot_type == 'polar':
+    else:
         ax.margins(y=0)
         # x_pos = np.deg2rad(np.arange(0, 360, 360/len(xticks)))
         x_pos = np.deg2rad(np.linspace(0, 360, len(xticks)))
