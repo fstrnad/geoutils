@@ -860,12 +860,12 @@ def plot_wind_field(
     u_dat = u.data[::y_steps, ::x_steps]
     v_dat = v.data[::y_steps, ::x_steps]
 
-    lw = kwargs.pop("lw", 1)
+    lw = kwargs.pop("lw", 4)
     scale = kwargs.pop("scale", None)
-    headwidth = kwargs.pop('headwidth', 8)
-    width = kwargs.pop('width', 0.004)
-    headaxislength = kwargs.pop('headaxislength', 2)
-    headlength = kwargs.pop('headlength', 4)
+    headwidth = kwargs.pop('headwidth', 6)
+    width = kwargs.pop('width', 0.01)
+    headaxislength = kwargs.pop('headaxislength', 3)
+    headlength = kwargs.pop('headlength', 5)
     if stream:
         magnitude = (u ** 2 + v ** 2) ** 0.5
         im_stream = ax.streamplot(

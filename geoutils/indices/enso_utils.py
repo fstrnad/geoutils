@@ -161,7 +161,7 @@ def get_nino_indices(ssta, monthly=False, time_range=None):
     if time_range is not None:
         # nino_idx = nino_idx.sel(time=slice(np.datetime64(time_range[0], "M"),
         #                                    np.datetime64(time_range[1], "M")))
-        nino_idx = tut.get_sel_time_range(
+        nino_idx = tut.get_time_range_data(
             ds=nino_idx, time_range=time_range, freq='M',
             verbose=False)
 
@@ -311,13 +311,13 @@ def get_enso_flavors_N3N4(nino_indices,
                           np.datetime64(f"{y_end}-{em+1:02d}-01", "D")-1]
 
         # Select time window
-        nino34 = tut.get_sel_time_range(
+        nino34 = tut.get_time_range_data(
             ds=nino_indices['nino34'], time_range=time_range, verbose=False,
             freq='M')
-        nino3 = tut.get_sel_time_range(
+        nino3 = tut.get_time_range_data(
             ds=nino_indices['nino3'], time_range=time_range, verbose=False,
             freq='M')
-        nino4 = tut.get_sel_time_range(
+        nino4 = tut.get_time_range_data(
             ds=nino_indices['nino4'], time_range=time_range, verbose=False,
             freq='M')
 

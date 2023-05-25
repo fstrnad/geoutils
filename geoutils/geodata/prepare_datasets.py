@@ -4,7 +4,7 @@ import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import os
 output_folder = 'climate_data'
-time_range = ['1979-01-01', '2019-12-31']
+time_range = ['1959-01-01', '2019-12-31']
 
 if os.getenv("HOME") == '/home/goswami/fstrnad80' or os.getenv("HOME") == '/home/goswami/jschloer46':
     dirname_sp = "/mnt/qb/goswami/data/era5/single_pressure_level/surface_pressure/"
@@ -30,14 +30,14 @@ else:
 # %%
 # # MSWEP
 # if os.getenv("HOME") == '/home/goswami/fstrnad80':
-#     dirname_mswep = "/mnt/qb/goswami/data/mswep/daymean/precipitation_1979_2021.nc"
+#     dirname_mswep = "/mnt/qb/goswami/data/mswep/daymean/precipitation_1959_2021.nc"
 # else:
-#     dirname_mswep = "/mnt/qb/goswami/data/mswep/daymean/precipitation_1979_2021.nc"
+#     dirname_mswep = "/mnt/qb/goswami/data/mswep/daymean/precipitation_1959_2021.nc"
 # var_name = 'pr'
 # name = 'mswep'
 # grid_step = 1
 # dataset_file = output_dir + \
-#     f"/{output_folder}/{name}_{var_name}_{grid_step}_1979_2021_ds.nc"
+#     f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_1959_2021_ds.nc"
 
 # if os.path.exists(dataset_file) is False:
 #     gut.myprint(f'Create Dataset {dataset_file}')
@@ -45,7 +45,7 @@ else:
 #                      var_name=var_name,
 #                      grid_step=grid_step,
 #                      large_ds=True,
-#                      time_range=['1979-01-02', '2020-12-30'],
+#                      time_range=['1959-01-02', '2020-12-30'],
 #                      )
 #     ds.save(dataset_file)
 # else:
@@ -55,21 +55,21 @@ else:
 # %%
 # ERA 5 single pressure levels
 fname_sp = dirname_sp + \
-    'surface_pressure_sfc_1979_2020.nc'
+    'surface_pressure_sfc_1959_2021.nc'
 fname_t2m = dirname_t2m + \
-    '2m_temperature_sfc_1979_2020.nc'
+    '2m_temperature_sfc_1959_2021.nc'
 fname_sst = dirname_sst + \
-    'sea_surface_temperature_sfc_1979_2021.nc'
+    'sea_surface_temperature_sfc_1959_2021.nc'
 fname_ttr = dirname_ttr + \
-    'top_net_thermal_radiation_sfc_1979_2020.nc'
+    'top_net_thermal_radiation_sfc_1959_2021.nc'
 fname_tcrw = dirname_tcrw + \
-    'total_column_rain_water_1990_2020.nc'
+    'total_column_rain_water_1990_2021.nc'
 fname_ewvf = dirname_ewvf + \
-    'vertical_integral_of_eastward_water_vapour_flux_sfc_1979_2020.nc'
+    'vertical_integral_of_eastward_water_vapour_flux_sfc_1959_2021.nc'
 fname_nwvf = dirname_nwvf + \
-    'vertical_integral_of_northward_water_vapour_flux_sfc_1979_2020.nc'
+    'vertical_integral_of_northward_water_vapour_flux_sfc_1959_2021.nc'
 fname_vimd = dirname_vimd + \
-    'vertically_integrated_moisture_divergence_sfc_1979_2020.nc'
+    'vertically_integrated_moisture_divergence_sfc_1959_2021.nc'
 fname_slhf = dirname_slhf + \
     'surface_latent_heat_flux_sfc_1959_2022.nc'
 fname_uvrs = dirname_uvrs + \
@@ -79,41 +79,41 @@ fname_tcw = dirname_tcw + \
 
 # %%
 # print('Loading Data', flush=True)
-grid_steps = [2.5]
-fnames_dict = dict(
-    vimd=fname_vimd,
-    t2m=fname_t2m,
-    sst=fname_sst,
-    sp=fname_sp,
-    ttr=fname_ttr,
-    tcrw=fname_tcrw,
-    ewvf=fname_ewvf,
-    nwvf=fname_nwvf,
-    slhf=fname_slhf,
-    uvb=fname_uvrs,
-    tcw=fname_tcw
-)
+# grid_steps = [2.5]
+# fnames_dict = dict(
+#     vimd=fname_vimd,
+#     t2m=fname_t2m,
+#     sst=fname_sst,
+#     sp=fname_sp,
+#     ttr=fname_ttr,
+#     tcrw=fname_tcrw,
+#     ewvf=fname_ewvf,
+#     nwvf=fname_nwvf,
+#     slhf=fname_slhf,
+#     uvb=fname_uvrs,
+#     tcw=fname_tcw
+# )
 
-name = 'era5'
-var_names = ['vimd', 'ewvf', 'nwvf', 't2m', 'sp', 'ttr', 'tcrw']
-var_names = ['slhf', 'uvb', 'tcw']
+# name = 'era5'
+# var_names = ['vimd', 'ewvf', 'nwvf', 't2m', 'sp', 'ttr', 'tcrw']
+# var_names = ['slhf', 'uvb', 'tcw']
 
-for idx, var_name in enumerate(var_names):
-    for grid_step in grid_steps:
-        fname = fnames_dict[var_name]
-        dataset_file = output_dir + \
-            f"/{output_folder}/{name}_{var_name}_{grid_step}_ds.nc"
+# for idx, var_name in enumerate(var_names):
+#     for grid_step in grid_steps:
+#         fname = fnames_dict[var_name]
+#         dataset_file = output_dir + \
+#             f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_ds.nc"
 
-        if os.path.exists(dataset_file) is False:
-            gut.myprint(f'Create Dataset {dataset_file}')
-            ds = BaseDataset(data_nc=fname,
-                             #  var_name=var_name,
-                             grid_step=grid_step,
-                             large_ds=True,
-                             )
-            ds.save(dataset_file)
-        else:
-            gut.myprint(f'File {fname} already exists!')
+#         if os.path.exists(dataset_file) is False:
+#             gut.myprint(f'Create Dataset {dataset_file}')
+#             ds = BaseDataset(data_nc=fname,
+#                              #  var_name=var_name,
+#                              grid_step=grid_step,
+#                              large_ds=True,
+#                              )
+#             ds.save(dataset_file)
+#         else:
+#             gut.myprint(f'File {fname} already exists!')
 
 # %%  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Wind and geopot fields on different pressure levels
@@ -125,68 +125,69 @@ plevels = [5, 50, 100, 150, 200,
 
 # plevels = [50, 150, 950, 600]
 
+plevels = [400, 800]
 name = 'era5'
-grid_step = 1
+grid_step = 2.5
 
 
-# for plevel in plevels:
+for plevel in plevels:
 
-#     if os.getenv("HOME") == '/home/goswami/fstrnad80' or os.getenv("HOME") == '/home/goswami/jschloer46':
-#         dirname_uwind = f"/mnt/qb/goswami/data/era5/multi_pressure_level/u_component_of_wind/{plevel}/"
-#         dirname_vwind = f"/mnt/qb/goswami/data/era5/multi_pressure_level/v_component_of_wind/{plevel}/"
-#         dirname_w = f"/mnt/qb/goswami/data/era5/multi_pressure_level/vertical_velocity/{plevel}/"
-#         dirname_z = f"/mnt/qb/goswami/data/era5/multi_pressure_level/geopotential/{plevel}/"
-#         dirname_pv = f"/mnt/qb/goswami/data/era5/multi_pressure_level/potential_vorticity/{plevel}/"
-#         dirname_sh = f"/mnt/qb/goswami/data/era5/multi_pressure_level/specific_humidity/{plevel}/"
-#         dirname_temp = f"/mnt/qb/goswami/data/era5/multi_pressure_level/temperature/{plevel}/"
-#     else:
-#         dirname_uwind = f"/home/strnad/data/era5/multi_pressure_level/u_component_of_wind/{plevel}/"
-#         dirname_vwind = f"/home/strnad/data/era5/multi_pressure_level/v_component_of_wind/{plevel}/"
-#         dirname_w = f"/home/strnad/data/era5/multi_pressure_level/vertical_velocity/{plevel}/"
-#         dirname_z = f"/home/strnad/data/era5/multi_pressure_level/geopotential/{plevel}/"
+    if os.getenv("HOME") == '/home/goswami/fstrnad80' or os.getenv("HOME") == '/home/goswami/jschloer46':
+        dirname_uwind = f"/mnt/qb/goswami/data/era5/multi_pressure_level/u_component_of_wind/{plevel}/"
+        dirname_vwind = f"/mnt/qb/goswami/data/era5/multi_pressure_level/v_component_of_wind/{plevel}/"
+        dirname_w = f"/mnt/qb/goswami/data/era5/multi_pressure_level/vertical_velocity/{plevel}/"
+        dirname_z = f"/mnt/qb/goswami/data/era5/multi_pressure_level/geopotential/{plevel}/"
+        dirname_pv = f"/mnt/qb/goswami/data/era5/multi_pressure_level/potential_vorticity/{plevel}/"
+        dirname_sh = f"/mnt/qb/goswami/data/era5/multi_pressure_level/specific_humidity/{plevel}/"
+        dirname_temp = f"/mnt/qb/goswami/data/era5/multi_pressure_level/temperature/{plevel}/"
+    else:
+        dirname_uwind = f"/home/strnad/data/era5/multi_pressure_level/u_component_of_wind/{plevel}/"
+        dirname_vwind = f"/home/strnad/data/era5/multi_pressure_level/v_component_of_wind/{plevel}/"
+        dirname_w = f"/home/strnad/data/era5/multi_pressure_level/vertical_velocity/{plevel}/"
+        dirname_z = f"/home/strnad/data/era5/multi_pressure_level/geopotential/{plevel}/"
 
-#     fname_u = dirname_uwind + f'u_component_of_wind_{plevel}_1979_2020.nc'
-#     fname_v = dirname_vwind + f'v_component_of_wind_{plevel}_1979_2020.nc'
-#     fname_w = dirname_w + f'vertical_velocity_{plevel}_1979_2020.nc'
-#     fname_z = dirname_z + f'geopotential_{plevel}_1979_2020.nc'
+    fname_u = dirname_uwind + f'u_component_of_wind_{plevel}_1959_2021.nc'
+    fname_v = dirname_vwind + f'v_component_of_wind_{plevel}_1959_2021.nc'
+    fname_w = dirname_w + f'vertical_velocity_{plevel}_1959_2021.nc'
+    fname_z = dirname_z + f'geopotential_{plevel}_1959_2021.nc'
 
-#     fname_pv = dirname_pv + f'potential_vorticity_{plevel}_1979_2020.nc'
-#     fname_sh = dirname_sh + f'specific_humidity_{plevel}_1979_2020.nc'
-#     fname_temp = dirname_temp + f'temperature_{plevel}_1979_2020.nc'
+    fname_pv = dirname_pv + f'potential_vorticity_{plevel}_1959_2021.nc'
+    fname_sh = dirname_sh + f'specific_humidity_{plevel}_1979_2020.nc'
+    fname_temp = dirname_temp + f'temperature_{plevel}_1959_2021.nc'
 
-#     fnames_dict = dict(
-#         u=fname_u,
-#         v=fname_v,
-#         w=fname_w,
-#         pv=fname_pv,
-#         q=fname_sh,
-#         t=fname_temp,
-#         z=fname_z
-#     )
+    fnames_dict = dict(
+        u=fname_u,
+        v=fname_v,
+        w=fname_w,
+        pv=fname_pv,
+        q=fname_sh,
+        t=fname_temp,
+        z=fname_z
+    )
 
-#     var_names = ['u', 'v', 'w', 'pv', 'z', 'q']
-#     var_names = ['u', 'v', 'z', 'pv']
-#     var_names = ['u', 'v']
-#     var_names = ['t', 'q']
-#     var_names = ['u', 'v', 'w', ]
-#     var_names = ['z', 'q']
+    var_names = ['u', 'v', 'w', 'pv', 'z', 'q']
+    var_names = ['u', 'v', 'z', 'pv']
+    var_names = ['u', 'v']
+    var_names = ['t', 'q']
+    var_names = ['u', 'v', 'w', ]
+    var_names = ['z', 'q', 't']
 
-#     for idx, var_name in enumerate(var_names):
-#         fname = fnames_dict[var_name]
-#         dataset_file = output_dir + \
-#             f"/{output_folder}/{name}_{var_name}_{grid_step}_{plevel}_ds.nc"
+    for idx, var_name in enumerate(var_names):
+        fname = fnames_dict[var_name]
+        dataset_file = output_dir + \
+            f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_{plevel}_ds.nc"
 
-#         if not fut.exist_file(dataset_file):
-#             gut.myprint(f'Create Dataset {dataset_file}')
-#             ds = BaseDataset(data_nc=fname,
-#                              grid_step=grid_step,
-#                              large_ds=True,
-#                              #  time_range=time_range,
-#                              )
-#             ds.save(dataset_file)
-#             del ds
-#         else:
-#             gut.myprint(f'File {dataset_file} already exists!')
+        if not fut.exist_file(dataset_file):
+            gut.myprint(f'Create Dataset {dataset_file}')
+            ds = BaseDataset(data_nc=fname,
+                             grid_step=grid_step,
+                             large_ds=True,
+                             #  time_range=time_range,
+                             )
+            ds.save(dataset_file)
+            del ds
+        else:
+            gut.myprint(f'File {dataset_file} already exists!')
 
 
 # %%
@@ -196,7 +197,7 @@ grid_step = 1
 # else:
 #     dirname_sppw = '/home/strnad/data/NCEP-NCAR/pr_wtr/eatm/'
 # var_name = 'pr_wtr'
-# fname_sppw = dirname_sppw + 'pr_wtr_eatm_1979_2020.nc'
+# fname_sppw = dirname_sppw + 'pr_wtr_eatm_1959_2021.nc'
 # name = 'noaa'
 # dataset_file = output_dir + \
 #         f"/{output_folder}/{name}_{var_name}_{grid_step}_ds.nc"

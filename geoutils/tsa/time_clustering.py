@@ -255,7 +255,8 @@ def tps_cluster_2d_data(data_arr, tps,
     # concatenate along 1 dimension
     data_input = np.concatenate(coll_data, axis=1)
     if method == 'kmeans':
-        Z, sign_Z = k_means_clustering(data=data_input,  rm_ol=rm_ol, **kwargs)
+        Z, sign_Z = k_means_clustering(data=data_input,
+                                       rm_ol=rm_ol, **kwargs)
     elif method == 'gm':
         Z, sign_Z = gm_clustering(data=data_input, **kwargs)
     elif method == 'dbscan':
@@ -271,7 +272,8 @@ def tps_cluster_2d_data(data_arr, tps,
         Z = Z[sign_Z]
         tps = tps[sign_Z]
 
-    grp_tps_dict = get_cluster_dict(Z=Z, cluster_x=tps, cluster_names=cluster_names)
+    grp_tps_dict = get_cluster_dict(Z=Z, cluster_x=tps,
+                                    cluster_names=cluster_names)
 
     return grp_tps_dict
 

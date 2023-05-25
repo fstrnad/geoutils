@@ -76,6 +76,9 @@ class BaseDataset():
         # ds_arr = []
         for file in data_nc_arr:
             fut.print_file_location_and_size(file_path=file, verbose=verbose)
+        if len(data_nc_arr) > 1 and time_range is not None:
+            time_range = fut.get_file_time_range(file_arr=data_nc_arr)
+
         self.grid_step = grid_step
         ds = self.open_ds(
             nc_files=data_nc_arr,
@@ -118,7 +121,8 @@ class BaseDataset():
         if month_range is not None:
             self.ds = tu.get_month_range_data(dataset=self.ds,
                                               start_month=month_range[0],
-                                              end_month=month_range[1])
+                                              end_month=month_range[1],
+                                              verbose=verbose)
 
         # Filter nans
         nan_filter = kwargs.pop('nan_filter', None)
@@ -758,7 +762,7 @@ class BaseDataset():
         map_idx = []
         for i in range(length):
             buff = self.get_map_index(i)
-            coord_deg.append([buff["lat"], buff["lon"]])
+            coord_deg.append([buff["lon"], buff["lat"]])  # x, y
             map_idx.append(buff["point"])
 
         coord_rad = np.radians(coord_deg)  # transforms to np.array
@@ -1286,12 +1290,13 @@ class BaseDataset():
 
         return anomalies
 
-    def compute_anomalies_ds(self, **kwargs):
+    def compute_anomalies_ds(self, var_name=None, **kwargs):
         self.an_types = kwargs.pop('an_types', [])
-        if "an" not in self.vars:
+        var_name = self.var_name if var_name is None else var_name
+        if var_name in self.vars:
             for an_type in self.an_types:
                 self.ds[f"an_{an_type}"] = self.compute_anomalies(
-                    self.ds[self.var_name], group=an_type
+                    self.ds[var_name], group=an_type
                 )
 
     def compute_all_anomalies(self, **kwargs):
@@ -1339,7 +1344,9 @@ class BaseDataset():
                 raise ValueError(
                     f"Chosen time {time_range} out of range. Please select times within {td[0]} - {td[-1]}!")
             else:
-                gut.myprint(f"Time steps within {time_range} selected!")
+                sd = tu.tp2str(time_range[0])
+                ed = tu.tp2str(time_range[-1])
+                gut.myprint(f"Time steps within {sd}-{ed} selected!")
             # da = data.interp(time=t, method='nearest')
             da = data.sel(time=slice(time_range[0], time_range[1]))
 

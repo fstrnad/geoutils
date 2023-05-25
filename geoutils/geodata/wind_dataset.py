@@ -15,6 +15,7 @@ from windspharm.xarray import VectorWind
 import copy
 import geoutils.utils.time_utils as tu
 import geoutils.utils.general_utils as gut
+import geoutils.utils.file_utils as fut
 reload(mp)
 
 
@@ -44,14 +45,30 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         w_kwargs = copy.deepcopy(kwargs)
         self.u_name = kwargs.pop('u_name', 'u')
         self.v_name = kwargs.pop('v_name', 'v')
+
+        all_files = data_nc_u + \
+            data_nc_v if data_nc_w is None else data_nc_u + data_nc_v + data_nc_w
+        for file in all_files:
+            fut.print_file_location_and_size(file_path=file, verbose=False)
+        time_range = fut.get_file_time_range(all_files)
+
         if data_nc_u is not None:
+            for file in data_nc_u + data_nc_v:
+                fut.print_file_location_and_size(file_path=file, verbose=False)
+
+            if data_nc_v is not None:
+                for file in data_nc_w:
+                    fut.print_file_location_and_size(
+                        file_path=file, verbose=False)
             ds_uwind = mp.MultiPressureLevelDataset(data_nc=data_nc_u,
                                                     plevels=plevels,
                                                     can=False,  # Anomalies are computed later all together
+                                                    time_range=time_range,
                                                     **u_kwargs)
             ds_vwind = mp.MultiPressureLevelDataset(data_nc=data_nc_v,
                                                     plevels=plevels,
                                                     can=False,
+                                                    time_range=time_range,
                                                     **v_kwargs)
 
             u = ds_uwind.ds[self.u_name]
@@ -67,6 +84,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                 ds_fac = mp.MultiPressureLevelDataset(data_nc=data_nc_fac,
                                                       plevels=plevels,
                                                       can=False,
+                                                      time_range=time_range,
                                                       **w_kwargs)
                 fac_name = kwargs.pop('fac_name', 'fac')
 
@@ -254,9 +272,9 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
     def compute_massstreamfunction(self,
                                    a=6376.0e3,
                                    g=9.81,
-                                   meridional=True,
                                    c=None,
                                    can=True,
+                                   vars=None,
                                    ):
         """Calculate the mass streamfunction for the atmosphere.
         Based on a vertical integral of the meridional wind.
@@ -272,8 +290,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         Returns an xarray DataArray of mass streamfunction.
 
         """
-
-        for var in ['v_chi', 'u_chi']:
+        vars = ['v_chi', 'u_chi'] if vars is None else vars
+        for var in vars:
             if var == 'v_chi':
                 lats = self.ds.lat
                 lats = np.cos(lats*np.pi/180)
@@ -290,18 +308,18 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             # Compute Vertical integral of the Mass Streamfunction
             Psi = self.vertical_integration(var=var, c=c)
 
-            if meridional:
+            if var == 'v_chi':
                 vname = 'msf_v'
             else:
                 vname = 'msf_u'
 
             self.ds[vname] = Psi.rename(vname)
 
-        if can:
-            for an_type in self.an_types:
-                sf_an = tu.compute_anomalies(
-                    dataarray=self.ds[vname], group=an_type)
-                self.ds[sf_an.name] = sf_an
+            if can:
+                for an_type in self.an_types:
+                    sf_an = tu.compute_anomalies(
+                        dataarray=self.ds[vname], group=an_type)
+                    self.ds[sf_an.name] = sf_an
 
         return self.ds
 

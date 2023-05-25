@@ -5,6 +5,10 @@ import os
 import sys
 import xarray as xr
 import geoutils.utils.general_utils as gut
+import geoutils.utils.time_utils as tu
+from importlib import reload
+reload(tu)
+reload(gut)
 
 
 def find_files_with_string(folder_path: str, search_string: str = None,
@@ -89,6 +93,18 @@ def print_file_location_and_size(file_path, verbose=True):
     gut.myprint(f"File size: {file_size:.2f} {size_unit}", verbose=verbose)
 
     return None
+
+
+def get_file_time_range(file_arr, verbose=True):
+    time_arr = []
+    for datafile in file_arr:
+        file = xr.open_dataset(datafile)
+        time_arr.append(file.time)
+
+    tr = tu.find_common_time_range(time_arr)
+    gut.myprint(f'Load time_range:{tr}', verbose=verbose)
+
+    return tr
 
 
 def save_np_dict(arr_dict, sp, verbose=True):

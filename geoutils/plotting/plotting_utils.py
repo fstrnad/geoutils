@@ -457,7 +457,7 @@ def plot_hline(ax, y, **kwargs):
     return {'im': ax}
 
 
-def enumerate_subplots(axs, pos_x=-0.08, pos_y=1.06, fontsize=20):
+def enumerate_subplots(axs, pos_x=-0.12, pos_y=1.06, fontsize=20):
     """Adds letters to subplots of a figure.
 
     Args:

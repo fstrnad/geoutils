@@ -185,6 +185,11 @@ def get_netcdf_encoding(ds,
     gut.myprint('Set time to np.datetime[ns] time format!', verbose=verbose)
     ds = ds.assign_coords(
         time=time.data.astype('datetime64[ns]'))
+    freq = get_frequency(ds)
+    if freq != 'hour':
+        gut.myprint('set hours to 0')
+        ds = set_hours_to_zero(x=ds)
+
     # ds = ds.transpose('time', 'lat', 'lon
     ds.time.attrs.pop('calendar', None)
     # ds.time.attrs.update({'calendar': '365_day'})
@@ -262,7 +267,10 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
                 if not check_timepoints_in_dataarray(dataarray=ds, timepoints=tps, verbose=verbose):
                     gut.myprint(f'WARNING: Single {tps} not in dataset!')
                     return []
+                else:
+                    tps_sel = tps
 
+            # Attention for time points out of range!
             ds_sel = ds.sel(time=tps_sel, method='nearest')
             # Remove duplicates
             if not stp:
@@ -404,6 +412,34 @@ def is_tp_smaller(date1, date2):
 
     bool_date = date1 < date2
     return bool_date
+
+
+def find_common_time_range(time_series_array):
+    """
+    Find the earliest and latest time points that are within all the time series in an array.
+
+    Parameters:
+        time_series_array (array-like): Array containing xarray DataArrays representing time series.
+
+    Returns:
+        tuple: A tuple of two datetime64 objects representing the earliest and latest common time points.
+    """
+    # Initialize the earliest and latest time points as None
+    earliest_time = None
+    latest_time = None
+
+    # Iterate over the time series array
+    for time_series in time_series_array:
+        # Get the time range of the current time series
+        time_range = time_series.time.values
+
+        # Update the earliest and latest time points
+        if earliest_time is None or time_range[0] > earliest_time:
+            earliest_time = time_range[0]
+        if latest_time is None or time_range[-1] < latest_time:
+            latest_time = time_range[-1]
+
+    return earliest_time, latest_time
 
 
 def get_time_range_data(ds, time_range,
@@ -629,6 +665,22 @@ def time_difference_in_hours(time1, time2):
     return time_diff
 
 
+def set_hours_to_zero(x):
+    """
+    Sets all hours to 0 in an xarray object with a time dimension.
+
+    Parameters:
+        x (xarray.DataArray or xarray.Dataset): The input xarray object.
+
+    Returns:
+        xarray.DataArray or xarray.Dataset: The modified xarray object with hours set to 0.
+    """
+    # Set hours to 0 using the dt accessor
+    x['time'] = x['time'].dt.floor('D')
+
+    return x
+
+
 def get_month_range(da):
     """
     Get the month range of an xarray DataArray with a time dimension.
@@ -813,6 +865,36 @@ def is_full_year(ds, get_missing_dates=False):
             return False
     else:
         return True
+
+
+def get_frequency(x):
+    """
+    Determines the frequency of an xarray object with a time dimension.
+
+    Parameters:
+        x (xarray.DataArray or xarray.Dataset): The input xarray object.
+
+    Returns:
+        str: The frequency of the time dimension (daily, monthly, hourly, none).
+    """
+    # Convert the time dimension to a pandas Series
+    time_series = pd.Series(x.time.values)
+
+    # Compute the time differences between consecutive timestamps
+    time_diff = time_series.diff()
+
+    # Check the most common time difference
+    most_common_diff = time_diff.value_counts().idxmax()
+
+    # Determine the frequency based on the most common time difference
+    if pd.Timedelta(days=1) == most_common_diff:
+        return 'day'
+    elif pd.Timedelta(days=30) == most_common_diff or pd.Timedelta(days=31) == most_common_diff:
+        return 'month'
+    elif pd.Timedelta(hours=1) == most_common_diff:
+        return 'hour'
+    else:
+        return 'none'
 
 
 def get_tm_name(timemean):
@@ -1059,7 +1141,7 @@ def get_ee_count_ds(ds, q=0.95):
 def compute_evs(dataarray,
                 q=0.9,
                 min_threshold=1,
-                th_eev=5, #
+                th_eev=5,
                 min_evs=3):
     """Creates an event series from an input time series.
 
@@ -1177,7 +1259,8 @@ def tp2str(tp, m=True, d=True):
     """
     if isinstance(tp, xr.DataArray):
         tp = tp.time.data
-
+    if isinstance(tp, str):
+        return tp
     if gut.is_datetime360(tp):
         date = f'{tp.year}'
     else:
@@ -1418,6 +1501,9 @@ def get_tw_periods(
 
 
 def get_periods_tps(tps, step=1, start=0, freq="D", include_start=True):
+    """Gives the all time points from tps to step.
+
+    """
     if step == 0:
         return tps
     else:
@@ -1425,13 +1511,22 @@ def get_periods_tps(tps, step=1, start=0, freq="D", include_start=True):
             sign = math.copysign(step)
             tps = add_time_step_tps(tps=tps, time_step=sign*1)
             step += sign  # because we have shifted the step
-        if start > 0:
-            stps = add_time_step_tps(
-                tps=tps, time_step=start, freq=freq)
+        if start != 0:
+            if np.abs(start) < np.abs(step):
+                stps = add_time_step_tps(
+                    tps=tps, time_step=start, freq=freq)
+            else:
+                gut.myprint(f'ERROR! Step needs to be larger than start!')
+                stps = tps
         else:
             stps = tps
         etps = add_time_step_tps(tps=tps, time_step=step, freq=freq)
         all_time_periods = []
+
+        if gut.is_single_tp(stps):
+            stps = [stps]
+            etps = [etps]
+
         for idx, stp in enumerate(stps):
             etp = etps[idx]
             tw_range = get_dates_of_time_range([stp, etp], freq=freq)
@@ -1440,9 +1535,9 @@ def get_periods_tps(tps, step=1, start=0, freq="D", include_start=True):
         all_time_periods = np.concatenate(all_time_periods, axis=0)
         # Removes duplicates of time points
         all_time_periods = np.unique(all_time_periods)
-
         all_time_periods = create_xr_ts(
             data=all_time_periods, times=all_time_periods)
+        all_time_periods = remove_duplicate_times(all_time_periods)
 
         return all_time_periods
 
