@@ -244,9 +244,17 @@ def calc_spearman(data, test='twosided', verbose=False):
     return corr, pvalue
 
 
-# Pearson's Correlation
+# Pearson's Correlatio
 def calc_pearson(data, verbose=False):
-    """Pearson correlation of the flattened array."""
+    """Compute the Pearson correlation of the flattened and without NaNs object.
+
+    Args:
+        data (np.array): array of shape (n, m) where n is the number of samples and m the number of features.
+        verbose (bool, optional): Verbose notification. Defaults to False.
+
+    Returns:
+        np.ndarray: correlation and p-value matrix of shape (m, m)
+    """
     # Pearson correlation
     corr = np.corrcoef(data.T)
     assert corr.shape[0] == data.shape[1]
@@ -271,6 +279,17 @@ def calc_pearson(data, verbose=False):
 
 
 def get_corr_function(corr_method):
+    """Returns the correlation function based on the choosen correlation method.
+
+    Args:
+        corr_method (str): string of the choosen correlation method
+
+    Raises:
+        ValueError: string of the choosen correlation method does not exist
+
+    Returns:
+        function: function to calculate the correlation
+    """
     # spearman correlation
     if corr_method == 'spearman':
         return calc_spearman

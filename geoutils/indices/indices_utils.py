@@ -1,6 +1,5 @@
 import geoutils.utils.general_utils as gut
 import os
-import geoutils.tsa.time_series_analysis as tsa
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -539,62 +538,8 @@ def get_enso_flavors_consensus(fname, time_range=None):
     return enso_years
 
 
-# ############################ MJO #####################################
-def get_mjo_index(time_range=['1981-01-01', '2020-01-01'],
-                  start_month='Jan', end_month='Dec'):
-    # RMM Index
-    rmm_index = xr.open_dataset('/home/strnad/data/MJO-RMM/rmm_index.nc')
-    rmm_index = tu.get_sel_time_range(rmm_index, time_range=time_range)
-    rmm_index = tu.get_month_range_data(rmm_index,
-                                        start_month=start_month,
-                                        end_month=end_month)
-    return rmm_index
 
 
-def get_mjophase_tps(phase_number,
-                     time_range=['1981-01-01', '2020-01-01'],
-                     start_month='Jan', end_month='Dec',
-                     active=None,
-                     ):
-    reload(tsa)
-    reload(tu)
-    rmm_index = get_mjo_index(time_range=time_range, start_month=start_month,
-                              end_month=end_month)
-    ampl = rmm_index['amplitude']
-    tps = tsa.get_tps4val(ts=rmm_index['phase'], val=phase_number)
-    if active is not None:
-        if active:
-            tps = tu.get_sel_tps_ds(
-                ds=tps, tps=ampl.where(ampl >= 1, drop=True).time)
-        else:
-            tps = tu.get_sel_tps_ds(
-                ds=tps, tps=ampl.where(ampl < 1, drop=True).time)
-    return tps
-
-
-def get_bsisophase_tps(phase_number,
-                       time_range=['1981-01-01', '2020-01-01'],
-                       start_month='Jan', end_month='Dec',
-                       active=None,
-                       bsiso_name='BSISO1',
-                       ampl_th=1.5
-                       ):
-    reload(tsa)
-    reload(tu)
-    bsiso_index = get_bsiso_index(time_range=time_range, start_month=start_month,
-                                  end_month=end_month,
-                                  )
-    ampl = bsiso_index[bsiso_name]
-    tps = tsa.get_tps4val(
-        ts=bsiso_index[f'{bsiso_name}-phase'], val=phase_number)
-    if active is not None:
-        if active:
-            tps = tu.get_sel_tps_ds(
-                ds=tps, tps=ampl.where(ampl >= ampl_th, drop=True).time)
-        else:
-            tps = tu.get_sel_tps_ds(
-                ds=tps, tps=ampl.where(ampl < ampl_th, drop=True).time)
-    return tps
 
 
 @np.vectorize
@@ -636,17 +581,3 @@ def get_phase_of_angle(angle):
     return int(phase)
 
 
-def get_bsiso_index(time_range=['1980-01-01', '2020-01-01'],
-                    start_month='Jan', end_month='Dec',
-                    index_def='Lee'):
-    # BSISO Index
-    if index_def == 'Lee':
-        bsiso_index = xr.open_dataset('/home/strnad/data/bsiso/BSISO.nc')
-    elif index_def == 'Kikuchi':
-        bsiso_index = xr.open_dataset('/home/strnad/data/kikuchi_bsiso/BSISO_index.nc')
-
-    bsiso_index = tu.get_time_range_data(bsiso_index, time_range=time_range)
-    bsiso_index = tu.get_month_range_data(bsiso_index,
-                                          start_month=start_month,
-                                          end_month=end_month)
-    return bsiso_index

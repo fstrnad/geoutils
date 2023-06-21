@@ -46,20 +46,20 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         self.u_name = kwargs.pop('u_name', 'u')
         self.v_name = kwargs.pop('v_name', 'v')
 
-        all_files = data_nc_u + \
-            data_nc_v if data_nc_w is None else data_nc_u + data_nc_v + data_nc_w
+        print(data_nc_u, data_nc_v)
+        all_files = data_nc_u + data_nc_v if data_nc_w is None else data_nc_u + data_nc_v + data_nc_w
         for file in all_files:
-            fut.print_file_location_and_size(file_path=file, verbose=False)
+            fut.print_file_location_and_size(filepath=file, verbose=False)
         time_range = fut.get_file_time_range(all_files)
 
         if data_nc_u is not None:
             for file in data_nc_u + data_nc_v:
-                fut.print_file_location_and_size(file_path=file, verbose=False)
+                fut.print_file_location_and_size(filepath=file, verbose=False)
 
-            if data_nc_v is not None:
+            if data_nc_w is not None:
                 for file in data_nc_w:
                     fut.print_file_location_and_size(
-                        file_path=file, verbose=False)
+                        filepath=file, verbose=False)
             ds_uwind = mp.MultiPressureLevelDataset(data_nc=data_nc_u,
                                                     plevels=plevels,
                                                     can=False,  # Anomalies are computed later all together

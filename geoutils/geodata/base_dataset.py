@@ -75,7 +75,7 @@ class BaseDataset():
         # initialize dataset
         # ds_arr = []
         for file in data_nc_arr:
-            fut.print_file_location_and_size(file_path=file, verbose=verbose)
+            fut.print_file_location_and_size(filepath=file, verbose=verbose)
         if len(data_nc_arr) > 1 and time_range is not None:
             time_range = fut.get_file_time_range(file_arr=data_nc_arr)
 

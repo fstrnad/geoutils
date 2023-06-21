@@ -1,3 +1,4 @@
+import geoutils.utils.general_utils as gut
 from sklearn.metrics import explained_variance_score
 import scipy.stats as st
 from sklearn.svm import SVR
@@ -40,7 +41,8 @@ def fit_model(X, Y, method='linear', degree=2):
     return model
 
 
-def evaluate_data(X_data, Y_data, time_lag=0, test=True,
+def evaluate_data(X_data, Y_data,
+                  time_lag=0, test=True,
                   auto_corr_lag=0,
                   method='linear', degree=2, ratio_tt=0.9,
                   ):
@@ -82,9 +84,9 @@ def evaluate_data(X_data, Y_data, time_lag=0, test=True,
 
     Y_pred = model.predict(X_pd).flatten()
 
-    fit_statistics(Y_pred, Y_pd['0_0'], model=model)
+    stats = fit_statistics(Y_pred, Y_pd['0_0'], model=model)
 
-    return model, Y_pred
+    return model, Y_pred, stats
 
 
 def predict_data(X_data, Y_data, X_pred, time_lag=0,
@@ -116,9 +118,9 @@ def fit_statistics(Y_pred, Y_true, model):
     y_mean = np.mean(Y_true)
     # ie. Rsquare = np.sum((Y_pred-y_mean)**2) / np.sum((Y_true - y_mean)**2)
     Rsquare = explained_variance_score(Y_true, Y_pred)
-    print(f'Explained Variance: {Rsquare:.2f}')
+    gut.myprint(f'Explained Variance: {Rsquare:.2f}')
 
     r_pr, p = st.pearsonr(Y_pred, Y_true)
-    print(f'Pearson R: {r_pr:.2f}')
+    gut.myprint(f'Pearson R: {r_pr:.2f}')
 
     return Rsquare

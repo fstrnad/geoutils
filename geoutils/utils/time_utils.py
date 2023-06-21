@@ -446,7 +446,7 @@ def get_time_range_data(ds, time_range,
                         start_month='Jan',
                         end_month='Dec',
                         freq='D',
-                        verbose=True):
+                        verbose=False):
     if time_range is not None:
         sd, ed = get_time_range(ds)
         if isinstance(time_range[0], str):

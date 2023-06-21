@@ -451,7 +451,7 @@ def get_locations_in_range(def_map,
         xr.DataArray: masked xr.DataArray.
     """
     if not dateline:
-        if np.abs(np.max(lon_range) - np.min(lon_range)) > 180:
+        if np.abs(np.max(lon_range) - np.min(lon_range)) > 180 and lon_range != [-180, 180]:
             gut.myprint(
                 f'WARNING! Range larger 180° {lon_range} but not dateline!')
         mask = (

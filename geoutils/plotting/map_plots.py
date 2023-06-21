@@ -127,14 +127,17 @@ def set_extent(da, ax,
             if lat_range is None and lon_range is None:
                 set_global = True
         else:
-            min_ext_lon = float(
-                np.min(da.coords["lon"])) if da is not None else min_ext_lon
-            max_ext_lon = float(
-                np.max(da.coords["lon"])) if da is not None else max_ext_lon
-            min_ext_lat = float(
-                np.min(da.coords["lat"])) if da is not None else min_ext_lat
-            max_ext_lat = float(
-                np.max(da.coords["lat"])) if da is not None else max_ext_lat
+            # expect DataArray with lon and lat coordinates
+            # If condition is true, the extent is not set yet and is defined by data coordinates
+            if [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
+                min_ext_lon = float(
+                    np.min(da.coords["lon"])) if da is not None else min_ext_lon
+                max_ext_lon = float(
+                    np.max(da.coords["lon"])) if da is not None else max_ext_lon
+                min_ext_lat = float(
+                    np.min(da.coords["lat"])) if da is not None else min_ext_lat
+                max_ext_lat = float(
+                    np.max(da.coords["lat"])) if da is not None else max_ext_lat
     if lat_range is not None or lon_range is not None:
         lat_range = lat_range if lat_range is not None else [
             min_ext_lat, max_ext_lat]
@@ -145,12 +148,14 @@ def set_extent(da, ax,
         min_ext_lat = np.min(lat_range)
         max_ext_lat = np.max(lat_range)
     if not set_global:
-        if abs(min_ext_lon) > 179 and abs(max_ext_lon) > 179 and abs(min_ext_lat) > 89 and abs(max_ext_lat) > 89:
+        if (abs(min_ext_lon) > 179 and
+            abs(max_ext_lon) > 179 and
+            abs(min_ext_lat) > 89 and
+                abs(max_ext_lat) > 89):
             set_global = True
             if lon_range is not None or lat_range is not None:
                 gut.myprint('WARNING! Set global map!')
     final_extent = [min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat]
-    # print(final_extent)
     if set_global:
         ax.set_global()
     else:
@@ -474,6 +479,8 @@ def plot_map(dmap: xr.DataArray,
                         **kwargs)
     return im
 
+# Plotting of 2D data (not necessary a map)
+
 
 def plot_2D(
     x,
@@ -601,7 +608,6 @@ def plot_2D(
             transform=projection,
             alpha=alpha,
         )
-        return dict(ax=ax, im=im)
     elif plot_type == "colormesh":
         im = ax.pcolor(
             x,
@@ -753,9 +759,11 @@ def plot_2D(
             cbar.set_ticks(ticks)
             cbar.ax.set_xticklabels(ticks, rotation=45)
             cbar.set_ticklabels(normticks)
-
-    return {"ax": ax, "fig": fig, "projection": projection, "im": im,
-            'ticks': levels, 'extend': extend}
+    if plot_type != "points":
+        return {"ax": ax, "fig": fig, "projection": projection, "im": im,
+                'ticks': levels, 'extend': extend}
+    else:
+        return {"ax": ax, "fig": fig, "projection": projection, "im": im}
 
 
 def plot_edges(

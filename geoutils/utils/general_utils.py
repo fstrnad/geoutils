@@ -653,6 +653,8 @@ def contains_nan(arr):
 
 
 def remove_nans(x):
+    if isinstance(x, list):
+        x = np.array(x)
     return x[~np.isnan(x)]
 
 

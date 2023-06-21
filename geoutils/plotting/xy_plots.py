@@ -360,16 +360,12 @@ def plot_lines(ax, te, color="Turquoise"):
     return {'ax': ax}
 
 
-def plot_hist(data, ax=None, label_arr=None, log=False, color_arr=None, **kwargs):
+def plot_hist(data, ax=None, fig=None, label_arr=None, log=False, color_arr=None, **kwargs):
     reload(sut)
     reload(gut)
-    if ax is None:
-        figsize = kwargs.pop("figsize", (6, 4))
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-    ax, kwargs = put.prepare_axis(ax, log=log, **kwargs)
 
     density = kwargs.pop("density", False)
-    bar = kwargs.pop("bar", True)
+    bar = kwargs.pop("bar", False)
     nbins = kwargs.pop("nbins", None)
     bw = kwargs.pop("bw", None)
     if len(np.shape(data)) > 1:
@@ -385,6 +381,11 @@ def plot_hist(data, ax=None, label_arr=None, log=False, color_arr=None, **kwargs
     if nbins is None and bw is None:
         data_tmp = gut.remove_nans(data_tmp)
         nbins = sut.__doane(data_tmp)
+
+    if ax is None:
+        figsize = kwargs.pop("figsize", (6, 4))
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+    ax, kwargs = put.prepare_axis(ax, log=log, **kwargs)
 
     hc_arr = []
     for idx, arr in enumerate(data_arr):
@@ -417,7 +418,7 @@ def plot_hist(data, ax=None, label_arr=None, log=False, color_arr=None, **kwargs
                 label=label,
             )
         else:
-            ax.plot(bc, hc, "x", color=c, label=label)
+            ax.plot(bc, hc, "x", color=c, label=label, ls='-')
     if label_arr is not None:
         ax = set_legend(ax, label_arr=label_arr, **kwargs)
 

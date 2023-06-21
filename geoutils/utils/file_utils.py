@@ -10,6 +10,8 @@ from importlib import reload
 reload(tu)
 reload(gut)
 
+#
+
 
 def find_files_with_string(folder_path: str, search_string: str = None,
                            verbose: bool = True) -> list:
@@ -28,17 +30,17 @@ def find_files_with_string(folder_path: str, search_string: str = None,
     file_list = []
     for root, dirs, files in os.walk(folder_path):
         for file in files:
-            file_path = os.path.join(root, file)
-            if os.path.isfile(file_path):
+            filepath = os.path.join(root, file)
+            if os.path.isfile(filepath):
                 if search_string is None:
-                    file_list.append(file_path)
+                    file_list.append(filepath)
                 else:
                     if search_string in file:
-                        file_list.append(file_path)
+                        file_list.append(filepath)
 
     # Check that all files in the file list actually exist
-    for file_path in file_list:
-        assert_file_exists(file_path=file_path)
+    for filepath in file_list:
+        assert_file_exists(filepath=filepath)
 
     gut.myprint(f'Found {len(file_list)} files!',
                 verbose=verbose)
@@ -51,9 +53,9 @@ def assert_folder_exists(folder_path):
         raise ValueError("Folder path does not exist.")
 
 
-def assert_file_exists(file_path):
-    if not os.path.isfile(file_path):
-        raise ValueError(f"File {file_path} does not exist.")
+def assert_file_exists(filepath):
+    if not os.path.isfile(filepath):
+        raise ValueError(f"File {filepath} does not exist.")
 
 
 def exist_file(filepath, verbose=True):
@@ -64,19 +66,46 @@ def exist_file(filepath, verbose=True):
         return False
 
 
-def print_file_location_and_size(file_path, verbose=True):
+def exist_folder(filepath, verbose=True):
+    """
+    Checks if the folder exists for the given file path.
+
+    Args:
+        file_path (str): The file path to check.
+
+    Returns:
+        bool: True if the folder exists, False otherwise.
+    """
+    folder_path = os.path.dirname(filepath)
+    if os.path.isdir(folder_path):
+        gut.myprint(f"File {filepath} exists!", verbose=verbose)
+        return True
+    else:
+        return False
+
+
+def create_folders(filepath):
+    directory = os.path.dirname(filepath)
+    if not exist_folder(filepath=filepath):
+        os.makedirs(directory)
+        print(f"Created folders for path: {filepath}")
+    else:
+        print(f"Folders already exist for path: {filepath}")
+
+
+def print_file_location_and_size(filepath, verbose=True):
     """
     Prints the location and memory size of a given file.
 
     Args:
-        file_path (str): The file path.
+        filepath (str): The file path.
 
     Returns:
         None
     """
-    assert_file_exists(file_path)
+    assert_file_exists(filepath)
 
-    file_size = os.path.getsize(file_path)
+    file_size = os.path.getsize(filepath)
     size_unit = "bytes"
     if file_size > 1024:
         file_size /= 1024
@@ -89,7 +118,7 @@ def print_file_location_and_size(file_path, verbose=True):
         size_unit = "GB"
 
     gut.myprint(
-        f"File location: {os.path.abspath(file_path)}", verbose=verbose)
+        f"File location: {os.path.abspath(filepath)}", verbose=verbose)
     gut.myprint(f"File size: {file_size:.2f} {size_unit}", verbose=verbose)
 
     return None
@@ -109,8 +138,9 @@ def get_file_time_range(file_arr, verbose=True):
 
 def save_np_dict(arr_dict, sp, verbose=True):
     gut.myprint(f'Store to {sp}', verbose=verbose)
+    create_folders(filepath=sp)
     np.save(sp, arr_dict, allow_pickle=True)
-    print_file_location_and_size(file_path=sp)
+    print_file_location_and_size(filepath=sp)
 
     return None
 
@@ -120,7 +150,7 @@ def save_pkl_dict(arr_dict, sp, verbose=True):
     with open(sp, 'wb') as f:
         # Pickle the 'data' dictionary using the highest protocol available.
         pickle.dump(arr_dict, f, pickle.HIGHEST_PROTOCOL)
-    print_file_location_and_size(file_path=sp)
+    print_file_location_and_size(filepath=sp)
 
     return None
 
@@ -154,13 +184,13 @@ def save_ds(ds, filepath, unlimited_dim=None,
         encoding = {var: {'zlib': True} for var in ds.data_vars}
         ds.to_netcdf(filepath, encoding=encoding)
     gut.myprint(f"File {filepath} written!")
-    print_file_location_and_size(file_path=filepath)
+    print_file_location_and_size(filepath=filepath)
     return None
 
 
 def load_np_dict(sp):
     gut.myprint('Load...')
-    print_file_location_and_size(file_path=sp)
+    print_file_location_and_size(filepath=sp)
     return np.load(sp, allow_pickle=True).item()
 
 
@@ -174,7 +204,7 @@ def load_npy(fname):
         converted_dic [dict]: dictionary of stored objects
     """
     gut.myprint('Load...')
-    print_file_location_and_size(file_path=fname)
+    print_file_location_and_size(filepath=fname)
     dic = np.load(fname,
                   allow_pickle=True).item()
     converted_dic = {}
@@ -192,14 +222,14 @@ def load_npy(fname):
 
 
 def load_xr(filepath):
-    assert_file_exists(file_path=filepath)
+    assert_file_exists(filepath=filepath)
     data = xr.open_dataset(filepath)
     return data
 
 
 def load_nx(filepath):
     gut.myprint(f"Load {filepath}...")
-    assert_file_exists(file_path=filepath)
+    assert_file_exists(filepath=filepath)
     cnx = nx.read_gml(filepath, destringizer=int)
     gut.myprint(f"... Loading {filepath} successful!")
 

@@ -50,7 +50,7 @@ class MoistStaticEnergy(mp.MultiPressureLevelDataset):
 
             all_files = data_nc_q + data_nc_t + data_nc_z
             for file in all_files:
-                fut.print_file_location_and_size(file_path=file, verbose=False)
+                fut.print_file_location_and_size(filepath=file, verbose=False)
             time_range = fut.get_file_time_range(all_files)
 
             ds_z = mp.MultiPressureLevelDataset(data_nc=data_nc_z,

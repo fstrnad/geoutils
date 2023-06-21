@@ -1,7 +1,7 @@
 # %%
 import geoutils.plotting.plots as cplt
 import geoutils.utils.statistic_utils as sut
-import geoutils.utils.indices_utils as iut
+import geoutils.indices.indices_utils as iut
 import numpy as np
 import xarray as xr
 import geoutils.utils.time_utils as tu

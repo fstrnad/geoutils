@@ -412,34 +412,60 @@ def plot_vline(ax, x, **kwargs):
     color = kwargs.pop("color", "k")
     zorder = kwargs.pop('zorder', 10)
     label = kwargs.pop('label', None)
-    ax.axvline(x=x, color=color,
-               zorder=zorder,
-               lw=lw,
-               linestyle=ls,
-               label=label)
+    trafo_axis = kwargs.pop('trafo_axis', False)
+    if trafo_axis:
+        ax.plot([x, x], [-90, 90],
+                color=color,
+                linestyle=ls,
+                linewidth=lw,
+                transform=ccrs.PlateCarree(),
+                label=label,)
+    else:
+        ax.axvline(x=x, color=color,
+                   zorder=zorder,
+                   lw=lw,
+                   linestyle=ls,
+                   label=label,
+                   )
 
     return {'ax': ax, 'x': x}
 
 
-
 def plot_arrow(ax, x1, y1, x2, y2, **kwargs):
-    lw = kwargs.pop("lw", 2)
+    lw = kwargs.pop("lw", 1)
+    width = kwargs.pop("width", 0.02)
     ls = kwargs.pop("ls", '-')
     color = kwargs.pop("color", "k")
     zorder = kwargs.pop('zorder', 10)
     label = kwargs.pop('label', "")
-
-    ax.annotate(label,
-                xytext=(x1, y1),
-                # xytext=(x1+(x2-x1)/2, y1+(y2-y1)/2),
-                xy=(x2, y2),
-                # textcoords='offset points',
-                xycoords='data',
-                arrowprops=dict(arrowstyle='->',
-                                color=color,
-                                lw=lw,
-                                linestyle=ls),
-                zorder=zorder,)
+    fill_color = kwargs.pop('fill_color', True)
+    trafo_axis = kwargs.pop('trafo_axis', False)
+    arrowprops = dict(color=color,
+                      lw=lw,
+                      ls=ls,
+                      label=label,
+                      width=width,
+                      ec=color,
+                      fc=color if fill_color else 'none'
+                      )
+    if label is not None:
+        ax.annotate(label,
+                    xytext=(x1, y1),
+                    xy=(x2, y2),
+                    xycoords='data',
+                    arrowprops=dict(arrowstyle='->',
+                                    color=color,
+                                    lw=lw,
+                                    linestyle=ls),
+                    zorder=zorder,)
+    else:
+        ax.arrow(x1, y1, x2-x1, y2-y1,
+                 #  xycoords='data',
+                 zorder=zorder,
+                 **arrowprops,
+                 transform=ccrs.PlateCarree()._as_mpl_transform(
+                     ax) if trafo_axis else ax.transData,
+                 )
 
 
 def plot_hline(ax, y, **kwargs):
@@ -555,7 +581,8 @@ def text_box(ax, text, pos="upper right", fsize=pst.MEDIUM_SIZE, **kwargs):
 
 
 def check_plot_type(plot_type):
-    avail_types = ['contour', 'contourf', 'scatter', 'points', 'colormesh', 'discrete']
+    avail_types = ['contour', 'contourf', 'scatter',
+                   'points', 'colormesh', 'discrete']
     if plot_type not in avail_types:
         raise ValueError(f'ERROR plot_type {plot_type} not available!')
     return True
