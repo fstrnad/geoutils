@@ -46,7 +46,6 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         self.u_name = kwargs.pop('u_name', 'u')
         self.v_name = kwargs.pop('v_name', 'v')
 
-        print(data_nc_u, data_nc_v)
         all_files = data_nc_u + data_nc_v if data_nc_w is None else data_nc_u + data_nc_v + data_nc_w
         for file in all_files:
             fut.print_file_location_and_size(filepath=file, verbose=False)

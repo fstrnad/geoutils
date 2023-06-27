@@ -1,3 +1,4 @@
+import geoutils.utils.spatial_utils as sput
 import scipy as sp
 import geoutils.utils.statistic_utils as sut
 from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering, OPTICS
@@ -12,6 +13,7 @@ import geoutils.plotting.plots as cplt
 from tqdm import tqdm
 reload(gut)
 reload(cplt)
+reload(sput)
 
 
 def k_means_clustering(data,
@@ -83,7 +85,6 @@ def k_means_clustering(data,
                      ylabel="Shilhouette Score",
                      ylim=(0., .5)
                      )
-
 
     if rem_outlayers or sc_th != 0.05:
         gut.myprint('Remove Outlayers...')
@@ -226,7 +227,11 @@ def tps_cluster_2d_data(data_arr, tps,
     # We always check if data is 3d (x,y,time)
     coll_data = []
     cluster_names = kwargs.pop('cluster_names', None)
+
     for data in data_arr:
+        if isinstance(data, xr.DataArray):
+            if gut.compare_lists(list(data.dims), ['time', 'lon', 'lat']):
+                data = sput.transpose_3D_data(data, dims=['time', 'lon', 'lat'])
         if len(data.shape) != 3:
             raise ValueError('Data needs to be of shape 3 (time, x, y)')
 
@@ -254,6 +259,7 @@ def tps_cluster_2d_data(data_arr, tps,
 
     # concatenate along 1 dimension
     data_input = np.concatenate(coll_data, axis=1)
+    gut.myprint(f'Shape of input data_input: {data_input.shape}')
     if method == 'kmeans':
         Z, sign_Z = k_means_clustering(data=data_input,
                                        rm_ol=rm_ol, **kwargs)
@@ -304,7 +310,8 @@ def apply_cluster_data(data,
                        **kwargs):
 
     if len(data.shape) != 2:
-        raise ValueError(f'Data not in correct input 2D-format. Shape is {data.shape}!')
+        raise ValueError(
+            f'Data not in correct input 2D-format. Shape is {data.shape}!')
 
     if standardize:
         gut.myprint(f'Standardize data!')

@@ -621,11 +621,11 @@ def get_values_above_val(dataarray, val=None, q=None, dim='time'):
     if val == 'mean':
         val = val_ = dataarray.mean(dim=dim)
     elif q is not None:
-        if q < 1 and q > 0:
-            val = dataarray.quantile(q=q)
-            val_ = dataarray.quantile(q=(1-q))
+        if q < 1 and q > 0.5:
+            val = dataarray.quantile(q=q, method='lower')
+            val_ = dataarray.quantile(q=(1-q), method='higher')
         else:
-            raise ValueError(f'q={q} has to be between 0 and 1')
+            raise ValueError(f'q={q} has to be between 0.5 and 1')
     else:
         val = val_ = dataarray.median(dim=dim) if val is None else val
     above_val = dataarray.where(dataarray >= val).dropna(dim=dim)
@@ -640,3 +640,6 @@ def get_values_above_val(dataarray, val=None, q=None, dim='time'):
         'below': below_val,
         'between': between_val
     }
+
+
+

@@ -336,54 +336,54 @@ def get_enso_flavors_N3N4(nino_indices,
                     'N3': float(nino3),
                     'N4': float(nino4)}
         buff_dic['N3-N4'] = nino3.data - nino4.data
-        buff_dic['strength'] = get_enso_strength(nino34)
+        strength = get_enso_strength(nino34)
+        buff_dic['strength'] = strength
 
-        # El Nino years
-        if ((nino3.data >= threshold_nino3) or (nino4.data >= threshold_nino4)):
-            buff_dic['type'] = 'Nino'
-
-            Nino_EP_label = 'Nino_EP_weak' if offset > 0 else 'Nino_EP'
-            Nino_CP_label = 'Nino_CP_weak' if offset > 0 else 'Nino_CP'
-
-            # EP type if DJF nino3 > 0.5 and nino3 > nino4
-            if (nino3.data - min_diff) > nino4.data:
-                buff_dic['flavor'] = Nino_EP_label
-            # CP type if DJF nino4 > 0.5 and nino3 < nino4
-            elif (nino4.data - min_diff) > nino3.data:
-                buff_dic['flavor'] = Nino_CP_label
-
-            # Strong El Ninos
-            if offset > 0.0:
-                if (nino3.data >= threshold_nino3 + offset) and (nino3.data - min_diff) > nino4.data:
-                    buff_dic['flavor'] = "Nino_EP_strong"
-                elif (nino4.data >= threshold_nino4 + offset) and (nino4.data - min_diff) > nino3.data:
-                    buff_dic['flavor'] = 'Nino_CP_strong'
-
-        # La Nina years
-        elif ((nino3.data <= -threshold_nino3) or (nino4.data <= -threshold_nino4)):
-            buff_dic['type'] = 'Nina'
-
-            Nina_EP_label = 'Nina_EP_weak' if offset > 0 else 'Nina_EP'
-            Nina_CP_label = 'Nina_CP_weak' if offset > 0 else 'Nina_CP'
-
-            # EP type if DJF nino3 < -0.5 and nino3 < nino4
-            if (nino3.data + min_diff) < nino4.data:
-                buff_dic['flavor'] = Nina_EP_label
-            # CP type if DJF nino4 < -0.5 and nino3 > nino4
-            elif (nino4.data + min_diff) < nino3.data:
-                buff_dic['flavor'] = Nina_CP_label
-
-            # Strong La Nina
-            if offset > 0.0:
-                if (nino3.data <= -threshold_nino3 - offset) and (nino3.data + min_diff) < nino4.data:
-                    buff_dic['flavor'] = "Nina_EP_strong"
-                elif (nino4.data <= -threshold_nino4 - offset) and (nino4.data + min_diff) < nino3.data:
-                    buff_dic['flavor'] = 'Nina_CP_strong'
-
-        # standard years
-        else:
+        if strength == 'Normal':
             buff_dic['type'] = 'Normal'
             buff_dic['flavor'] = 'Normal'
+        else:
+            # El Nino years
+            if ((nino3.data >= threshold_nino3) or (nino4.data >= threshold_nino4)):
+                buff_dic['type'] = 'Nino'
+
+                Nino_EP_label = 'Nino_EP_weak' if offset > 0 else 'Nino_EP'
+                Nino_CP_label = 'Nino_CP_weak' if offset > 0 else 'Nino_CP'
+
+                # EP type if DJF nino3 > 0.5 and nino3 > nino4
+                if (nino3.data - min_diff) > nino4.data:
+                    buff_dic['flavor'] = Nino_EP_label
+                # CP type if DJF nino4 > 0.5 and nino3 < nino4
+                elif (nino4.data - min_diff) > nino3.data:
+                    buff_dic['flavor'] = Nino_CP_label
+
+                # Strong El Ninos
+                if offset > 0.0:
+                    if (nino3.data >= threshold_nino3 + offset) and (nino3.data - min_diff) > nino4.data:
+                        buff_dic['flavor'] = "Nino_EP_strong"
+                    elif (nino4.data >= threshold_nino4 + offset) and (nino4.data - min_diff) > nino3.data:
+                        buff_dic['flavor'] = 'Nino_CP_strong'
+
+            # La Nina years
+            elif ((nino3.data <= -threshold_nino3) or (nino4.data <= -threshold_nino4)):
+                buff_dic['type'] = 'Nina'
+
+                Nina_EP_label = 'Nina_EP_weak' if offset > 0 else 'Nina_EP'
+                Nina_CP_label = 'Nina_CP_weak' if offset > 0 else 'Nina_CP'
+
+                # EP type if DJF nino3 < -0.5 and nino3 < nino4
+                if (nino3.data + min_diff) < nino4.data:
+                    buff_dic['flavor'] = Nina_EP_label
+                # CP type if DJF nino4 < -0.5 and nino3 > nino4
+                elif (nino4.data + min_diff) < nino3.data:
+                    buff_dic['flavor'] = Nina_CP_label
+
+                # Strong La Nina
+                if offset > 0.0:
+                    if (nino3.data <= -threshold_nino3 - offset) and (nino3.data + min_diff) < nino4.data:
+                        buff_dic['flavor'] = "Nina_EP_strong"
+                    elif (nino4.data <= -threshold_nino4 - offset) and (nino4.data + min_diff) < nino3.data:
+                        buff_dic['flavor'] = 'Nina_CP_strong'
 
         enso_classes.append(buff_dic)
 

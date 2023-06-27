@@ -1061,6 +1061,26 @@ def da_lon2_360(da):
     return da
 
 
+def transpose_3D_data(da, dims=['time', 'lon', 'lat']):
+    da_dims = list(da.dims)
+    if not gut.compare_lists(da_dims, dims):
+        gut.myprint(f'Transpose data from {da_dims} to {dims} not possible!')
+        raise ValueError('Dimensions are not the same!')
+    else:
+        da = da.transpose(dims[0], dims[1], dims[2]).compute()
+    return da
+
+
+def transpose_2D_data(da, dims=['lon', 'lat']):
+    da_dims = list(da.dims)
+    if not gut.compare_lists(da_dims, dims):
+        gut.myprint(f'Transpose data from {da_dims} to {dims} not possible!')
+        raise ValueError('Dimensions are not the same!')
+    else:
+        da = da.transpose(dims[0], dims[1]).compute()
+    return da
+
+
 def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
                      freq='D', verbose=True):
     """
@@ -1280,3 +1300,29 @@ def get_data_coord(da, coord, in3d=True, method='nearest'):
                                  method=method)
 
     return da_coord
+
+
+def calculate_percentile(arr1, arr2,):
+    """
+    Calculate the percentile of values in arr1 with respect to arr2 along the time dimension.
+
+    Parameters:
+        arr1 (xarray.DataArray): Array of dimension (lon, lat).
+        arr2 (xarray.DataArray): Array of dimension (time, lon, lat).
+
+    Returns:
+        xarray.DataArray: An array of dimension (lon, lat) representing the percentile values.
+    """
+    # compute the percentile values of arr1 with respect to arr2
+    # arr1 = transpose_2D_data(da=arr1)
+    # arr2 = transpose_3D_data(da=arr2)
+
+    percentile_values = np.zeros(arr1.shape)
+
+    for i, lat in enumerate(tqdm(arr1.lat.values)):
+        for j, lon in enumerate(arr1.lon.values):
+            this_val = st.percentileofscore(
+                arr2.sel(lon=lon, lat=lat, method='nearest'), arr1.sel(lon=lon, lat=lat, method='nearest'))
+            percentile_values[i, j] = this_val
+
+    return xr.DataArray(percentile_values, coords=arr1.coords, dims=arr1.dims)

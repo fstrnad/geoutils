@@ -1515,6 +1515,9 @@ def get_periods_tps(tps, step=1, start=0, freq="D", include_start=True):
             if np.abs(start) < np.abs(step):
                 stps = add_time_step_tps(
                     tps=tps, time_step=start, freq=freq)
+            elif np.abs(start) == np.abs(step):
+                return add_time_step_tps(
+                    tps=tps, time_step=start, freq=freq)
             else:
                 gut.myprint(f'ERROR! Step needs to be larger than start!')
                 stps = tps

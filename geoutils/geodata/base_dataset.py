@@ -445,8 +445,11 @@ class BaseDataset():
         if "ttr" in names:
             ds = ds.rename({"ttr": "olr"})
             gut.myprint(
-                "Rename top net thermal radiation (ttr) to: olr!\n Multiply by -1!")
-            ds['olr'] *= -1
+                "Rename top net thermal radiation (ttr) to: olr!\n Multiply by -1/3600!")
+            ds['olr'] *= -1./3600  # convert to W/m2
+            ds['olr'].attrs.update({'units': 'W/m2'})
+            ds.attrs.update({'long_name': 'Outgoing longwave radiation'})
+            ds['olr'].attrs.update({'long_name': 'Outgoing longwave radiation'})
 
         if "ar_binary_tag" in names:
             ds = ds.rename({"ar_binary_tag": "ar"})

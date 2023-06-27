@@ -107,9 +107,10 @@ def set_extent(da, ax,
         projection = ccrs.PlateCarree(central_longitude=0)
         if lon_range is not None:
             lon_range = sput.lon2_360(lon_range)
-
         min_ext_lon += 180
         max_ext_lon += 180
+        gut.myprint(
+            f'Dateline: Set min_ext_lon to {min_ext_lon} and max_ext_lon to {max_ext_lon}!')
     else:
         projection = ccrs.PlateCarree(central_longitude=0)
 
@@ -138,6 +139,7 @@ def set_extent(da, ax,
                     np.min(da.coords["lat"])) if da is not None else min_ext_lat
                 max_ext_lat = float(
                     np.max(da.coords["lat"])) if da is not None else max_ext_lat
+                print(min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat)
     if lat_range is not None or lon_range is not None:
         lat_range = lat_range if lat_range is not None else [
             min_ext_lat, max_ext_lat]
@@ -187,6 +189,11 @@ def create_map(
 ):
     projection = 'PlateCarree' if lon_range is not None else projection
     central_latitude = kwargs.pop("central_latitude", 0)
+    if isinstance(da, xr.DataArray):
+        # To ensure shift for plot over dateline
+        if float(da.coords["lon"].max()) > 180:
+            central_longitude = 180
+
     proj = get_projection(projection=projection,
                           central_longitude=central_longitude,
                           central_latitude=central_latitude,
@@ -201,6 +208,7 @@ def create_map(
         ax_central_longitude = ax.projection.proj4_params['lon_0']
         if ax_central_longitude == 180:
             dateline = True
+            gut.myprint('Dateline set to true!')
 
         if central_longitude is not None:
             if central_longitude != ax_central_longitude:
@@ -517,7 +525,8 @@ def plot_2D(
     sci = kwargs.pop("sci", None)
     if projection is None:
         # This is the Sci for the x axis
-        ax, kwargs = put.prepare_axis(ax, sci=sci_x, **kwargs)
+        ax, kwargs = put.prepare_axis(ax, sci=sci_x,
+                                      **kwargs)
     else:
         if isinstance(projection, str):
             projection = get_projection(projection='PlateCarree')

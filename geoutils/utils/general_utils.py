@@ -53,6 +53,11 @@ def is_datetime360(time):
 
 
 def compare_lists(*lists):
+    """Checks if the lists are equal.
+
+    Returns:
+        bool: True if lists are equal
+    """
     counters = map(Counter, lists)
 
     try:
