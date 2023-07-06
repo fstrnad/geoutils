@@ -1,8 +1,15 @@
+import hdbscan
+from sklearn.cluster import MiniBatchKMeans
+from sklearn.cluster import AffinityPropagation
+from sklearn.cluster import MeanShift
+from sklearn.cluster import SpectralClustering
 import geoutils.utils.spatial_utils as sput
 import scipy as sp
 import geoutils.utils.statistic_utils as sut
-from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering, OPTICS
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering, OPTICS, Birch
 from sklearn.mixture import GaussianMixture
+import scipy.cluster.hierarchy as shr
+from scipy.spatial.distance import pdist
 import numpy as np
 import xarray as xr
 from kneed import KneeLocator
@@ -25,14 +32,21 @@ def k_means_clustering(data,
     plot_statistics = kmeans_kwargs.pop('plot_statistics', False)
     rem_outlayers = kmeans_kwargs.pop('rm_ol', False)
     sc_th = kmeans_kwargs.pop('sc_th', 0.05)
-
+    minibatch = kmeans_kwargs.pop('minibatch', True)
     k = kmeans_kwargs.pop('n_clusters', None)
     if k is not None:
-        kmeans = KMeans(n_clusters=k,
-                        init="k-means++",
-                        max_iter=max_iter,
-                        n_init=n_init,
-                        **kmeans_kwargs)
+        if minibatch:
+            gut.myprint(f'Using MiniBatchKMeans with {k} clusters')
+            kmeans = MiniBatchKMeans(n_clusters=k,
+                                     max_iter=max_iter,
+                                     n_init=n_init,
+                                     **kmeans_kwargs)
+        else:
+            kmeans = KMeans(n_clusters=k,
+                            init="k-means++",
+                            max_iter=max_iter,
+                            n_init=n_init,
+                            **kmeans_kwargs)
         kmeans.fit(data)
 
     else:
@@ -97,6 +111,98 @@ def k_means_clustering(data,
     return Z, None
 
 
+def agglomerative_clustering(data, **kwargs):
+    """Perform DBSCAN clustering from vector array or distance matrix.
+    See as well https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html
+
+    Args:
+        data (np.Array): 2-d feature array
+
+    Returns:
+        labels: -1 considered as noise
+    """
+    # The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+    n_clusters = kwargs.pop('n_clusters', None)
+    compute_full_tree = kwargs.pop('compute_full_tree', 'auto')
+    if n_clusters is None:
+        compute_full_tree = True
+    plot_statistics = kwargs.pop('plot_statistics', False)
+    rem_outlayers = kwargs.pop('rm_ol', False)
+    sc_th = kwargs.pop('sc_th', 0.05)
+    # The metric to use when calculating distance between instances in a feature array
+    metric = kwargs.pop('metric', 'l2')
+    if 'metric' == 'chebyshev':
+        metric = sp.spatial.distance.chebyshev
+
+    distance_threshold = sc_th if n_clusters is None else None
+
+    linkage = kwargs.pop('linkage', 'complete')
+
+    # Perform DBSCAN clustering from vector array or distance matrix.
+    clustering = AgglomerativeClustering(n_clusters=n_clusters,
+                                         linkage=linkage,
+                                         affinity=metric,
+                                         distance_threshold=distance_threshold,
+                                         compute_full_tree=compute_full_tree).fit(data)
+
+    if plot_statistics:
+        # plot the top three levels of the dendrogram
+        None
+
+    # Cluster labels for each point in the dataset given to fit(). Noisy samples are given the label -1.
+    Z = clustering.labels_
+
+    return Z, None
+
+
+def birch_clustering(data,
+                     **kwargs):
+
+    threshold = kwargs.pop('threshold', 0.01)
+    k = kwargs.pop('n_clusters', 2)
+
+    gut.myprint(f'Get {k} clusters!')
+
+    br = Birch(threshold=threshold,
+               n_clusters=k).fit(data)
+
+    Z = br.predict(data)
+    return Z, None
+
+
+def affinity_clustering(data,
+                        **kwargs):
+
+    damping = kwargs.pop('damping', 0.99)
+
+    br = AffinityPropagation(damping=damping).fit(data)
+
+    Z = br.predict(data)
+    return Z, None
+
+
+def spectral_clustering(data,
+                        **kwargs):
+
+    k = kwargs.pop('n_clusters', 2)
+
+    gut.myprint(f'Get {k} clusters!')
+
+    Z = SpectralClustering(n_clusters=k).fit_predict(data)
+
+    return Z, None
+
+
+def mean_shift_clustering(data,
+                          **kwargs):
+
+    bandwidth = kwargs.pop('bandwidth', None)
+
+    Z = MeanShift(bandwidth=bandwidth).fit_predict(data)
+
+    return Z, None
+
+
 def gm_clustering(data,
                   **kwargs):
 
@@ -110,10 +216,22 @@ def gm_clustering(data,
                          init_params="k-means++",
                          max_iter=max_iter,
                          n_init=n_init,
-                         **kwargs).fit(data)
+                         #  **kwargs
+                         ).fit(data)
 
     Z = gm.predict(data)
-    return Z
+    return Z, None
+
+
+def hdbscan_clustering(data, **kwargs):
+    plot_statistics = kwargs.pop('plot_statistics', False)
+    min_samples = kwargs.pop('min_samples', 5)
+    this_scan = hdbscan.HDBSCAN(min_samples=min_samples)
+    labels = np.unique(this_scan.fit_predict(data))
+    if plot_statistics:
+        hdbscan.condensed_tree_.plot(select_clusters=False,)
+
+    return labels, None
 
 
 def dbscan_clustering(data, **kwargs):
@@ -138,10 +256,10 @@ def dbscan_clustering(data, **kwargs):
                         metric=metric).fit(data)
 
     # Cluster labels for each point in the dataset given to fit(). Noisy samples are given the label -1.
-
+    print(clustering.labels_)
     Z = clustering.labels_
 
-    return Z
+    return Z, None
 
 
 def optics_clustering(data, **kwargs):
@@ -158,45 +276,11 @@ def optics_clustering(data, **kwargs):
     # The metric to use when calculating distance between instances in a feature array
     metric = kwargs.pop('metric', 'correlation')
 
-    min_samples = kwargs.pop('min_samples', 2)
+    min_samples = kwargs.pop('min_samples', 50)
 
     # Perform DBSCAN clustering from vector array or distance matrix.
     clustering = OPTICS(eps=eps, min_samples=min_samples,
                         metric=metric).fit(data)
-
-    # Cluster labels for each point in the dataset given to fit(). Noisy samples are given the label -1.
-
-    Z = clustering.labels_
-
-    return Z
-
-
-def agglomerative_clustering(data, **kwargs):
-    """Perform DBSCAN clustering from vector array or distance matrix.
-    See as well https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html
-
-    Args:
-        data (np.Array): 2-d feature array
-
-    Returns:
-        labels: -1 considered as noise
-    """
-    # The maximum distance between two samples for one to be considered as in the neighborhood of the other.
-    n_clusters = kwargs.pop('n_clusters', None)
-    # The metric to use when calculating distance between instances in a feature array
-    metric = kwargs.pop('metric', 'l2')
-    if 'metric' == 'chebyshev':
-        metric = sp.spatial.distance.chebyshev
-
-    linkage = kwargs.pop('linkage', 'complete')
-
-    # if metric == 'correlation':
-    #     distances =
-
-    # Perform DBSCAN clustering from vector array or distance matrix.
-    clustering = AgglomerativeClustering(n_clusters=n_clusters,
-                                         linkage=linkage,
-                                         affinity=metric).fit(data)
 
     # Cluster labels for each point in the dataset given to fit(). Noisy samples are given the label -1.
 
@@ -231,9 +315,12 @@ def tps_cluster_2d_data(data_arr, tps,
     for data in data_arr:
         if isinstance(data, xr.DataArray):
             if gut.compare_lists(list(data.dims), ['time', 'lon', 'lat']):
-                data = sput.transpose_3D_data(data, dims=['time', 'lon', 'lat'])
-        if len(data.shape) != 3:
-            raise ValueError('Data needs to be of shape 3 (time, x, y)')
+                data = sput.transpose_3D_data(
+                    data, dims=['time', 'lon', 'lat'])
+            elif gut.compare_lists(list(data.dims), ['time', 'ids']):
+                data = sput.transpose_2D_data(data, dims=['time', 'ids'])
+        if len(data.shape) > 3:
+            raise ValueError('Data needs to be of max shape 3 (time, x, y)')
 
         if len(tps) != data.shape[0]:
             raise ValueError(
@@ -243,15 +330,15 @@ def tps_cluster_2d_data(data_arr, tps,
         if isinstance(data, xr.DataArray):
             data = data.data
 
-        if gf[0] != 0 or gf[1] != 0:
-            gut.myprint(f'Apply Gaussian Filter with sigma = {gf}!')
-            sigma = [gf[1], gf[0]]  # sigma_y, sigma_x
+        if len(data.shape) == 3:
+            if gf[0] != 0 or gf[1] != 0:
+                gut.myprint(f'Apply Gaussian Filter with sigma = {gf}!')
+                sigma = [gf[1], gf[0]]  # sigma_y, sigma_x
+                for idx, dp in enumerate(data):
+                    data[idx] = sp.ndimage.filters.gaussian_filter(
+                        dp, sigma, mode='constant')
 
-            for idx, dp in enumerate(data):
-                data[idx] = sp.ndimage.filters.gaussian_filter(
-                    dp, sigma, mode='constant')
-
-        # Reshapedata
+        # Reshapedata to 2d array
         new_arr = data.reshape(*data.shape[:1], -1)
         coll_data.append(new_arr)
 
@@ -271,10 +358,18 @@ def tps_cluster_2d_data(data_arr, tps,
         Z, sign_Z = optics_clustering(data=data_input, **kwargs)
     elif method == 'agglomerative':
         Z, sign_Z = agglomerative_clustering(data=data_input, **kwargs)
+    elif method == 'birch':
+        Z, sign_Z = birch_clustering(data=data_input, **kwargs)
+    elif method == 'spectral':
+        Z, sign_Z = spectral_clustering(data=data_input, **kwargs)
+    elif method == 'affinity':
+        Z, sign_Z = affinity_clustering(data=data_input, **kwargs)
+    elif method == 'mean_shift':
+        Z, sign_Z = mean_shift_clustering(data=data_input, **kwargs)
     else:
         raise ValueError(f'Method {method} not implemented yet!')
 
-    if rm_ol:
+    if rm_ol and sign_Z is not None:
         Z = Z[sign_Z]
         tps = tps[sign_Z]
 
@@ -337,7 +432,7 @@ def apply_cluster_data(data,
     if objects is None:
         objects = np.arange(len(data))
 
-    if rm_ol:
+    if rm_ol and sign_Z is not None:
         Z = Z[sign_Z]
         objects = objects[sign_Z]
 

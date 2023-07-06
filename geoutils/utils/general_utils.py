@@ -807,3 +807,28 @@ def remove_non_dim_coords(ds):
     non_dim_coords = coords - dims
 
     return ds.drop(non_dim_coords)
+
+
+def add_compliment(arr):
+    """
+    Takes an array of integers and appends the negative of each integer (except 0)
+    to the array, ensuring that the resulting array starts with the lowest integer,
+    ends with the highest integer, and contains 0 in the middle.
+
+    Args:
+        arr (list): The input array of integers.
+
+    Returns:
+        list: The updated array with negative integers appended, sorted in ascending order,
+              with 0 in the middle.
+
+    """
+    new_arr = []
+    for num in arr:
+        if num != 0:
+            new_arr.append(num)
+            new_arr.append(-1 * num)
+    new_arr.sort()
+    if 0 not in new_arr:
+        new_arr.insert(len(new_arr) // 2, 0)
+    return new_arr

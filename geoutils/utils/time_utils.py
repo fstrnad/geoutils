@@ -1500,30 +1500,42 @@ def get_tw_periods(
     return {"range": all_time_periods, "tps": np.array(all_tps)}
 
 
-def get_periods_tps(tps, step=1, start=0, freq="D", include_start=True):
-    """Gives the all time points from tps to step.
+def get_periods_tps(tps, end=1, start=0, freq="D", include_start=True):
+    """Gives the all time points from tps to end.
 
     """
-    if step == 0:
+    if end == 0:
         return tps
     else:
         if not include_start and start == 0:
-            sign = math.copysign(step)
+            sign = math.copysign(end)
             tps = add_time_step_tps(tps=tps, time_step=sign*1)
-            step += sign  # because we have shifted the step
+            end += sign  # because we have shifted the end
         if start != 0:
-            if np.abs(start) < np.abs(step):
-                stps = add_time_step_tps(
-                    tps=tps, time_step=start, freq=freq)
-            elif np.abs(start) == np.abs(step):
-                return add_time_step_tps(
-                    tps=tps, time_step=start, freq=freq)
+            if start < 0:
+                if np.abs(start) > np.abs(end):
+                    stps = add_time_step_tps(
+                        tps=tps, time_step=start, freq=freq)
+                elif np.abs(start) == np.abs(end):
+                    return add_time_step_tps(
+                        tps=tps, time_step=start, freq=freq)
+                else:
+                    gut.myprint(f'ERROR! Step needs to be larger than start!')
+                    stps = tps
             else:
-                gut.myprint(f'ERROR! Step needs to be larger than start!')
-                stps = tps
+                if start < end:
+                    stps = add_time_step_tps(
+                        tps=tps, time_step=start, freq=freq)
+                elif np.abs(start) == np.abs(end):
+                    return add_time_step_tps(
+                        tps=tps, time_step=start, freq=freq)
+                else:
+                    gut.myprint(f'ERROR! Step needs to be larger than start!')
+                    stps = tps
+
         else:
             stps = tps
-        etps = add_time_step_tps(tps=tps, time_step=step, freq=freq)
+        etps = add_time_step_tps(tps=tps, time_step=end, freq=freq)
         all_time_periods = []
 
         if gut.is_single_tp(stps):
@@ -1851,6 +1863,17 @@ def arr_lagged_ts(ts_arr, lag):
     return df
 
 
+def get_lagged_ts(ts1, ts2, lag=0):
+    if lag > 0:
+        ts1 = ts1[:-np.abs(lag)]
+        ts2 = ts2[np.abs(lag):]
+    elif lag < 0:
+        ts1 = ts1[np.abs(lag):]
+        ts2 = ts2[:-np.abs(lag)]
+
+    return ts1, ts2
+
+
 def lead_lag_corr(ts1, ts2,
                   maxlags=20,
                   corr_method='spearman',
@@ -1877,14 +1900,8 @@ def lead_lag_corr(ts1, ts2,
         corr_func = st.stats.pearsonr
     tau_arr = np.arange(-maxlags, maxlags+1, 1)
     for lag in tau_arr:
-        if lag > 0:
-            corr, p_val = corr_func(nts1[:-np.abs(lag)],
-                                    nts2[np.abs(lag):])
-        elif lag < 0:
-            corr, p_val = corr_func(nts1[np.abs(lag):],
-                                    nts2[:-np.abs(lag)])
-        else:
-            corr, p_val = corr_func(nts1, nts2)
+        ts1_lag, ts2_lag = get_lagged_ts(ts1=nts1, ts2=nts2, lag=lag)
+        corr, p_val = corr_func(ts1_lag, ts2_lag)
         corr_range.append(corr)
         p_val_arr.append(p_val)
     corr_range = np.array(corr_range)

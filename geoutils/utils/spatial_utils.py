@@ -804,7 +804,7 @@ def get_corr_map(ds, var, sids=None, method='spearman', p_value_test='twosided')
     return da_corr
 
 
-def compute_correlation(data_array, ts, correlation_type='spearman'):
+def compute_correlation(data_array, ts, correlation_type='spearman', lag_arr=None):
     """
     Compute the Pearson or Spearman correlation between a time series t_p and all time series in an xarray DataArray.
 
@@ -822,25 +822,36 @@ def compute_correlation(data_array, ts, correlation_type='spearman'):
     xarray.DataArray
         A DataArray with dimensions (lon, lat) containing the correlation values between t_p and the time series in data_array.
     """
+    lag_arr = [0] if lag_arr is None else lag_arr
+    lag_arr = gut.add_compliment(lag_arr)
     corr_array = xr.DataArray(np.zeros(
-        (data_array.lon.size, data_array.lat.size)), dims=("lon", "lat"), name='corr')
+        (data_array.lon.size, data_array.lat.size, len(lag_arr))),
+        dims=("lon", "lat", "lag"),
+        name='corr')
     p_array = xr.DataArray(np.zeros(
-        (data_array.lon.size, data_array.lat.size)), dims=("lon", "lat"), name='p')
-
+        (data_array.lon.size, data_array.lat.size, len(lag_arr))),
+        dims=("lon", "lat", "lag"),
+        name='p')
     for i, lon in enumerate(tqdm(data_array.lon)):
         for j, lat in enumerate(data_array.lat):
-            time_series = data_array.sel(lon=lon, lat=lat).values.flatten()
-            if correlation_type == 'pearson':
-                corr, p = st.pearsonr(ts, time_series)
-            elif correlation_type == 'spearman':
-                corr, p = st.spearmanr(ts, time_series)
-            else:
-                raise ValueError(
-                    f"Invalid correlation_type: {correlation_type}. Must be either 'pearson' or 'spearman'.")
-            corr_array[i, j] = corr
-            p_array[i, j] = p
+            for l, lag in enumerate(lag_arr):
+                time_series_loc = data_array.sel(
+                    lon=lon, lat=lat).values.flatten()
+                ts_1_lag, ts_2_lag = tu.get_lagged_ts(ts1=time_series_loc,
+                                                      ts2=ts,
+                                                      lag=lag)
+                if correlation_type == 'pearson':
+                    corr, p = st.pearsonr(ts_1_lag, ts_2_lag)
+                elif correlation_type == 'spearman':
+                    corr, p = st.spearmanr(ts_1_lag, ts_2_lag)
+                else:
+                    raise ValueError(
+                        f"Invalid correlation_type: {correlation_type}. Must be either 'pearson' or 'spearman'.")
+                corr_array[i, j, l] = corr
+                p_array[i, j, l] = p
     corr_array.coords["lon"] = data_array.lon
     corr_array.coords["lat"] = data_array.lat
+    corr_array.coords["lag"] = lag_arr
     da_corr = corr_array.to_dataset()
     da_corr['p'] = p_array
     da_corr = da_corr.transpose().compute()
@@ -1061,7 +1072,7 @@ def da_lon2_360(da):
     return da
 
 
-def transpose_3D_data(da, dims=['time', 'lon', 'lat']):
+def transpose_3D_data(da, dims=['lat', 'lon', 'time']):
     da_dims = list(da.dims)
     if not gut.compare_lists(da_dims, dims):
         gut.myprint(f'Transpose data from {da_dims} to {dims} not possible!')
@@ -1071,7 +1082,7 @@ def transpose_3D_data(da, dims=['time', 'lon', 'lat']):
     return da
 
 
-def transpose_2D_data(da, dims=['lon', 'lat']):
+def transpose_2D_data(da, dims=['lat', 'lon']):
     da_dims = list(da.dims)
     if not gut.compare_lists(da_dims, dims):
         gut.myprint(f'Transpose data from {da_dims} to {dims} not possible!')
@@ -1326,3 +1337,34 @@ def calculate_percentile(arr1, arr2,):
             percentile_values[i, j] = this_val
 
     return xr.DataArray(percentile_values, coords=arr1.coords, dims=arr1.dims)
+
+
+def extract_defined_time_series(xarr, mask):
+    """
+    Extracts the defined time series from an xarray object.
+
+    Parameters:
+        xarr (xarray.DataArray): An xarray object of dimension (lat, lon, time).
+
+    Returns:
+        xarray.DataArray: An xarray object containing the defined time series with the same time coordinates.
+    """
+    # Convert the xarray object to a numpy array
+    mask = transpose_2D_data(da=mask, dims=['lat', 'lon'])
+    ids = np.where(mask.data.flatten())[0]
+    xarr = xarr.where(mask)
+    xarr = transpose_3D_data(da=xarr, dims=['lat', 'lon', 'time'])
+    arr = xarr.values
+
+    # Find the locations where all time points are np.nan
+    undefined_locs = np.all(np.isnan(arr), axis=-1)
+
+    # Extract the defined time series by excluding the undefined locations
+    defined_time_series = arr[~undefined_locs]
+
+    # Create a new xarray object with the defined time series and the same time coordinates
+    defined_xarr = xr.DataArray(defined_time_series, coords={'time': xarr.time,
+                                                             'ids': ids},
+                                dims=['ids', 'time'])
+
+    return defined_xarr

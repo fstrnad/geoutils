@@ -21,22 +21,71 @@ def estimate_distance(minimum_value, maximum_value, min_dist_val=5):
     # Calculate the range between minimum and maximum value
     value_range = maximum_value - minimum_value
 
-    # Calculate the distance between lines
-    distance = value_range / min_dist_val
+    # Calculate the maximum step size to be a multiple of 6
+    step_size = max(value_range / 6, min_dist_val)
 
-    if distance % min_dist_val != 0:
-        distance = (distance // min_dist_val + 1) * min_dist_val
-    return distance
+    # Check if the step size is smaller than min_dist_val
+    if step_size < min_dist_val:
+        return min_dist_val
+
+    # Check if the step size is already a multiple of 5
+    if step_size % 5 == 0:
+        return step_size
+
+    # Find the closest multiple of 5
+    closest_multiple = ((step_size // 5) + 1) * 5
+
+    return closest_multiple
 
 
-def get_grid_dist(ext_dict):
+
+def get_grid_steps(grid_step, min_value=-90, max_value=90):
+    """
+    Generates a sorted NumPy array of grid steps within the specified range,
+    with the specified grid step, including the 0 value.
+
+    Args:
+        grid_step (int): The step size between consecutive grid points.
+        min_value (int, optional): The minimum value of the grid steps range (default: -90).
+        max_value (int, optional): The maximum value of the grid steps range (default: 90).
+
+    Returns:
+        numpy.ndarray: A sorted NumPy array of grid steps.
+
+    Examples:
+        >>> grid_steps = get_grid_steps(15)
+        >>> print(grid_steps)
+        [-90 -75 -60 -45 -30 -15   0  15  30  45  60  75  90]
+
+        >>> grid_steps = get_grid_steps(10, -50, 50)
+        >>> print(grid_steps)
+        [-50 -40 -30 -20 -10   0  10  20  30  40  50]
+    """
+
+    steps = [0]  # Include 0 value
+
+    current_step = grid_step
+    while current_step <= max_value:
+        steps.append(current_step)
+        current_step += grid_step
+
+    current_step = -grid_step
+    while current_step >= min_value:
+        steps.append(current_step)
+        current_step -= grid_step
+
+    steps.sort()
+    return np.array(steps)
+
+
+def get_grid_dist(ext_dict, min_dist_val=15):
     min_lon = ext_dict['min_lon']
     max_lon = ext_dict['max_lon']
     min_lat = ext_dict['min_lat']
     max_lat = ext_dict['max_lat']
 
-    gs_lon = estimate_distance(min_lon, max_lon, min_dist_val=5)
-    gs_lat = estimate_distance(min_lat, max_lat, min_dist_val=5)
+    gs_lon = estimate_distance(min_lon, max_lon, min_dist_val=min_dist_val)
+    gs_lat = estimate_distance(min_lat, max_lat, min_dist_val=min_dist_val)
 
     return gs_lon, gs_lat
 
@@ -60,18 +109,20 @@ def set_grid(ax, alpha=0.5,
         gs_lat = kwargs.pop('gs_lat', None)
         if gs_lon is None:
             gs_lon, gs_lat = get_grid_dist(ext_dict=ext_dict)
+        else:
+            gs_lat = 20 if gs_lat is None else gs_lat
+
         if proj != 'PlateCarree':
             gs_lon = 60
             gs_lat = 30
     else:
         gs_lon = 30
         gs_lat = 20
-
     # Generate the grid
     gl = ax.gridlines(
         draw_labels=True,
-        xlocs=np.arange(-180, 181, gs_lon),
-        ylocs=np.arange(-90, 91, gs_lat),
+        xlocs=get_grid_steps(gs_lon, min_value=-180, max_value=180),
+        ylocs=get_grid_steps(gs_lat, min_value=-90, max_value=90),
         crs=ccrs.PlateCarree(),
         x_inline=False,
         y_inline=False,
@@ -139,7 +190,7 @@ def set_extent(da, ax,
                     np.min(da.coords["lat"])) if da is not None else min_ext_lat
                 max_ext_lat = float(
                     np.max(da.coords["lat"])) if da is not None else max_ext_lat
-                print(min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat)
+
     if lat_range is not None or lon_range is not None:
         lat_range = lat_range if lat_range is not None else [
             min_ext_lat, max_ext_lat]
@@ -203,7 +254,8 @@ def create_map(
     if ax is None:
         fig, ax = plt.subplots(figsize=(figsize))
         ax = plt.axes(projection=proj)
-        plt_grid = True
+        unset_grid = kwargs.pop('unset_grid', False)
+        plt_grid = True if not unset_grid else False
     else:
         ax_central_longitude = ax.projection.proj4_params['lon_0']
         if ax_central_longitude == 180:
@@ -242,8 +294,13 @@ def create_map(
         #                alpha=alpha)
         land_ocean = kwargs.pop("land_ocean", False)
         if land_ocean:
-            ax.add_feature(ctp.feature.OCEAN, alpha=alpha, zorder=-1)
-            ax.add_feature(ctp.feature.LAND, alpha=alpha, zorder=-1)
+            # ax.add_feature(ctp.feature.OCEAN, alpha=.4, zorder=-1)
+            ax.add_feature(ctp.feature.LAND, alpha=.3, zorder=-1)
+        if projection == "PlateCarree":
+            rem_frame = kwargs.pop("rem_frame", False)
+            if rem_frame:
+                # Remove the frame around the map
+                ax.outline_patch.set_visible(False)
 
     if plt_grid:
         ax, kwargs = set_grid(ax, alpha=alpha,
@@ -512,7 +569,7 @@ def plot_2D(
     # plotting
     color = kwargs.pop("color", None)
     alpha = kwargs.pop("alpha", 1.0)
-    lw = kwargs.pop("lw", 1)
+    lw = kwargs.pop("lw", 2)
     size = kwargs.pop("size", 1)
     marker = kwargs.pop("marker", "o")
     fillstyle = kwargs.pop("fillstyle", "full")
@@ -880,9 +937,10 @@ def plot_wind_field(
     lw = kwargs.pop("lw", 4)
     scale = kwargs.pop("scale", None)
     headwidth = kwargs.pop('headwidth', 6)
-    width = kwargs.pop('width', 0.01)
+    width = kwargs.pop('width', 0.03)
     headaxislength = kwargs.pop('headaxislength', 3)
     headlength = kwargs.pop('headlength', 5)
+    zorder = kwargs.pop('zorder', 10)
     if stream:
         magnitude = (u ** 2 + v ** 2) ** 0.5
         im_stream = ax.streamplot(
@@ -910,6 +968,7 @@ def plot_wind_field(
                 headaxislength=headaxislength,
                 headlength=headlength,
                 linewidth=lw,
+                zorder=zorder,
             )
         else:
             Q = ax.quiver(
@@ -924,6 +983,7 @@ def plot_wind_field(
                 headaxislength=headaxislength,
                 headlength=headlength,
                 linewidth=lw,
+                zorder=zorder,
             )
         key_length = kwargs.pop('key_length', 1)
         wind_unit = kwargs.pop('wind_unit', r"$\frac{m}{s}$")
@@ -978,6 +1038,8 @@ def create_multi_plot(nrows, ncols, projection=None,
     run_idx = 1
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx
+    if nrows*ncols/end_idx >= nrows:
+        nrows = nrows - 1 if nrows > 1 else nrows
 
     for i in range(nrows):
         for j in range(ncols):
@@ -1005,7 +1067,7 @@ def create_multi_plot(nrows, ncols, projection=None,
         axs = axs[0]
 
     title = kwargs.pop('title', None)
-    y_title = kwargs.pop('y_title', 1.02)
+    y_title = kwargs.pop('y_title', .9)
     if title is not None:
         put.set_title(title=title, ax=None, fig=fig,
                       y_title=y_title)

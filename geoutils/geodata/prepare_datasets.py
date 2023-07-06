@@ -125,7 +125,8 @@ plevels = [5, 50, 100, 150, 200,
 
 # plevels = [50, 150, 950, 600]
 
-plevels = [400, 800]
+plevels = [100, 200, 300, 400,
+           500, 600, 700, 800]
 name = 'era5'
 grid_step = 2.5
 
@@ -152,7 +153,7 @@ for plevel in plevels:
     fname_z = dirname_z + f'geopotential_{plevel}_1959_2021.nc'
 
     fname_pv = dirname_pv + f'potential_vorticity_{plevel}_1959_2021.nc'
-    fname_sh = dirname_sh + f'specific_humidity_{plevel}_1979_2020.nc'
+    fname_sh = dirname_sh + f'specific_humidity_{plevel}_1959_2021.nc'
     fname_temp = dirname_temp + f'temperature_{plevel}_1959_2021.nc'
 
     fnames_dict = dict(
