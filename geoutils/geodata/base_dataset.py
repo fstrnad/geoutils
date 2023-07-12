@@ -449,7 +449,8 @@ class BaseDataset():
             ds['olr'] *= -1./3600  # convert to W/m2
             ds['olr'].attrs.update({'units': 'W/m2'})
             ds.attrs.update({'long_name': 'Outgoing longwave radiation'})
-            ds['olr'].attrs.update({'long_name': 'Outgoing longwave radiation'})
+            ds['olr'].attrs.update(
+                {'long_name': 'Outgoing longwave radiation'})
 
         if "ar_binary_tag" in names:
             ds = ds.rename({"ar_binary_tag": "ar"})
@@ -568,8 +569,10 @@ class BaseDataset():
                                            use_ds_grid=True,
                                            large_ds=False
                                            )
-                mask_name = self.get_vars(ds=mask_ds)[0]
-                mask_ds = mask_ds[mask_name]
+                if isinstance(mask_ds, xr.Dataset):
+                    mask_name = self.get_vars(ds=mask_ds)[0]
+                    mask_ds = mask_ds[mask_name]
+
                 if not mask.shape == mask_ds.shape:
                     raise ValueError(
                         f'LSM Mask {mask_ds.shape} and input data {mask.shape} not of same shape')
@@ -581,6 +584,8 @@ class BaseDataset():
                 coords=mask_coords,
                 name="mask",
             )
+            if np.count_nonzero(self.mask.data) == 0:
+                raise ValueError('ERROR! Mask is the whole dataset!')
             self.ds = xr.where(self.mask, self.ds, np.nan)
             self.ds = self.ds.assign_attrs(self.info_dict)
             init_indices = kwargs.pop('init_indices', True)
@@ -703,9 +708,11 @@ class BaseDataset():
 
         return full_idx_lst
 
-    def get_map_for_idx(self, idx_lst):
+    def get_map_for_idx(self, idx_lst, fill_val=0):
         flat_idx_arr = self.flat_idx_array(idx_list=idx_lst)
         idx_lst_map = self.get_map(flat_idx_arr)
+        if fill_val != 0:
+            idx_lst_map = xr.where(idx_lst_map == 0, fill_val, idx_lst_map)
         return idx_lst_map
 
     def init_map_indices(self, verbose=True):
@@ -786,7 +793,7 @@ class BaseDataset():
 
         return dims
 
-    def get_idx_for_loc(self, locs):
+    def get_idx_for_locs(self, locs):
         """This is just a wrapper for self.get_index_for_coord.
 
         Args:
@@ -856,7 +863,7 @@ class BaseDataset():
         """
         index_locs_lst = []
 
-        index_locs_lst = self.get_idx_for_loc(locs=locations)
+        index_locs_lst = self.get_idx_for_locs(locs=locations)
         loc_map = self.get_map_for_idx(idx_lst=index_locs_lst)
 
         return loc_map
@@ -1235,7 +1242,7 @@ class BaseDataset():
 
     def get_mean_loc_idx(self, idx_lst):
         mean_loc = self.get_mean_loc(idx_lst=idx_lst)
-        mean_idx = self.get_idx_for_loc(locs=mean_loc)
+        mean_idx = self.get_idx_for_locs(locs=mean_loc)
         return mean_idx
 
     # ####################### temporal functions ############################
@@ -1459,13 +1466,15 @@ class BaseDataset():
                 data_arr.append(self.ds.sel(lon=lon, lat=lat)[var].data)
             data_arr = np.array(data_arr)
 
-            if 'plevel' in dims:
+            if 'lev' in dims:
                 data_arr = gut.create_xr_ds(
                     data=data_arr,
-                    dims=['ids', 'plevel', 'time'],
+                    dims=['ids', 'lev', 'time'],
                     coords={'time': self.ds.time,
                             'ids': idx_lst,
-                            'plevel': self.ds.plevel},
+                            'lon': ('ids', [loc[0] for loc in locs]),
+                            'lat': ('ids', [loc[1] for loc in locs]),
+                            'lev': self.ds.lev},
                     name=var
                 )
             else:
@@ -1473,7 +1482,10 @@ class BaseDataset():
                     data=data_arr,
                     dims=['ids', 'time'],
                     coords={'time': self.ds.time,
-                            'ids': idx_lst, },
+                            'ids': idx_lst,
+                            'lon': ('ids', [loc[0] for loc in locs]),
+                            'lat': ('ids', [loc[1] for loc in locs]),
+                            },
                     name=var
                 )
         return data_arr
@@ -1489,7 +1501,7 @@ class BaseDataset():
         if var is None:
             var = self.var_name
 
-        idx_lst = self.get_idx_for_loc(locs=locs)
+        idx_lst = self.get_idx_for_locs(locs=locs)
         ts = self.get_data_for_indices(idx_lst=idx_lst, var=var)
         return ts
 
@@ -1611,6 +1623,45 @@ class BaseDataset():
         locs = self.get_locs_for_indices(idx_lst=nids)
         return locs
 
+    def get_data_spatially_seperated_regions(self, min_num_locations=10,
+                                             dist=None,
+                                             var=None,
+                                             verbose=True):
+        """This function seperates the data spatially into regions that are seperated by a distance of dist.
+        but the regions are also required to have a minimum number of locations.
+        The locations are spatially connected by a distance of dist.
+
+        Args:
+            min_num_locations (int, optional): Minium number of locations. Defaults to 10.
+            dist (float, optional): Minimum distance. Defaults to None.
+            verbose (bool, optional): verbose results. Defaults to True.
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            _type_: _description_
+        """
+        if dist is None:
+            dist = self.grid_step + 0.5
+        if self.mask is None:
+            raise ValueError(
+                f'ERROR mask is None! Check if mask is computed properly!')
+        def_locs = self.def_locs
+        groups = sput.find_location_groups(def_locs,
+                                           grid_step=dist,
+                                           min_num_locations=min_num_locations,
+                                           verbose=verbose)
+
+        data_arr = []
+        for group in groups:
+            data = self.get_data_for_locs(locs=group, var=var)
+            index_lst = self.get_idx_for_locs(locs=group)
+            data_map = self.get_map_for_idx(idx_lst=index_lst, fill_val=np.nan)
+            data_arr.append(dict(data=data, data_map=data_map,
+                                 locs=group, idx_lst=index_lst))
+        return data_arr
+
     def make_derivative(self, dx='time', var_name=None, group='JJAS'):
         if var_name is None:
             var_name = self.var_name
@@ -1685,7 +1736,8 @@ class BaseDataset():
 
         da_es = self.set_ds_attrs_evs(ds=da_es)
         self.ds["evs"] = da_es
-        self.ds = self.set_ds_attrs_evs(ds=self.ds) # set also to dataset object the attrs.
+        # set also to dataset object the attrs.
+        self.ds = self.set_ds_attrs_evs(ds=self.ds)
 
         return self.ds
 

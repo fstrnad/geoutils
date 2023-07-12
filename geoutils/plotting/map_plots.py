@@ -588,10 +588,6 @@ def plot_2D(
         if isinstance(projection, str):
             projection = get_projection(projection='PlateCarree')
 
-    # set colormap
-    if cmap is not None:
-        cmap = plt.get_cmap(cmap)
-
     set_norm = kwargs.pop('norm', None)
     levels = kwargs.pop("levels", None)
     if plot_type == 'contourf' and levels is None:
@@ -638,10 +634,22 @@ def plot_2D(
                     levels, round_dec) if round_dec is not None else levels
             if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
                 # norm = mpl.colors.LogNorm(levels=levels)
+
+                n_colors = len(levels)
+                # set colormap
+                if cmap is not None:
+                    cmap = plt.get_cmap(cmap, n_colors)
+                colors = np.array([mpl.colors.rgb2hex(cmap(i)) for i in range(n_colors)])
+                # Set center of colormap to specific color
+                centercolor = kwargs.pop('centercolor', '#FFFFFF')
+                if centercolor is not None:
+                    idx = [len(colors) // 2 - 1, len(colors) // 2]
+                    colors[idx] = centercolor
+                cmap = mpl.colors.ListedColormap(colors)
                 norm = mpl.colors.BoundaryNorm(
                     levels, ncolors=cmap.N, clip=True)
-                # vmin = vmax = None
             else:
+                cmap = plt.get_cmap(cmap)
                 norm = None
     else:
         sci = round_dec = norm = levels = None
@@ -1066,8 +1074,9 @@ def create_multi_plot(nrows, ncols, projection=None,
     else:
         axs = axs[0]
 
+    y_title_pos = 1. - 0.025*(nrows-1)
     title = kwargs.pop('title', None)
-    y_title = kwargs.pop('y_title', .9)
+    y_title = kwargs.pop('y_title', y_title_pos)
     if title is not None:
         put.set_title(title=title, ax=None, fig=fig,
                       y_title=y_title)

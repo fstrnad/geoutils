@@ -20,7 +20,7 @@ reload(tut)
 # ======================================================================================
 
 
-def get_cgt_index(z200, monthly=False, time_range=None):
+def get_cgt_index(z200, ):
     """Returns the cgti index based on the 200hPa GPH dataset.
 
     Args:
@@ -42,11 +42,6 @@ def get_cgt_index(z200, monthly=False, time_range=None):
     box_tropics.name = 'cgti'
 
     cgti_idx = box_tropics.to_dataset()
-
-    if monthly:
-        cgti_days = cgti_idx.time
-        cgti_mm = tut.compute_timemean(cgti_idx, timemean='week')
-        cgti_idx = cgti_mm.interp(time=cgti_days)
 
     return cgti_idx
 

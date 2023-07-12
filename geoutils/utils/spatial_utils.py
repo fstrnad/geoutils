@@ -62,6 +62,7 @@ def get_mean_std_loc(locs):
 
     return {'mean_lon': mean_lon,
             'mean_lat': mean_lat,
+            'mean_loc': np.array([mean_lon, mean_lat]),
             'std_lon': std_lon,
             'std_lat': std_lat}
 
@@ -823,7 +824,8 @@ def compute_correlation(data_array, ts, correlation_type='spearman', lag_arr=Non
         A DataArray with dimensions (lon, lat) containing the correlation values between t_p and the time series in data_array.
     """
     lag_arr = [0] if lag_arr is None else lag_arr
-    lag_arr = gut.add_compliment(lag_arr)
+    # lag_arr = gut.add_compliment(lag_arr)
+    lag_arr = gut.make_arr_negative(arr=lag_arr)  # Only use past lags to target time series
     corr_array = xr.DataArray(np.zeros(
         (data_array.lon.size, data_array.lat.size, len(lag_arr))),
         dims=("lon", "lat", "lag"),
@@ -853,6 +855,11 @@ def compute_correlation(data_array, ts, correlation_type='spearman', lag_arr=Non
     corr_array.coords["lat"] = data_array.lat
     corr_array.coords["lag"] = lag_arr
     da_corr = corr_array.to_dataset()
+    p_array_corr = sut.correct_p_values(pvals=p_array.data, method='fdr_bh')
+    p_array_corr = xr.DataArray(
+        p_array_corr,
+        dims=("lon", "lat", "lag"),
+        name='p')
     da_corr['p'] = p_array
     da_corr = da_corr.transpose().compute()
     return da_corr
@@ -1368,3 +1375,63 @@ def extract_defined_time_series(xarr, mask):
                                 dims=['ids', 'time'])
 
     return defined_xarr
+
+
+def find_location_groups(locations, grid_step=3, min_num_locations=5, verbose=True):
+    """
+    Find groups of locations where each location shares at least one neighbor within a specified distance.
+
+    Parameters:
+        locations (list): A list of locations, where each location is a tuple of float values (lon, lat).
+        grid_step (float): The maximum distance allowed between neighboring locations within a group.
+
+    Returns:
+        list: A list of arrays, where each array represents a group of locations.
+    """
+    groups = []
+
+    def find_group(location):
+        for group in groups:
+            for loc in group:
+                if is_neighbor(location, loc):
+                    return group
+        return None
+
+    def is_neighbor(loc1, loc2):
+        return np.abs(loc1[0] - loc2[0]) <= grid_step \
+            and np.abs(loc1[1] - loc2[1]) <= grid_step
+
+    for location in locations:
+        group = find_group(location)
+        if group is not None:
+            group.append(location)
+        else:
+            groups.append([location])
+
+    merged_groups = []
+    for group in groups:
+        merged = False
+        for merged_group in merged_groups:
+            for loc in group:
+                for merged_loc in merged_group:
+                    if is_neighbor(loc, merged_loc):
+                        merged_group.extend(group)
+                        merged = True
+                        break
+                if merged:
+                    break
+            if merged:
+                break
+        if not merged:
+            merged_groups.append(group)
+
+    return_arr = []
+    tot_sign_locs = 0
+    for group in merged_groups:
+        if len(group) >= min_num_locations:
+            return_arr.append(np.array(group))
+            tot_sign_locs += len(group)
+    gut.myprint(f'Found {len(return_arr)} groups with {tot_sign_locs} locations',
+                verbose=verbose)
+
+    return return_arr

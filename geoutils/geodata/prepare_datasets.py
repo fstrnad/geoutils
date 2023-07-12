@@ -20,6 +20,7 @@ if os.getenv("HOME") == '/home/goswami/fstrnad80' or os.getenv("HOME") == '/home
     dirname_slhf = "/mnt/qb/goswami/data/era5/single_pressure_level/surface_latent_heat_flux/"
     dirname_uvrs = "/mnt/qb/goswami/data/era5/single_pressure_level/downward_uv_radiation_at_the_surface/"
     dirname_tcw = "/mnt/qb/goswami/data/era5/single_pressure_level/total_column_water/"
+    dirname_mslp = "/mnt/qb/goswami/data/era5/single_pressure_level/mean_sea_level_pressure/"
 else:
     dirname_ttr = "/mnt/qb/goswami/data/era5/single_pressure_level/top_net_thermal_radiation/"
     dirname_sp = "/home/strnad/data/era5/single_pressure_level/surface_pressure/"
@@ -76,44 +77,48 @@ fname_uvrs = dirname_uvrs + \
     'downward_uv_radiation_at_the_surface_sfc_1959_2022.nc'
 fname_tcw = dirname_tcw + \
     'total_column_water_sfc_1959_2022.nc'
+fname_mslp = dirname_mslp + \
+    'mean_sea_level_pressure_sfc_1959_2022.nc'
+
 
 # %%
-# print('Loading Data', flush=True)
-# grid_steps = [2.5]
-# fnames_dict = dict(
-#     vimd=fname_vimd,
-#     t2m=fname_t2m,
-#     sst=fname_sst,
-#     sp=fname_sp,
-#     ttr=fname_ttr,
-#     tcrw=fname_tcrw,
-#     ewvf=fname_ewvf,
-#     nwvf=fname_nwvf,
-#     slhf=fname_slhf,
-#     uvb=fname_uvrs,
-#     tcw=fname_tcw
-# )
+print('Loading Data', flush=True)
+grid_steps = [2.5, 1]
+fnames_dict = dict(
+    vimd=fname_vimd,
+    t2m=fname_t2m,
+    sst=fname_sst,
+    sp=fname_sp,
+    ttr=fname_ttr,
+    tcrw=fname_tcrw,
+    ewvf=fname_ewvf,
+    nwvf=fname_nwvf,
+    slhf=fname_slhf,
+    uvb=fname_uvrs,
+    tcw=fname_tcw,
+    msl=fname_mslp,
+)
 
-# name = 'era5'
-# var_names = ['vimd', 'ewvf', 'nwvf', 't2m', 'sp', 'ttr', 'tcrw']
-# var_names = ['slhf', 'uvb', 'tcw']
+name = 'era5'
+var_names = ['vimd', 'ewvf', 'nwvf', 't2m', 'sp', 'ttr', 'tcrw']
+var_names = ['msl']
 
-# for idx, var_name in enumerate(var_names):
-#     for grid_step in grid_steps:
-#         fname = fnames_dict[var_name]
-#         dataset_file = output_dir + \
-#             f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_ds.nc"
+for idx, var_name in enumerate(var_names):
+    for grid_step in grid_steps:
+        fname = fnames_dict[var_name]
+        dataset_file = output_dir + \
+            f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_ds.nc"
 
-#         if os.path.exists(dataset_file) is False:
-#             gut.myprint(f'Create Dataset {dataset_file}')
-#             ds = BaseDataset(data_nc=fname,
-#                              #  var_name=var_name,
-#                              grid_step=grid_step,
-#                              large_ds=True,
-#                              )
-#             ds.save(dataset_file)
-#         else:
-#             gut.myprint(f'File {fname} already exists!')
+        if os.path.exists(dataset_file) is False:
+            gut.myprint(f'Create Dataset {dataset_file}')
+            ds = BaseDataset(data_nc=fname,
+                             #  var_name=var_name,
+                             grid_step=grid_step,
+                             large_ds=True,
+                             )
+            ds.save(dataset_file)
+        else:
+            gut.myprint(f'File {fname} already exists!')
 
 # %%  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Wind and geopot fields on different pressure levels

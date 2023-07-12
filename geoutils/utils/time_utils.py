@@ -908,8 +908,12 @@ def get_tm_name(timemean):
         tm = "Q-FEB"
     elif timemean == "year":
         tm = "1Y"
-    elif timemean == 'pentad':
+    elif timemean == 'pentad' or timemean == '5D' or timemean == '5d':
         tm = "5D"
+    elif timemean == '3D' or timemean == '3d':
+        tm = "3D"
+    elif timemean == '2D' or timemean == '2d':
+        tm = "2D"
     else:
         raise ValueError(
             f"This time mean {timemean} does not exist! Please choose week, month, season or year!"
@@ -950,6 +954,8 @@ def compute_timemean(ds, timemean, dropna=True, verbose=True):
     Returns:
         xr.dataset: monthly average dataset
     """
+    if timemean is None:
+        return ds
     tm = get_tm_name(timemean)
 
     gut.myprint(
@@ -2365,7 +2371,7 @@ def check_time_overlap(da1, da2, return_overlap=False):
         return bool(time1.intersection(time2))
 
 
-def select_random_timepoints(dataarray, sample_size=1):
+def select_random_timepoints(dataarray, sample_size=1, seed=None):
     """
     Returns a random sample of time points from an xarray dataarray along the time dimension.
     The time points are sorted in time.
@@ -2378,6 +2384,8 @@ def select_random_timepoints(dataarray, sample_size=1):
         xarray.DataArray: A DataArray containing a random sample of time points, sorted in time.
     """
     time_vals = dataarray.time.values
+    if seed is not None:
+        np.random.seed(seed)
     random_sample = np.random.choice(
         time_vals, size=sample_size, replace=False)
     random_sample.sort()

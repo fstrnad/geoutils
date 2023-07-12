@@ -1,4 +1,4 @@
-import statsmodels.api as sm
+import statsmodels.stats as sm
 from statsmodels.tsa.ar_model import AutoReg
 import geoutils.utils.time_utils as tu
 from sklearn.preprocessing import minmax_scale
@@ -42,6 +42,20 @@ def holm(pvals, alpha=0.05, corr_type="dunn"):
     except IndexError:
         lst_idx = []
     return lst_idx
+
+
+def correct_p_values(pvals, alpha=0.05, method="fdr_bh"):
+    if isinstance(pvals, xr.DataArray):
+        pvals = pvals.data
+    p_data_shape = pvals.shape
+    if method == 'fdr_bh':
+        bools, p_corrected = sm.multitest.fdrcorrection(pvals.flatten(),
+                                                        alpha=alpha,
+                                                        method='indep',
+                                                        is_sorted=False)
+    else:
+        raise ValueError(f'Correction type {method} not implemented!')
+    return p_corrected.reshape(p_data_shape)
 
 
 def bin_ds(ds, vmin=None, vmax=None, **kwargs):
@@ -640,6 +654,3 @@ def get_values_above_val(dataarray, val=None, q=None, dim='time'):
         'below': below_val,
         'between': between_val
     }
-
-
-

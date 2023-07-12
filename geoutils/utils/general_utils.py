@@ -832,3 +832,20 @@ def add_compliment(arr):
     if 0 not in new_arr:
         new_arr.insert(len(new_arr) // 2, 0)
     return new_arr
+
+
+def make_arr_negative(arr):
+    """Gets for an array of integers for every item the negative compliment
+
+    Args:
+        arr (np.array): list or array
+
+    Returns:
+        np.array: sorted list of negative items, always add 0 at the end.
+    """
+    new_arr = -1*np.abs(arr)
+    new_arr.sort()
+    new_arr = np.append(new_arr, [0])
+    new_arr = np.unique(new_arr)
+
+    return new_arr

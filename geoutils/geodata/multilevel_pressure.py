@@ -61,6 +61,7 @@ class MultiPressureLevelDataset(bds.BaseDataset):
             self.idx_map = base_ds.idx_map
             self.lon_range = base_ds.lon_range
             self.lat_range = base_ds.lat_range
+            self.info_dict = base_ds.info_dict
         self.dims = base_ds.dims
 
     def set_plevel_attrs(self):

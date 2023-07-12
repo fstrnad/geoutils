@@ -116,6 +116,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             self.load_dataset_attributes(base_ds=ds_vwind, init_mask=init_mask)
 
             self.vars = self.get_vars()
+            self.set_var()  # sets the variable name to the first variable in the dataset
             self.can = can
             self.compute_all_anomalies(**kwargs)
 
