@@ -11,7 +11,7 @@ from importlib import reload
 # Read files
 reload(bds)
 data_folder = '/home/strnad/data/paleo'
-hadcm_file = f'{data_folder}/HadCM3B_M2.1aN-deepmip_sens_1xCO2-mlotst-v1.0.mean_r360x180.nc'
+hadcm_file = f'{data_folder}/HadCM3B_M2.1aN-deepmip_stand_3xCO2-pr-v1.0.mean.nc'
 hadcm_mask_file_pi = f'{data_folder}/mask_1_Preindustrial_.nc'
 mask_file_eocene = f'{data_folder}/mask_1_Eocene_.nc'
 cesm_file = f'{data_folder}/CESM1.2_CAM5-deepmip_sens_1xCO2-pr-v1.0.mean.nc'
@@ -20,13 +20,16 @@ cosmos_file = f'{data_folder}/COSMOS-landveg_r2413-deepmip_stand_3xCO2-tas-v1.0.
 ocean_file = f'{data_folder}/ocean_r360x180_jan.nc'
 grid_step = 1
 # %%
+reload(bds)
+grid_step = None
 ds_hadcm = bds.BaseDataset(data_nc=hadcm_file,
                            var_name=None,
                            grid_step=grid_step,
                            decode_times=False,
                            lsm_file=mask_file_eocene,
-                           init_mask=True,
-                           max_lat=86.25
+                           flip_mask=True,
+                           lon360=False,
+                        #    max_lat=86.25
                            )
 # %%
 reload(gplt)
@@ -35,16 +38,11 @@ im_comp = gplt.plot_map(dmap=mean_t,
                         plot_type='contourf',
                         cmap='cividis',
                         levels=12,
-                        # vmin=290,
-                        # vmax=310,
                         title=f"HadCM ",
                         label=f'Global Mean {ds_hadcm.var_name}',
                         orientation='horizontal',
                         tick_step=3,
-                        # round_dec=2,
                         set_map=False,
-                        # sci=1,
-                        # central_longitude=180
                         )
 # %%
 reload(gplt)

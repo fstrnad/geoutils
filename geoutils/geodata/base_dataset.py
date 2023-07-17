@@ -342,13 +342,13 @@ class BaseDataset():
         """
         reload(sput)
         sort = kwargs.pop('sort', True)
-        lon360 = kwargs.pop('lon360', False)
+        self.lon360 = kwargs.pop('lon360', False)
         ts_days = kwargs.pop('ts_days', True)
         keep_time = kwargs.pop('keep_time', False)
         freq = kwargs.pop('freq', 'D')
         ds = sput.check_dimensions(ds=ds,
                                    ts_days=ts_days,
-                                   lon360=lon360,
+                                   lon360=self.lon360,
                                    sort=sort,
                                    keep_time=keep_time,
                                    freq=freq,
@@ -491,6 +491,9 @@ class BaseDataset():
         self.get_source_attrs(ds=ds)
 
     def get_source_attrs(self, ds=None):
+        """
+        Get the attributes of the source dataset
+        """
         if ds is None:
             ds = self.ds
         self.source_attrs = ds.attrs
@@ -568,7 +571,8 @@ class BaseDataset():
                                            lon_range=self.lon_range,
                                            lat_range=self.lat_range,
                                            use_ds_grid=True,
-                                           large_ds=False
+                                           large_ds=False,
+                                           lon360=self.lon360,  # bring to same lon range
                                            )
                     flip_mask = kwargs.pop('flip_mask', False)
                     if flip_mask:

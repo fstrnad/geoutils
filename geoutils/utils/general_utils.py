@@ -851,7 +851,7 @@ def make_arr_negative(arr):
     return new_arr
 
 
-def split_array_by_half(arr, keyword='first'):
+def split_array_by_half(arr, keyword):
     """
     Splits the input array into either the first or second half based on the keyword.
 
@@ -873,9 +873,11 @@ def split_array_by_half(arr, keyword='first'):
         [5, 6, 7, 8]
     """
 
+    midpoint = len(arr) // 2
+    print(midpoint)
     if keyword == 'first' or keyword == 1:
-        return arr[:len(arr) // 2]
+        return arr[:midpoint] if len(arr) % 2 == 0 else arr[:midpoint + 1]
     elif keyword == 'second' or keyword == -1:
-        return arr[len(arr) // 2:]
+        return arr[midpoint:] if len(arr) % 2 == 1 else arr[midpoint -1:]
     else:
         raise ValueError("Keyword must be either 'first' or 'second'.")
