@@ -561,6 +561,7 @@ class BaseDataset():
             # Optional Land Sea Mask File
             if lsm_file is not None or mask_ds is not None:
                 if mask_ds is None:
+                    gut.myprint(f'Read file {lsm_file} for land sea mask!')
                     mask_ds = self.open_ds(nc_files=lsm_file,
                                            time_range=None,
                                            grid_step=self.grid_step,
@@ -569,6 +570,10 @@ class BaseDataset():
                                            use_ds_grid=True,
                                            large_ds=False
                                            )
+                    flip_mask = kwargs.pop('flip_mask', False)
+                    if flip_mask:
+                        gut.myprint(f'Flip land-sea mask!')
+                        mask_ds = xr.where(mask_ds == 1, 0, 1)
                 if isinstance(mask_ds, xr.Dataset):
                     mask_name = self.get_vars(ds=mask_ds)[0]
                     mask_ds = mask_ds[mask_name]

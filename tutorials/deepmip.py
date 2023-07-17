@@ -14,7 +14,7 @@ data_folder = '/home/strnad/data/paleo'
 hadcm_file = f'{data_folder}/HadCM3B_M2.1aN-deepmip_sens_1xCO2-mlotst-v1.0.mean_r360x180.nc'
 hadcm_mask_file_pi = f'{data_folder}/mask_1_Preindustrial_.nc'
 mask_file_eocene = f'{data_folder}/mask_1_Eocene_.nc'
-cesm_file = f'{data_folder}/CESM1.2_CAM5-deepmip_sens_1xCO2-mlotst-v1.0.mean_r360x180.nc'
+cesm_file = f'{data_folder}/CESM1.2_CAM5-deepmip_sens_1xCO2-pr-v1.0.mean.nc'
 cosmos_file = f'{data_folder}/COSMOS-landveg_r2413-deepmip_stand_3xCO2-tas-v1.0.time_series.nc'
 
 ocean_file = f'{data_folder}/ocean_r360x180_jan.nc'
@@ -46,14 +46,55 @@ im_comp = gplt.plot_map(dmap=mean_t,
                         # sci=1,
                         # central_longitude=180
                         )
+# %%
+reload(gplt)
+mask_eocene = ds_hadcm.mask
+im_comp = gplt.plot_map(dmap=mask_eocene,
+                        plot_type='contourf',
+                        cmap='cividis',
+                        levels=2,
+                        # vmin=290,
+                        # vmax=310,
+                        title=f"Mask Eocene",
+                        label=f'Mask Eocene',
+                        orientation='horizontal',
+                        tick_step=3,
+                        # round_dec=2,
+                        set_map=False,
+                        # sci=1,
+                        # central_longitude=180
+                        )
 
 # %%
+reload(bds)
 ds_cesm = bds.BaseDataset(data_nc=cesm_file,
                           var_name=None,
                           grid_step=grid_step,
                           decode_times=False,
-                          lsm_file=mask_file_eocene
+                          lsm_file=mask_file_eocene,
+                          init_mask=True,
+                          flip_mask=True,
                           )
+
+# %%
+reload(gplt)
+mean_t = ds_cesm.get_da().mean(dim='time')
+im_comp = gplt.plot_map(dmap=mean_t,
+                        projection='Robinson',
+                        plot_type='contourf',
+                        cmap='Blues',
+                        levels=12,
+                        # vmin=290,
+                        # vmax=310,
+                        title=f"CESM ",
+                        label=f'Global Mean {ds_cesm.var_name}',
+                        orientation='horizontal',
+                        tick_step=3,
+                        # round_dec=2,
+                        set_map=False,
+                        # sci=1,
+                        # central_longitude=180
+                        )
 # %%
 reload(bds)
 ds_ocean = bds.BaseDataset(data_nc=ocean_file,
@@ -73,6 +114,7 @@ ds_cosmos = bds.BaseDataset(data_nc=cosmos_file,
                             lon360=False,
                             init_mask=True,
                             lsm_file=mask_file_eocene,
+                            flip_mask=True,
                             decode_times=False,
                             freq='M'
                             )
@@ -177,7 +219,7 @@ for j in range(0, 12):
                             # levels=12,
                             vmin=0,
                             vmax=700,
-                            title=f"CESM Mixed-layer depth, {months[j]}",
+                            title=f"CESM pr, {months[j]}",
                             bar=True,
                             plt_grid=True,
                             label=f'mixed-layer depth [m]',

@@ -157,8 +157,9 @@ def create_cmap(cmap, levels, **kwargs):
         cmap = plt.get_cmap(cmap, n_colors)
     colors = np.array([mpl.colors.rgb2hex(cmap(i)) for i in range(n_colors)])
                 # Set center of colormap to specific color
-    centercolor = kwargs.pop('centercolor', '#FFFFFF')
+    centercolor = kwargs.pop('centercolor', None)
     if centercolor is not None:
+        centercolor = '#FFFFFF' if centercolor == 'white' else centercolor
         idx = [len(colors) // 2 - 1, len(colors) // 2]
         colors[idx] = centercolor
     cmap = mpl.colors.ListedColormap(colors)
