@@ -150,6 +150,28 @@ def prepare_axis(ax, log=False, **kwargs):
     return ax, kwargs
 
 
+def create_cmap(cmap, levels, **kwargs):
+    n_colors = len(levels)
+                # set colormap
+    if cmap is not None:
+        cmap = plt.get_cmap(cmap, n_colors)
+    colors = np.array([mpl.colors.rgb2hex(cmap(i)) for i in range(n_colors)])
+                # Set center of colormap to specific color
+    centercolor = kwargs.pop('centercolor', '#FFFFFF')
+    if centercolor is not None:
+        idx = [len(colors) // 2 - 1, len(colors) // 2]
+        colors[idx] = centercolor
+    cmap = mpl.colors.ListedColormap(colors)
+    norm = mpl.colors.BoundaryNorm(
+                    levels, ncolors=cmap.N, clip=True)
+    if levels is None:
+        cmap = plt.get_cmap(cmap)
+        norm = None
+
+    return cmap, norm
+
+
+
 def make_colorbar_discrete(ax, im, fig=None, vmin=None, vmax=None, **kwargs):
     if vmin is None:
         vmin = im.get_clim()[0]

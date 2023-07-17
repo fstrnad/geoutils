@@ -52,8 +52,10 @@ class MoistureFlux(wds.Wind_Dataset):
         self.u_name = ds_ivt.u_name
         self.v_name = ds_ivt.v_name
 
-        self.compute_ivt()
-        self.compute_all_anomalies()
+        vi = kwargs.pop('vi', False)
+        if vi:
+            self.compute_ivt()
+        self.compute_all_anomalies(**kwargs)
 
     def integrated_vapor_flux(self,
                               g=9.81,):

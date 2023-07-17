@@ -85,12 +85,17 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                       can=False,
                                                       time_range=time_range,
                                                       **w_kwargs)
-                fac_name = kwargs.pop('fac_name', 'fac')
+                self.fac_name = kwargs.pop('fac_name', 'fac')
 
-                gut.myprint(f'Multiply u- and v by factor {fac_name}!')
-                u = (u*ds_fac.ds[fac_name]).rename(self.u_name)
-                v = (v*ds_fac.ds[fac_name]).rename(self.v_name)
-
+                gut.myprint(f'Multiply u- and v by factor {self.fac_name}!')
+                u = (u*ds_fac.ds[self.fac_name]).rename(self.u_name)
+                v = (v*ds_fac.ds[self.fac_name]).rename(self.v_name)
+                set_fac = kwargs.pop('set_fac', False)
+                if not set_fac:
+                    del ds_fac
+                    ds_fac = None
+            else:
+                ds_fac = None
             self.grid_step = ds_uwind.grid_step
             self.vert_velocity = False
             w = None
@@ -109,7 +114,9 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             if compute_ws:
                 windspeed = self.compute_windspeed(u=u, v=v)
 
-            self.ds = self.get_ds(u=u, v=v, w=w, windspeed=windspeed)
+            self.ds = self.get_ds(u=u, v=v, w=w,
+                                  fac=ds_fac.ds[self.fac_name] if ds_fac is not None else None,
+                                  windspeed=windspeed)
 
             # ds_uwind would be possible as well
             init_mask = kwargs.pop('init_mask', True)
@@ -124,7 +131,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         else:
             gut.myprint('Only Init the Wind Dataset object without data!')
 
-    def get_ds(self, u, v, w=None, windspeed=None):
+    def get_ds(self, u, v, w=None, windspeed=None, fac=None):
         gut.myprint(f'Merge u, v')
         ds = xr.Dataset({self.u_name: u,
                          self.v_name: v})
@@ -134,6 +141,9 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         if w is not None:
             gut.myprint(f'Merge u, v, omega')
             ds[self.w_name] = w
+        if fac is not None:
+            gut.myprint(f'Merge u, v, fac')
+            ds[self.fac_name] = fac
         return ds
 
     def compute_windspeed(self, u, v, ws_name='windspeed'):

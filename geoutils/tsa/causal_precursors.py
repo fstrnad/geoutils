@@ -14,7 +14,7 @@ reload(cplt)
 def get_corr_precursors(ds, var, target_ts, lag=-1,
                         timemean=None,
                         plevel=None,
-                        min_num_locations=10, plot=True):
+                        min_num_locations=20, plot=True):
 
     if lag > 0:
         raise ValueError(f'Lag must be negative, but is {lag}!')
@@ -60,7 +60,7 @@ def get_corr_precursors(ds, var, target_ts, lag=-1,
             levels=14,
             plot_type='contourf',
             label=f'Correlation',
-            vertical_title=f'Lag={lag} {timemean}',
+            vertical_title=f'{var} Lag={lag} {timemean}',
             vmin=vmin,
             vmax=vmax,
             orientation='vertical',

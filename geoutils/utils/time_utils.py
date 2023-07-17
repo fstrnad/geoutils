@@ -643,7 +643,7 @@ def get_idx_tps_times(tps, times):
     return tps_idx
 
 
-def time_difference_in_hours(time1, time2):
+def time_difference_in_hours(time1, time2, abs_diff=True):
     """
     Calculate the time difference in hours between two time points as xarray dataarrays.
 
@@ -661,6 +661,10 @@ def time_difference_in_hours(time1, time2):
     # Calculate the time difference in hours using the timedelta method
     tdelta = pd_time2 - pd_time1
     time_diff = tdelta.total_seconds() / 3600
+
+    # Always return a positive time difference
+    if abs_diff:
+        time_diff = np.abs(time_diff)
 
     return time_diff
 

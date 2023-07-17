@@ -103,26 +103,26 @@ name = 'era5'
 var_names = ['vimd', 'ewvf', 'nwvf', 't2m', 'sp', 'ttr', 'tcrw']
 var_names = ['msl']
 
-for idx, var_name in enumerate(var_names):
-    for grid_step in grid_steps:
-        fname = fnames_dict[var_name]
-        dataset_file = output_dir + \
-            f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_ds.nc"
+# for idx, var_name in enumerate(var_names):
+#     for grid_step in grid_steps:
+#         fname = fnames_dict[var_name]
+#         dataset_file = output_dir + \
+#             f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_ds.nc"
 
-        if os.path.exists(dataset_file) is False:
-            gut.myprint(f'Create Dataset {dataset_file}')
-            ds = BaseDataset(data_nc=fname,
-                             #  var_name=var_name,
-                             grid_step=grid_step,
-                             large_ds=True,
-                             )
-            ds.save(dataset_file)
-        else:
-            gut.myprint(f'File {fname} already exists!')
+#         if os.path.exists(dataset_file) is False:
+#             gut.myprint(f'Create Dataset {dataset_file}')
+#             ds = BaseDataset(data_nc=fname,
+#                              #  var_name=var_name,
+#                              grid_step=grid_step,
+#                              large_ds=True,
+#                              )
+#             ds.save(dataset_file)
+#         else:
+#             gut.myprint(f'File {fname} already exists!')
 
 # %%  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Wind and geopot fields on different pressure levels
-plevels = [5, 50, 100, 150, 200,
+plevels = [50, 100, 150, 200,
            250, 300, 350, 400,
            450, 500, 550, 600,
            650, 700, 750, 800,
@@ -130,10 +130,10 @@ plevels = [5, 50, 100, 150, 200,
 
 # plevels = [50, 150, 950, 600]
 
-plevels = [100, 200, 300, 400,
-           500, 600, 700, 800]
+# plevels = [100, 200, 300, 400,
+#            500, 600, 700, 800, ]
 name = 'era5'
-grid_step = 2.5
+grid_step = 1.5
 
 
 for plevel in plevels:
@@ -173,10 +173,9 @@ for plevel in plevels:
 
     var_names = ['u', 'v', 'w', 'pv', 'z', 'q']
     var_names = ['u', 'v', 'z', 'pv']
-    var_names = ['u', 'v']
     var_names = ['t', 'q']
-    var_names = ['u', 'v', 'w', ]
-    var_names = ['z', 'q', 't']
+    var_names = ['u', 'v', 'w', 'z', 'q', 't']
+    var_names = ['u', 'v', 'w']
 
     for idx, var_name in enumerate(var_names):
         fname = fnames_dict[var_name]

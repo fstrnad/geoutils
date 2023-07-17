@@ -634,20 +634,7 @@ def plot_2D(
                     levels, round_dec) if round_dec is not None else levels
             if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
                 # norm = mpl.colors.LogNorm(levels=levels)
-
-                n_colors = len(levels)
-                # set colormap
-                if cmap is not None:
-                    cmap = plt.get_cmap(cmap, n_colors)
-                colors = np.array([mpl.colors.rgb2hex(cmap(i)) for i in range(n_colors)])
-                # Set center of colormap to specific color
-                centercolor = kwargs.pop('centercolor', '#FFFFFF')
-                if centercolor is not None:
-                    idx = [len(colors) // 2 - 1, len(colors) // 2]
-                    colors[idx] = centercolor
-                cmap = mpl.colors.ListedColormap(colors)
-                norm = mpl.colors.BoundaryNorm(
-                    levels, ncolors=cmap.N, clip=True)
+                cmap, norm = put.create_cmap(cmap, levels, **kwargs)
             else:
                 cmap = plt.get_cmap(cmap)
                 norm = None
@@ -838,6 +825,8 @@ def plot_2D(
                 'ticks': levels, 'extend': extend}
     else:
         return {"ax": ax, "fig": fig, "projection": projection, "im": im}
+
+
 
 
 def plot_edges(
@@ -1048,7 +1037,7 @@ def create_multi_plot(nrows, ncols, projection=None,
     end_idx = int(nrows*ncols) if end_idx is None else end_idx
     if nrows*ncols/end_idx >= nrows:
         nrows = nrows - 1 if nrows > 1 else nrows
-
+    set_map = kwargs.pop('set_map', True)
     for i in range(nrows):
         for j in range(ncols):
             axs.append(fig.add_subplot(gs[i, j], projection=proj))
@@ -1062,6 +1051,7 @@ def create_multi_plot(nrows, ncols, projection=None,
                     lon_range=lon_range,
                     lat_range=lat_range,
                     dateline=dateline,
+                    set_map=set_map,
                     **kwargs
                 )
                 kwargs = map_dict['kwargs']

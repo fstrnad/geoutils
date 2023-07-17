@@ -849,3 +849,33 @@ def make_arr_negative(arr):
     new_arr = np.unique(new_arr)
 
     return new_arr
+
+
+def split_array_by_half(arr, keyword='first'):
+    """
+    Splits the input array into either the first or second half based on the keyword.
+
+    Args:
+        arr (list): The input array of items.
+        keyword (str): The keyword specifying which half to return ('first' or 'second').
+
+    Returns:
+        list: The first or second half of the input array, based on the keyword.
+
+    Examples:
+        >>> my_array = [1, 2, 3, 4, 5, 6, 7, 8]
+        >>> result = split_array_by_half(my_array, 'first')
+        >>> print(result)
+        [1, 2, 3, 4]
+
+        >>> result = split_array_by_half(my_array, 'second')
+        >>> print(result)
+        [5, 6, 7, 8]
+    """
+
+    if keyword == 'first' or keyword == 1:
+        return arr[:len(arr) // 2]
+    elif keyword == 'second' or keyword == -1:
+        return arr[len(arr) // 2:]
+    else:
+        raise ValueError("Keyword must be either 'first' or 'second'.")
