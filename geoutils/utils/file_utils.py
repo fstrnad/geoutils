@@ -171,18 +171,21 @@ def save_ds(ds, filepath, unlimited_dim=None,
     dirname = os.path.dirname(filepath)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
-
-    if classic_nc:
-        gut.myprint('Store as NETCDF4_CLASSIC!')
-        ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
-                     format='NETCDF4_CLASSIC')
-    else:
-        ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
-                     engine='netcdf4')
+    if isinstance(ds, xr.DataArray):
+        zlib = False   # because dataarray has no var attibute
 
     if zlib:
         encoding = {var: {'zlib': True} for var in ds.data_vars}
         ds.to_netcdf(filepath, encoding=encoding)
+    else:
+        if classic_nc:
+            gut.myprint('Store as NETCDF4_CLASSIC!')
+            ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
+                         format='NETCDF4_CLASSIC')
+        else:
+            ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
+                         engine='netcdf4')
+
     gut.myprint(f"File {filepath} written!")
     print_file_location_and_size(filepath=filepath)
     return None

@@ -874,10 +874,40 @@ def split_array_by_half(arr, keyword):
     """
 
     midpoint = len(arr) // 2
-    print(midpoint)
     if keyword == 'first' or keyword == 1:
         return arr[:midpoint] if len(arr) % 2 == 0 else arr[:midpoint + 1]
     elif keyword == 'second' or keyword == -1:
         return arr[midpoint:] if len(arr) % 2 == 1 else arr[midpoint -1:]
     else:
         raise ValueError("Keyword must be either 'first' or 'second'.")
+
+
+def delete_element_at_index(arr, i, axis=0):
+    """
+    Deletes the item at the specified index from the input array.
+
+    Args:
+        arr (list or numpy.ndarray): The input array of items.
+        i (int): The index of the item to be deleted.
+
+    Returns:
+        same_type_as_input: The modified array after deleting the item at index i.
+
+    Examples:
+        >>> my_array = [1, 2, 3, 4, 5]
+        >>> new_array = delete_element_at_index(my_array, 2)
+        >>> print(new_array)
+        [1 2 4 5]
+
+        >>> import numpy as np
+        >>> my_array = np.array([10, 20, 30, 40, 50])
+        >>> new_array = delete_element_at_index(my_array, 0)
+        >>> print(new_array)
+        [20 30 40 50]
+    """
+
+    arr = np.array(arr)  # Convert input to NumPy array
+    if i < len(arr):
+        return np.delete(arr, i, axis=axis)
+    else:
+        raise IndexError("Index out of range. The index must be less than the length of the array.")

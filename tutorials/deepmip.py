@@ -36,7 +36,7 @@ reload(gplt)
 mean_t = ds_hadcm.get_da().mean(dim='time')
 im_comp = gplt.plot_map(dmap=mean_t,
                         plot_type='contourf',
-                        cmap='cividis',
+                        cmap='cividis',g
                         levels=12,
                         title=f"HadCM ",
                         label=f'Global Mean {ds_hadcm.var_name}',

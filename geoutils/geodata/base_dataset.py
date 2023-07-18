@@ -64,7 +64,7 @@ class BaseDataset():
             lsm_file (str, optional): additional land sea mask file. Defaults to None.
             decode_times (bool, optional): decode times if in nc file np.datetime64 format is provided. Defaults to True.
         """
-
+        self.verbose = verbose
         if isinstance(data_nc, list) or isinstance(data_nc, np.ndarray):
             data_nc_arr = data_nc
         elif isinstance(data_nc, str):
@@ -131,7 +131,7 @@ class BaseDataset():
         # Init Mask
         self.init_mask(da=self.ds[self.var_name], lsm_file=lsm_file,
                        verbose=verbose, **kwargs)
-        self.set_source_attrs()
+        self.set_source_attrs(verbose=verbose)
 
         self.set_ds_objects()
 
@@ -516,8 +516,8 @@ class BaseDataset():
             self.time_attrs['standard_name'] = self.time_attrs['long_name'] = 'time'
             self.time_attrs['axis'] = 'T'
 
-    def set_source_attrs(self):
-        gut.myprint(f'Set dataset source attributes!')
+    def set_source_attrs(self, verbose=True):
+        gut.myprint(f'Set dataset source attributes!', verbose=verbose)
         if self.source_attrs is None:
             raise ValueError('Source attributes is not set yet!')
         self.ds.attrs.update(self.source_attrs)
