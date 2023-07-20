@@ -14,7 +14,9 @@ reload(cplt)
 def get_corr_precursors(ds, var, target_ts, lag=-1,
                         timemean=None,
                         plevel=None,
-                        min_num_locations=20, plot=True):
+                        min_num_locations=15,
+                        plot=True,
+                        savepath=None,):
 
     if lag > 0:
         raise ValueError(f'Lag must be negative, but is {lag}!')
@@ -66,6 +68,8 @@ def get_corr_precursors(ds, var, target_ts, lag=-1,
             orientation='vertical',
             round_dec=2,
         )
+        if savepath is not None:
+            cplt.save_fig(savepath, fig=im['fig'])
         im = None
         for group in lagged_sign_data:
             im = cplt.plot_map(

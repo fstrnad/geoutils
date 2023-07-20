@@ -38,7 +38,6 @@ def estimate_distance(minimum_value, maximum_value, min_dist_val=5):
     return closest_multiple
 
 
-
 def get_grid_steps(grid_step, min_value=-90, max_value=90):
     """
     Generates a sorted NumPy array of grid steps within the specified range,
@@ -634,9 +633,16 @@ def plot_2D(
                     levels, round_dec) if round_dec is not None else levels
             if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
                 # norm = mpl.colors.LogNorm(levels=levels)
-                cmap, norm = put.create_cmap(cmap, levels, **kwargs)
+                centercolor = kwargs.pop('centercolor', None)
+                cmap, norm = put.create_cmap(cmap, levels,
+                                             centercolor=centercolor,
+                                             **kwargs)
             else:
-                cmap = plt.get_cmap(cmap)
+                if isinstance(cmap, str):
+                    cmap = plt.get_cmap(cmap)
+                elif not isinstance(cmap, mpl.colors.Colormap) or not isinstance(cmap, mpl.colors.LinearSegmentedColormap):
+                    raise ValueError(
+                        f'cmap has to be of type str or mpl.colors.Colormap but is of type {type(cmap)}!')
                 norm = None
     else:
         sci = round_dec = norm = levels = None
@@ -825,8 +831,6 @@ def plot_2D(
                 'ticks': levels, 'extend': extend}
     else:
         return {"ax": ax, "fig": fig, "projection": projection, "im": im}
-
-
 
 
 def plot_edges(
@@ -1064,7 +1068,7 @@ def create_multi_plot(nrows, ncols, projection=None,
     else:
         axs = axs[0]
 
-    y_title_pos = 1. - 0.025*(nrows-1)
+    y_title_pos = 1.1 - 0.05*(nrows-1)
     title = kwargs.pop('title', None)
     y_title = kwargs.pop('y_title', y_title_pos)
     if title is not None:

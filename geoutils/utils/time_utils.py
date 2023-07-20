@@ -1884,6 +1884,17 @@ def get_lagged_ts(ts1, ts2, lag=0):
     return ts1, ts2
 
 
+def get_lagged_ts_arr(ts1_arr, ts2_arr, lag=0):
+    if lag > 0:
+        ts1_arr = ts1_arr[:, :-np.abs(lag)]
+        ts2_arr = ts2_arr[:, np.abs(lag):]
+    elif lag < 0:
+        ts1_arr = ts1_arr[:, np.abs(lag):]
+        ts2_arr = ts2_arr[:, :-np.abs(lag)]
+
+    return ts1_arr, ts2_arr
+
+
 def lead_lag_corr(ts1, ts2,
                   maxlags=20,
                   corr_method='spearman',

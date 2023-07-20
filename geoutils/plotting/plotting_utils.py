@@ -150,27 +150,38 @@ def prepare_axis(ax, log=False, **kwargs):
     return ax, kwargs
 
 
+def truncate_colormap(cmap='terrain_r', minval=0.0, maxval=1.0, n=100):
+    cmap = plt.get_cmap(cmap)
+    new_cmap = mpl.colors.LinearSegmentedColormap.from_list(
+        'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
+        cmap(np.linspace(minval, maxval, n)))
+    return new_cmap
+
+
 def create_cmap(cmap, levels, **kwargs):
     n_colors = len(levels)
-                # set colormap
-    if cmap is not None:
+    # set colormap
+    if isinstance(cmap, str):
         cmap = plt.get_cmap(cmap, n_colors)
-    colors = np.array([mpl.colors.rgb2hex(cmap(i)) for i in range(n_colors)])
-                # Set center of colormap to specific color
+    elif not isinstance(cmap, mpl.colors.Colormap) or not isinstance(cmap, mpl.colors.LinearSegmentedColormap):
+        raise ValueError(
+            f'cmap has to be of type str or mpl.colors.Colormap but is of type {type(cmap)}!')
+
+    # Set center of colormap to specific color
     centercolor = kwargs.pop('centercolor', None)
     if centercolor is not None:
+        colors = np.array([mpl.colors.rgb2hex(cmap(i)) for i in range(n_colors)])
+
         centercolor = '#FFFFFF' if centercolor == 'white' else centercolor
         idx = [len(colors) // 2 - 1, len(colors) // 2]
         colors[idx] = centercolor
-    cmap = mpl.colors.ListedColormap(colors)
+        cmap = mpl.colors.ListedColormap(colors)
     norm = mpl.colors.BoundaryNorm(
-                    levels, ncolors=cmap.N, clip=True)
+        levels, ncolors=cmap.N, clip=True)
     if levels is None:
-        cmap = plt.get_cmap(cmap)
         norm = None
 
     return cmap, norm
-
 
 
 def make_colorbar_discrete(ax, im, fig=None, vmin=None, vmax=None, **kwargs):

@@ -415,9 +415,10 @@ def apply_cluster_data(data,
             gut.myprint(f'Data contains Nans: {gut.count_nans(data)}!')
     rm_ol = kwargs.pop('rm_ol', False)
 
+    gut.myprint(f'Shape of input data_input: {data.shape}')
     if method == 'kmeans':
-        Z, sign_Z = k_means_clustering(data=data, rm_ol=rm_ol,
-                                       **kwargs)
+        Z, sign_Z = k_means_clustering(data=data,
+                                       rm_ol=rm_ol, **kwargs)
     elif method == 'gm':
         Z, sign_Z = gm_clustering(data=data, **kwargs)
     elif method == 'dbscan':
@@ -426,8 +427,17 @@ def apply_cluster_data(data,
         Z, sign_Z = optics_clustering(data=data, **kwargs)
     elif method == 'agglomerative':
         Z, sign_Z = agglomerative_clustering(data=data, **kwargs)
+    elif method == 'birch':
+        Z, sign_Z = birch_clustering(data=data, **kwargs)
+    elif method == 'spectral':
+        Z, sign_Z = spectral_clustering(data=data, **kwargs)
+    elif method == 'affinity':
+        Z, sign_Z = affinity_clustering(data=data, **kwargs)
+    elif method == 'mean_shift':
+        Z, sign_Z = mean_shift_clustering(data=data, **kwargs)
     else:
         raise ValueError(f'Method {method} not implemented yet!')
+
 
     if objects is None:
         objects = np.arange(len(data))
