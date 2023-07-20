@@ -1,5 +1,6 @@
 from matplotlib.offsetbox import AnchoredText
 import matplotlib as mpl
+import palettable as pt
 from matplotlib.cm import ScalarMappable
 import matplotlib.pyplot as plt
 import copy
@@ -9,6 +10,62 @@ import string
 import cartopy.crs as ccrs
 import geoutils.plotting.plot_settings as pst
 from importlib import reload
+
+
+def get_available_mpl_colormaps():
+    """
+    Get a list of all available colormaps in matplotlib.
+
+    Returns:
+        list: A list of strings containing the names of available colormaps.
+    """
+    colormaps = [cmap for cmap in mpl.cm.datad]
+    reversed_colormaps = [cmap + '_r' for cmap in colormaps]
+    return np.array(colormaps + reversed_colormaps)
+
+
+def get_available_palettable_colormaps():
+    """
+    Get a list of all available colormaps in palettable.
+
+    Returns:
+        list: A list of strings containing the names of available colormaps.
+    """
+    diverging_lst = [cmap for cmap in dir(
+        pt.colorbrewer.diverging) if not cmap.startswith("__")]
+    qualitative_lst = [cmap for cmap in dir(
+        pt.colorbrewer.qualitative) if not cmap.startswith("__")]
+    sequential_lst = [cmap for cmap in dir(
+        pt.colorbrewer.sequential) if not cmap.startswith("__")]
+
+    return np.array(diverging_lst + qualitative_lst + sequential_lst), diverging_lst, qualitative_lst, sequential_lst
+
+
+def get_cmap(cmap, n_colors=None):
+    mpl_cmaps = get_available_mpl_colormaps()
+    pt_cmaps, d_cmaps, q_cmaps, s_cmaps = get_available_palettable_colormaps()
+    if cmap in mpl_cmaps:
+        colormap = cmap
+    elif cmap in pt_cmaps:
+        cmap_strs = cmap.split("_")
+        reverse = True if 'r' in cmap_strs else False
+        if cmap in d_cmaps:
+            colormap = pt.colorbrewer.get_map(
+                cmap_strs[0], 'diverging',  number=int(cmap_strs[1]), reverse=reverse)
+        elif cmap in s_cmaps:
+            colormap = pt.colorbrewer.get_map(
+                cmap_strs[0], 'sequential',  number=int(cmap_strs[1]), reverse=reverse)
+        elif cmap in q_cmaps:
+            colormap = pt.colorbrewer.get_map(
+                cmap_strs[0], 'qualitative',  number=int(cmap_strs[1]), reverse=reverse)
+
+        colormap = colormap.mpl_colormap
+    else:
+        raise ValueError(
+            f'Colormap {cmap} not found. Please choose from {mpl_cmaps} or {pt_cmaps}')
+    cmap = plt.get_cmap(colormap, n_colors)
+
+    return cmap
 
 
 def set_title(title, ax=None, fig=None, **kwargs):
@@ -162,7 +219,7 @@ def create_cmap(cmap, levels, **kwargs):
     n_colors = len(levels)
     # set colormap
     if isinstance(cmap, str):
-        cmap = plt.get_cmap(cmap, n_colors)
+        cmap = get_cmap(cmap, n_colors)
     elif not isinstance(cmap, mpl.colors.Colormap) or not isinstance(cmap, mpl.colors.LinearSegmentedColormap):
         raise ValueError(
             f'cmap has to be of type str or mpl.colors.Colormap but is of type {type(cmap)}!')
@@ -170,7 +227,8 @@ def create_cmap(cmap, levels, **kwargs):
     # Set center of colormap to specific color
     centercolor = kwargs.pop('centercolor', None)
     if centercolor is not None:
-        colors = np.array([mpl.colors.rgb2hex(cmap(i)) for i in range(n_colors)])
+        colors = np.array([mpl.colors.rgb2hex(cmap(i))
+                           for i in range(n_colors)])
 
         centercolor = '#FFFFFF' if centercolor == 'white' else centercolor
         idx = [len(colors) // 2 - 1, len(colors) // 2]
@@ -377,25 +435,6 @@ def make_colorbar(ax, im, fig=None, **kwargs):
         )
 
     return cbar
-
-
-def discrete_cmap(vmin, vmax, colormap=None, num_ticks=None, shift_ticks=False):
-    import matplotlib as mpl
-
-    # colormap=pt.Spectral_11.mpl_colormap
-    if colormap is None:
-        # import palettable.colorbrewer.diverging as pt
-        import palettable.colorbrewer.qualitative as pt
-
-        colormap = pt.Paired_12.mpl_colormap
-    cmap = plt.get_cmap(colormap)
-
-    normticks = discrete_norm_ticks(
-        vmin, vmax, num_ticks=num_ticks, shift_ticks=shift_ticks
-    )
-
-    norm = mpl.colors.BoundaryNorm(normticks, cmap.N)
-    return cmap, norm
 
 
 def discrete_norm_ticks(vmin, vmax, shift_ticks=False, num_ticks=None):
