@@ -21,6 +21,7 @@ The following packages are required for running the package:
 - scipy
 - scikit-learn
 - tqdm
+- palettable (for more colorbars)
 
 The required packages are provided by the condaEnv.yml file.
 
