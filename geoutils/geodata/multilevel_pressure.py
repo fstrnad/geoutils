@@ -12,6 +12,7 @@ import xarray as xr
 import numpy as np
 import geoutils.utils.time_utils as tu
 import geoutils.utils.general_utils as gut
+import geoutils.utils.file_utils as fut
 from importlib import reload
 reload(bds)
 
@@ -36,7 +37,9 @@ class MultiPressureLevelDataset(bds.BaseDataset):
             gut.myprint(
                 'No Plevel provided! Assuming variable is vertically integrated!')
             plevels = [0]
-
+        for file in data_nc:
+            fut.print_file_location_and_size(filepath=file, verbose=False)
+        gut.myprint(f'All files are available! Loading {data_nc}...')
         super().__init__(data_nc=data_nc,
                          plevels=plevels,
                          can=can,
@@ -94,3 +97,20 @@ class MultiPressureLevelDataset(bds.BaseDataset):
 
         vert_int = c*np.cumsum(v_bar*dp, axis=v_bar.dims.index('lev'))
         return vert_int
+
+    def horizontal_gradient(self, var, dim='lon'):
+        """Calculate horizontal gradient of variable.
+
+        Args:
+            var (str): variable name
+            dim (str, optional): dimension to take gradient over. Defaults to 'lon'.
+
+        Returns:
+            xr.Dataarray: horizontal gradient
+        """
+        v_bar = self.ds[var]
+        new_name = var+'_grad_'+dim
+        grad_vbar = v_bar.differentiate(dim).rename(new_name)
+
+        self.ds[new_name] = grad_vbar
+        return grad_vbar

@@ -299,6 +299,41 @@ def get_ee_ts(evs, rcevs=False, norm=False):
     return num_ee_xr
 
 
+def get_most_sync_days_evs(ts, q=0.95):
+
+    times = ts.time
+    num_tp = len(times)
+    sync_days_ts = np.zeros(num_tp)
+    _, indices = gut.get_quantile_of_ts(ts, q=q, return_indices=True)
+    sync_days_ts[indices] = 1
+    sync_days_ts = tu.create_xr_ts(data=sync_days_ts, times=times)
+
+    return sync_days_ts
+
+
+def complement_evs_series(dataarray):
+    """
+    Create the complement time series of an xarray DataArray containing 0 and 1 values.
+
+    Parameters:
+        dataarray (xarray.DataArray): An xarray DataArray containing 0 and 1 values.
+
+    Returns:
+        xarray.DataArray: The complement time series with every 0 replaced by 1 and every 1 replaced by 0.
+
+    Raises:
+        ValueError: If the input time series contains values other than 0 and 1.
+    """
+    # Check if the input time series contains only 0 and 1 values
+    unique_values = set(dataarray.values.flatten())
+    if not set([0, 1]).issuperset(unique_values):
+        raise ValueError(
+            "The input time series should contain only 0 and 1 values.")
+
+    complement_dataarray = 1 - dataarray
+    return complement_dataarray
+
+
 def get_evs_idx_ds(ds, ids):
     pids = ds.get_points_for_idx(ids)
     evs_s = ds.ds['evs'].sel(points=pids)
@@ -605,6 +640,12 @@ def get_cond_occ(tps, cond, counter):
                                          count_arr=counter,
                                          rel_freq=False)
 
+    min_num_samples = 10
+    # print(count_phase_act)
+    count_phase_act = np.where(count_phase_act < min_num_samples,
+                               count_phase_act*1.22,
+                               count_phase_act)
+    # print(count_phase_act)
     p_s_1_act = count_phase_act_sync/count_phase_act
 
     return p_s_1_act

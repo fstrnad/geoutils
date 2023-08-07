@@ -15,11 +15,13 @@ def get_corr_precursors(ds, var, target_ts, lag=-1,
                         timemean=None,
                         plevel=None,
                         min_num_locations=15,
+                        min_corr=0.1,
                         plot=True,
                         savepath=None,):
 
     if lag > 0:
-        raise ValueError(f'Lag must be negative, but is {lag}!')
+        gut.myprint(
+            f'Lag {lag} >0! Compute causal successors instead of precursors!')
 
     ds_corr = copy.deepcopy(ds)
     if plevel is None:
@@ -35,23 +37,28 @@ def get_corr_precursors(ds, var, target_ts, lag=-1,
         ts=tu.compute_timemean(t_, timemean=timemean,
                                dropna=True),
         lag_arr=np.array([lag]),
+        multi_lag=False,
         correlation_type='spearman')
 
     gut.myprint(f'Compute significant correlation regions in dataset')
-    lag_corr_mask = xr.where(corr_['p'].sel(lag=lag) < 0.01,
-                             1,
-                             0)
-    _ = ds_corr.init_mask(init_mask=True,
-                          mask_ds=lag_corr_mask)
-    lagged_sign_data = ds_corr.get_data_spatially_seperated_regions(
-        var=var,
-        min_num_locations=min_num_locations,)
-    if plevel is not None:
-        for idx, data in enumerate(lagged_sign_data):
-            lagged_sign_data[idx]['data'] = data['data'].sel(lev=plevel)
+    lag_p_mask = xr.where(corr_['p'].sel(lag=lag) < 0.01, 1, 0)
+    lag_corr_mask = xr.where(np.abs(corr_['corr'].sel(lag=lag)) > min_corr,
+                             lag_p_mask, 0)
+    if np.count_nonzero(lag_corr_mask) == 0:
+        gut.myprint(f'No significant correlation regions found!')
+        lagged_sign_data = []
+    else:
+        _ = ds_corr.init_mask(init_mask=True,
+                              mask_ds=lag_corr_mask)
+        lagged_sign_data = ds_corr.get_data_spatially_seperated_regions(
+            var=var,
+            min_num_locations=min_num_locations,)
+        if plevel is not None:
+            for idx, data in enumerate(lagged_sign_data):
+                lagged_sign_data[idx]['data'] = data['data'].sel(lev=plevel)
 
     if plot:
-        vmax = .25
+        vmax = .3
         vmin = -vmax
         im = cplt.plot_map(
             corr_['corr'].sel(lag=lag),
@@ -67,6 +74,7 @@ def get_corr_precursors(ds, var, target_ts, lag=-1,
             vmax=vmax,
             orientation='vertical',
             round_dec=2,
+            centercolor='white',
         )
         if savepath is not None:
             cplt.save_fig(savepath, fig=im['fig'])
@@ -103,6 +111,7 @@ def get_variable_dict(lagged_data, var, lag=-1):
             loc=mean_loc,
             idx=idx,
             data=this_data,
+            lag=lag,
         )
 
     return variable_dict

@@ -123,7 +123,9 @@ def count_occ(occ_arr, count_arr, rel_freq=False, norm_fac=1.):
         u, count = np.unique(occ,  return_counts=True)
         u = np.array(u, dtype=int)
         for iu, u_val in enumerate(u):
-            idx_cnt_arr = int(np.where(u_val == count_arr)[0])
+            cnt_idx = np.where(u_val == count_arr)[0]
+            # print(u_val, count_arr, cnt_idx)
+            idx_cnt_arr = int(cnt_idx)
             m_c_occ[idx_cnt_arr] = count[iu]
         if rel_freq:
             if tot_num > 0:

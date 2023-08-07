@@ -805,7 +805,10 @@ def get_corr_map(ds, var, sids=None, method='spearman', p_value_test='twosided')
     return da_corr
 
 
-def compute_correlation(data_array, ts, correlation_type='spearman', lag_arr=None):
+def compute_correlation(data_array, ts,
+                        correlation_type='spearman',
+                        lag_arr=None, prev_lags=True,
+                        multi_lag=True):
     """
     Compute the Pearson or Spearman correlation between a time series t_p and all time series in an xarray DataArray.
 
@@ -824,8 +827,9 @@ def compute_correlation(data_array, ts, correlation_type='spearman', lag_arr=Non
         A DataArray with dimensions (lon, lat) containing the correlation values between t_p and the time series in data_array.
     """
     lag_arr = [0] if lag_arr is None else lag_arr
-    # lag_arr = gut.add_compliment(lag_arr)
-    lag_arr = gut.make_arr_negative(arr=lag_arr)  # Only use past lags to target time series
+    if multi_lag:
+        lag_arr = gut.make_arr_negative(arr=lag_arr) if prev_lags else gut.add_compliment(
+            lag_arr)  # Only use past lags to target time series
     corr_array = xr.DataArray(np.zeros(
         (data_array.lon.size, data_array.lat.size, len(lag_arr))),
         dims=("lon", "lat", "lag"),
@@ -839,8 +843,8 @@ def compute_correlation(data_array, ts, correlation_type='spearman', lag_arr=Non
             for l, lag in enumerate(lag_arr):
                 time_series_loc = data_array.sel(
                     lon=lon, lat=lat).values.flatten()
-                ts_1_lag, ts_2_lag = tu.get_lagged_ts(ts1=time_series_loc,
-                                                      ts2=ts,
+                ts_1_lag, ts_2_lag = tu.get_lagged_ts(ts1=ts,   # the lags are with respect to the target time series
+                                                      ts2=time_series_loc,
                                                       lag=lag)
                 if correlation_type == 'pearson':
                     corr, p = st.pearsonr(ts_1_lag, ts_2_lag)

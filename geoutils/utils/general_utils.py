@@ -429,16 +429,21 @@ def get_exponent10(x, verbose=False):
     return exp
 
 
-def get_quantile_of_ts(ts, q=0.9, verbose=False):
+def get_quantile_of_ts(ts, q=0.9,
+                       return_indices=False,
+                       verbose=False):
     q_value = np.quantile(ts, q)
     if q >= 0.5:
-        q_ts = ts[np.where(ts >= q_value)[0]]
+        indices = np.where(ts >= q_value)[0]
     else:
-        q_ts = ts[np.where(ts <= q_value)[0]]
+        indices = np.where(ts < q_value)[0]
+    q_ts = ts[indices]
 
     myprint(f"Q-Value: {q_value}!", verbose=verbose)
-
-    return q_ts
+    if return_indices:
+        return q_ts, indices
+    else:
+        return q_ts
 
 
 def get_varnames_ds(ds):

@@ -11,15 +11,21 @@ from importlib import reload
 import pandas as pd
 
 
-def get_bsiso_index(time_range=['1980-01-01', '2020-01-01'],
+def get_bsiso_index(time_range=['1980-01-01', '2021-01-01'],
                     start_month='Jan', end_month='Dec',
                     index_def='Kikuchi'):
     # BSISO Index
     if index_def == 'Lee':
-        bsiso_index = xr.open_dataset('/home/strnad/data/bsiso/BSISO.nc')
+        bsiso_index = fut.load_xr(
+            '/home/strnad/data/bsiso/BSISO.nc')
     elif index_def == 'Kikuchi':
-        bsiso_index = xr.open_dataset(
+        bsiso_index = fut.load_xr(
             '/home/strnad/data/kikuchi_bsiso/BSISO_index.nc')
+    elif index_def == 'Kiladis':
+        bsiso_index = fut.load_xr(
+            filepath='/home/strnad/data/omi/omi.nc')
+    else:
+        raise ValueError(f'Unknown index definition {index_def}')
 
     bsiso_index = tu.get_time_range_data(bsiso_index, time_range=time_range)
     bsiso_index = tu.get_month_range_data(bsiso_index,
@@ -32,15 +38,16 @@ def get_bsisophase_tps(phase_number,
                        time_range=['1981-01-01', '2020-01-01'],
                        start_month='Jan', end_month='Dec',
                        active=None,
-                       bsiso_name='BSISO1',
-                       ampl_th=1.5
-                       ):
+                       bsiso_name='BSISO',
+                       ampl_th=1.5,
+                       index_def='Kikuchi'):
     reload(tsa)
     reload(tu)
     bsiso_index = get_bsiso_index(time_range=time_range, start_month=start_month,
                                   end_month=end_month,
+                                  index_def=index_def,
                                   )
-    ampl = bsiso_index[bsiso_name]
+    ampl = bsiso_index[f'{bsiso_name}-ampl']
     tps = tsa.get_tps4val(
         ts=bsiso_index[f'{bsiso_name}-phase'], val=phase_number)
     if active is not None:
@@ -237,3 +244,60 @@ if __name__ == '__main__':
                 filepath=savepath_bsiso1)
 
     # %%
+    # check for consistency
+    reload(bds)
+    reload(cplt)
+    data_dir = "/home/strnad/data/"
+
+    dataset_file = data_dir + \
+        f"climate_data/2.5/era5_ttr_{2.5}_ds.nc"
+
+    ds_olr_25 = bds.BaseDataset(data_nc=dataset_file,
+                                can=True,
+                                an_types=['dayofyear', 'month', 'JJAS'],
+                                )
+    # %%
+    import geoutils.indices.bsiso_index as bs
+    reload(bs)
+    nrows = 2
+    ncols = 4
+    im = cplt.create_multi_plot(nrows=nrows,
+                                ncols=ncols,
+                                projection='PlateCarree',
+                                hspace=0.45, wspace=0.15,
+                                orientation='horizontal',
+                                lon_range=[-30, 180],
+                                lat_range=[-30, 60])
+
+    index_def = 'Kiladis'
+    for idx, phase in enumerate(np.arange(1, 9)):
+        tps = bs.get_bsisophase_tps(
+            phase_number=phase,
+            start_month='Jun',
+            end_month='Sep',
+            active=True,
+            index_def=index_def)
+
+        composite_pr = tu.get_sel_tps_ds(ds=ds_olr_25.ds, tps=tps)
+        mean_pr = composite_pr.mean(dim='time')
+
+        an_type = 'month'
+        var_type = f'an_{an_type}'
+        # var_type = 'ttr'
+        vmax = 20
+        vmin = -vmax
+
+        im_comp = cplt.plot_map(mean_pr[var_type],
+                                ax=im['ax'][idx],
+                                plot_type='contourf',
+                                cmap='RdBu_r',
+                                centercolor='white',
+                                levels=12,
+                                vmin=vmin, vmax=vmax,
+                                title=f"BSISO Phase {phase} ({len(tps)} days)",
+                                label=rf'Anomalies OLR (wrt {an_type}) [W/m$^2$]',
+                                )
+    plot_dir = "/home/strnad/data/plots/bsiso/"
+    savepath = plot_dir + \
+        f"definitions/bsiso_phase_{index_def}_olr_{an_type}.png"
+    cplt.save_fig(savepath=savepath, fig=im['fig'])

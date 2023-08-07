@@ -119,9 +119,10 @@ def plot_xy(
             if ts_axis:
                 ax = prepare_ts_x_axis(ax, dates=x_arr[0], **kwargs)
             else:
-                ax, kwargs = put.prepare_axis(ax, plot_type=plot_type, **kwargs)
+                ax, kwargs = put.prepare_axis(
+                    ax, plot_type=plot_type, **kwargs)
 
-        num_items = len(y_arr) if len(y_arr) >= len(x_arr) else len(x_arr)
+        num_items = len(y_arr)
         if lcmap is not None:
             lcmap, evenly_spaced_interval, ccolors = put.get_arr_colorbar(
                 cmap=lcmap, num_items=num_items,)
@@ -130,6 +131,8 @@ def plot_xy(
         inverted_z_order = kwargs.pop('inv_z_order', True)
         linearize_xaxis = kwargs.pop('linearize_xaxis', False)
         for idx in range(num_items):
+            if x_arr is None:
+                x_arr = [np.arange(len(y_arr[idx]))]
             x = x_arr[idx] if len(x_arr) > 1 else x_arr[0]
             if linearize_xaxis:
                 x = np.arange(0, len(x))
@@ -144,8 +147,10 @@ def plot_xy(
                 if len(y_err_arr) > 0:
                     y_err_arr[idx] = sut.standardize(y_err_arr[idx])
                 if len(y_lb_arr) > 0:
-                    y_lb_arr[idx] = sut.standardize(y_lb_arr[idx]) if y_lb_arr[idx] is not None else None
-                    y_ub_arr[idx] = sut.standardize(y_ub_arr[idx]) if y_lb_arr[idx] is not None else None
+                    y_lb_arr[idx] = sut.standardize(
+                        y_lb_arr[idx]) if y_lb_arr[idx] is not None else None
+                    y_ub_arr[idx] = sut.standardize(
+                        y_ub_arr[idx]) if y_lb_arr[idx] is not None else None
 
             lw = lw_arr[idx] if idx < len(lw_arr) else lw_arr[-1]
             mk = mk_arr[idx] if idx < len(mk_arr) else mk_arr[-1]
@@ -220,17 +225,16 @@ def plot_xy(
                                  alpha=alpha,
                                  label=label
                                  )
-                if len(x_err_arr) > idx or len(y_err_arr) > idx or len(y_lb_arr) > idx:
+                if len(x_err_arr) > idx or len(y_err_arr) > idx+1 or len(y_lb_arr) > idx+1:
 
                     if len(y_lb_arr) > idx:
                         y_lb = y_lb_arr[idx] if y_lb_arr[idx] is not None else None
                         y_ub = y_ub_arr[idx] if y_lb_arr[idx] is not None else None
-                    else:
+                    elif y_err_arr[idx] is not None:
                         y_err = y_err_arr[idx] if len(y_err_arr) > 0 else None
                         x_err = x_err_arr[idx] if len(x_err_arr) > 0 else None
                         y_lb = np.array(y + y_err / 2, dtype=float)
-                        y_ub = np.array(y + y_err / 2, dtype=float)
-
+                        y_ub = np.array(y - y_err / 2, dtype=float)
                     if len(y_err_arr) < 1:
                         if y_lb_arr[idx] is not None:
                             # c = color_arr_ci[idx] if color_arr_ci is not None else c
@@ -244,9 +248,20 @@ def plot_xy(
                             )
                     else:
                         if y_err is not None:
-                            ax.errorbar(x, y, xerr=x_err, yerr=y_err,
-                                        label=label, lw=lw, marker=mk, ls=ls, color=c,
-                                        capsize=2)
+                            plot_errorbar = kwargs.pop('plot_errorbars', False)
+                            if plot_errorbar:
+                                ax.errorbar(x, y, xerr=x_err, yerr=y_err,
+                                            label=label, lw=lw, marker=mk, ls=ls, color=c,
+                                            capsize=2)
+                            else:
+                                im = ax.fill_between(
+                                    x,
+                                    y_lb,
+                                    y_ub,
+                                    color=c,
+                                    alpha=0.5,
+                                    # label=label,
+                                )
     else:
         # Bar plot
         stacked = kwargs.pop('stacked', False)

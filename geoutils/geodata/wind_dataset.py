@@ -38,6 +38,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                  compute_ws=False,
                  plevels=None,
                  can=True,
+                 grad_fac=False,
                  **kwargs):
         reload(mp)
         u_kwargs = copy.deepcopy(kwargs)
@@ -59,6 +60,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                 for file in data_nc_w:
                     fut.print_file_location_and_size(
                         filepath=file, verbose=False)
+            gut.myprint(f'All files are available! Now load them!')
+
             ds_uwind = mp.MultiPressureLevelDataset(data_nc=data_nc_u,
                                                     plevels=plevels,
                                                     can=False,  # Anomalies are computed later all together
@@ -86,10 +89,16 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                       time_range=time_range,
                                                       **w_kwargs)
                 self.fac_name = kwargs.pop('fac_name', 'fac')
-
-                gut.myprint(f'Multiply u- and v by factor {self.fac_name}!')
-                u = (u*ds_fac.ds[self.fac_name]).rename(self.u_name)
-                v = (v*ds_fac.ds[self.fac_name]).rename(self.v_name)
+                if grad_fac:
+                    gut.myprint(f'Multiply u- and v by gradient of factor {self.fac_name}!')
+                    ds_fac.horizontal_gradient(var=self.fac_name, dim='lon')
+                    ds_fac.horizontal_gradient(var=self.fac_name, dim='lat')
+                    u = (u*ds_fac.ds[self.fac_name + '_grad_lon']).rename(self.u_name)
+                    v = (v*ds_fac.ds[self.fac_name + '_grad_lat']).rename(self.v_name)
+                else:
+                    gut.myprint(f'Multiply u- and v by factor {self.fac_name}!')
+                    u = (u*ds_fac.ds[self.fac_name]).rename(self.u_name)
+                    v = (v*ds_fac.ds[self.fac_name]).rename(self.v_name)
                 set_fac = kwargs.pop('set_fac', False)
                 if not set_fac:
                     del ds_fac
@@ -107,6 +116,9 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                         **w_kwargs)
                 self.w_name = kwargs.pop('w_name', 'w')
                 w = ds_wwind.ds[self.w_name].rename('OMEGA')
+                reverse_w = kwargs.pop('reverse_w', True)
+                gut.myprint(f'Multiply w by factor {-1}!', verbose=reverse_w)
+                w = -1*w if reverse_w else w
                 self.w_name = 'OMEGA'
                 self.vert_velocity = True
 

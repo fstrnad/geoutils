@@ -58,9 +58,10 @@ class MoistStaticEnergy(mp.MultiPressureLevelDataset):
                                                 can=False,
                                                 time_range=time_range,
                                                 **z_kwargs)
-            z = metcalc.geopotential_to_height(
-                ds_z.ds[self.z_name] * units.m**2 / units.seconds**2)
-            z = z.rename('z')
+            # GP to GPH is alread done in base_dataset class
+            # z = metcalc.geopotential_to_height(
+            #     ds_z.ds[self.z_name] * units.m**2 / units.seconds**2)
+            z = ds_z.ds[self.z_name] * units.m
 
             ds_q = mp.MultiPressureLevelDataset(data_nc=data_nc_q,
                                                 plevels=plevels,

@@ -19,9 +19,8 @@ def get_available_mpl_colormaps():
     Returns:
         list: A list of strings containing the names of available colormaps.
     """
-    colormaps = [cmap for cmap in mpl.cm.datad]
-    reversed_colormaps = [cmap + '_r' for cmap in colormaps]
-    return np.array(colormaps + reversed_colormaps)
+    colormaps = plt.colormaps()
+    return np.array(colormaps)
 
 
 def get_available_palettable_colormaps():
@@ -115,7 +114,9 @@ def prepare_axis(ax, log=False, **kwargs):
     ylabel = kwargs.pop("ylabel", None)
     xlabel = kwargs.pop("xlabel", None)
     xpos = kwargs.pop("xlabel_pos", None)
-
+    x_ints = kwargs.pop("x_ints", False)
+    y_ints = kwargs.pop("y_ints", False)
+    xtick_step = kwargs.pop("xtick_step", None)
     if plot_type != 'polar':
         ax.spines["right"].set_visible(False)
         ax.spines["top"].set_visible(False)
@@ -145,6 +146,10 @@ def prepare_axis(ax, log=False, **kwargs):
             ax.set_xticks(xticks)
         if xticklabels is not None:
             ax.set_xticklabels(xticklabels)
+        if x_ints:
+            ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
+        if y_ints:
+            ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
 
     else:
         ax.margins(y=0)
@@ -575,11 +580,13 @@ def enumerate_subplots(axs, pos_x=-0.12, pos_y=1.06, fontsize=20):
         pos_y = [pos_y] * len(axs.flatten())
 
     for n, ax in enumerate(axs.flatten()):
+        li = n % 26  # letter index
+        fac = n // 26  # factor
         plt_text(
             ax=ax,
             xpos=pos_x[n],
             ypos=pos_y[n],
-            text=f"{string.ascii_lowercase[n]}." if n < 26 else f"{string.ascii_lowercase[n-26]}{string.ascii_lowercase[n-26]}.",
+            text=f"{string.ascii_lowercase[li]}." if n < 26 else f"{string.ascii_uppercase[li]}{fac}.",
             size=fontsize,
             weight="bold",
             transform=True,

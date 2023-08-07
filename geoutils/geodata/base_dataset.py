@@ -442,6 +442,15 @@ class BaseDataset():
             gut.myprint(
                 "Rename vertical integral of northward water vapour flux to: ewvf!")
 
+        if "z" in names:
+            import metpy.calc as metcalc
+            from metpy.units import units
+            ds['z'].attrs.update({'units': 'm'})
+            ds['z'].attrs.update({'long_name': 'Geopotential Height'})
+            g = 9.80665
+            ds['z'] = ds['z'] / g  # convert to m
+            gut.myprint(f'Compute geopotential height from z! \n Multiply by 1/{g}', verbose=verbose)
+
         if "ttr" in names:
             ds = ds.rename({"ttr": "olr"})
             gut.myprint(

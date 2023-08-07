@@ -187,7 +187,7 @@ def get_netcdf_encoding(ds,
         time=time.data.astype('datetime64[ns]'))
     freq = get_frequency(ds)
     if freq != 'hour':
-        gut.myprint('set hours to 0')
+        gut.myprint('set hours to 0', verbose=verbose)
         ds = set_hours_to_zero(x=ds)
 
     # ds = ds.transpose('time', 'lat', 'lon
@@ -284,6 +284,20 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
                 if drop_dim:
                     if 'time' in list(ds_sel.dims):
                         ds_sel = ds_sel.mean(dim='time')
+
+    return ds_sel
+
+
+def get_sel_tps_lst(ds, tps_lst, remove_tp=False,
+                    drop_dim=True,
+                    verbose=False,
+                    timemean='day'):
+    ds_sel = ds
+    for tps in tps_lst:
+        ds_sel = get_sel_tps_ds(ds=ds_sel, tps=tps, remove_tp=remove_tp,
+                                drop_dim=drop_dim,
+                                verbose=verbose,
+                                timemean=timemean)
 
     return ds_sel
 
@@ -926,7 +940,7 @@ def get_tm_name(timemean):
     return tm
 
 
-def get_mean_time_series(da, lon_range, lat_range, time_roll=0):
+def get_mean_time_series(da, lon_range, lat_range, time_roll=0, q=None):
     """Get mean time series of selected area.
 
     Parameters:
@@ -940,7 +954,10 @@ def get_mean_time_series(da, lon_range, lat_range, time_roll=0):
     """
     da_area = sput.cut_map(da, lon_range=lon_range,
                            lat_range=lat_range)
-    ts_mean = da_area.mean(dim=('lon', 'lat'), skipna=True)
+    if q is None:
+        ts_mean = da_area.mean(dim=('lon', 'lat'), skipna=True)
+    else:
+        ts_mean = da_area.quantile(q=q, dim=('lon', 'lat'), skipna=True)
     ts_std = da_area.std(dim=('lon', 'lat'), skipna=True)
     if time_roll > 0:
         ts_mean = ts_mean.rolling(time=time_roll, center=True).mean()
@@ -1873,7 +1890,9 @@ def arr_lagged_ts(ts_arr, lag):
     return df
 
 
-def get_lagged_ts(ts1, ts2, lag=0):
+def get_lagged_ts(ts1, ts2=None, lag=0):
+    if ts2 is None:
+        ts2 = ts1
     if lag > 0:
         ts1 = ts1[:-np.abs(lag)]
         ts2 = ts2[np.abs(lag):]
@@ -1902,15 +1921,17 @@ def lead_lag_corr(ts1, ts2,
                   cutoff_ts=1):
     reload(gut)
     reload(flt)
+    ts1, ts2 = equalize_time_points(ts1, ts2)
+
     Nx = len(ts1)
     if Nx != len(ts2):
         raise ValueError('ts1 and ts2 must be equal length')
     nts1 = sut.standardize(ts1)
     nts2 = sut.standardize(ts2)
 
-    if cutoff_ts != 1:
-        nts1 = flt.apply_butter_filter(ts=nts1, cutoff=cutoff_ts)
-        nts2 = flt.apply_butter_filter(ts=nts2, cutoff=cutoff_ts)
+    if cutoff != 1:
+        nts1 = flt.apply_butter_filter(ts=nts1, cutoff=cutoff)
+        nts2 = flt.apply_butter_filter(ts=nts2, cutoff=cutoff)
 
     corr_range = []
     p_val_arr = []

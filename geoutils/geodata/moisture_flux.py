@@ -32,6 +32,7 @@ class MoistureFlux(wds.Wind_Dataset):
                  data_nc_q=None,
                  can=True,
                  plevels=None,
+                 grad_q=True,
                  **kwargs):
         if data_nc_q is None:
             gut.myprint(f'ERROR! Please provide specific humidity file')
@@ -43,6 +44,7 @@ class MoistureFlux(wds.Wind_Dataset):
                                   data_nc_fac=data_nc_q,
                                   plevels=plevels,
                                   fac_name='q',
+                                  grad_fac=grad_q,  # Compute horizontal gradient of q
                                   can=False,  # anoamlies are computed later
                                   **kwargs)
         self.ds = ds_ivt.ds

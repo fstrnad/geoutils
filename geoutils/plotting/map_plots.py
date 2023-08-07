@@ -152,6 +152,7 @@ def set_extent(da, ax,
         raise ValueError(
             f'Axis is not of type Geoaxis, but of type {type(ax)}!')
 
+    verbose = kwargs.get('verbose', False)
     min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat = ax.get_extent()
     if dateline:
         projection = ccrs.PlateCarree(central_longitude=0)
@@ -160,7 +161,8 @@ def set_extent(da, ax,
         min_ext_lon += 180
         max_ext_lon += 180
         gut.myprint(
-            f'Dateline: Set min_ext_lon to {min_ext_lon} and max_ext_lon to {max_ext_lon}!')
+            f'Dateline: Set min_ext_lon to {min_ext_lon} and max_ext_lon to {max_ext_lon}!',
+            verbose=verbose)
     else:
         projection = ccrs.PlateCarree(central_longitude=0)
 
@@ -616,8 +618,8 @@ def plot_2D(
     round_dec = kwargs.pop("round_dec", None)
     if z is not None:
         if plot_type != 'hatch':
-            expo = gut.get_exponent10(vmin) if float(
-                vmin) != 0. else gut.get_exponent10(vmax)
+            expo = gut.get_exponent10(np.abs(vmax-vmin)) if float(
+                vmin) != 0. else gut.get_exponent10(np.abs(vmax-vmin))
             if sci is None:
                 sci = expo if np.abs(expo) > 1 else None
             if sci is not None:
@@ -625,12 +627,12 @@ def plot_2D(
                     round_dec = abs(sci) + 1
                 elif sci > 0:
                     round_dec = -1*(sci-2)
-                else:
-                    round_dec = 0
-
+            else:
+                round_dec = 1 if vmax > 1 else 2  # because the range is between 0 and 10
             if levels is not None:
                 levels = np.around(
                     levels, round_dec) if round_dec is not None else levels
+                # print(sci, round_dec, levels)
             if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
                 # norm = mpl.colors.LogNorm(levels=levels)
                 centercolor = kwargs.pop('centercolor', None)
@@ -1064,7 +1066,9 @@ def create_multi_plot(nrows, ncols, projection=None,
                 break
     fig.tight_layout()
     if nrows > 1 or ncols > 1:
-        put.enumerate_subplots(axs, pos_x=-0.1, pos_y=1.07)
+        pos_x = kwargs.pop('pos_x', -0.1)
+        pos_y = kwargs.pop('pos_y', 1.07)
+        put.enumerate_subplots(axs, pos_x=pos_x, pos_y=pos_y)
     else:
         axs = axs[0]
 

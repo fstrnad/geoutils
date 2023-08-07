@@ -538,14 +538,10 @@ def get_enso_flavors_consensus(fname, time_range=None):
     return enso_years
 
 
-
-
-
-
 @np.vectorize
 def get_phase_of_angle(angle):
     """Gives the (MJO) phase for an angle between 0-360° (ie. in degree).
-
+    for definition used by Lee et al. 2013
     Args:
         angle (float): angle in degree
 
@@ -579,5 +575,3 @@ def get_phase_of_angle(angle):
         raise ValueError(f'angle {angle} not between 0-360')
 
     return int(phase)
-
-
