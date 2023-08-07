@@ -1,6 +1,5 @@
 from matplotlib.offsetbox import AnchoredText
 import matplotlib as mpl
-import palettable as pt
 from matplotlib.cm import ScalarMappable
 import matplotlib.pyplot as plt
 import copy
@@ -30,6 +29,8 @@ def get_available_palettable_colormaps():
     Returns:
         list: A list of strings containing the names of available colormaps.
     """
+    import palettable as pt
+
     diverging_lst = [cmap for cmap in dir(
         pt.colorbrewer.diverging) if not cmap.startswith("__")]
     qualitative_lst = [cmap for cmap in dir(
