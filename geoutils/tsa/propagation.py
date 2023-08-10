@@ -258,7 +258,7 @@ def get_quantile_progression_arr(ds, tps, start,
                                  q_th=0.05,
                                  th=None):
     progression_arr = get_day_progression_arr(
-        ds=ds, tps=tps,
+        data=ds, tps=tps,
         start=start,
         sps=sps, eps=eps,
         var=var, end=end,
@@ -266,7 +266,7 @@ def get_quantile_progression_arr(ds, tps, start,
         average_ts=average_ts,
         verbose=verbose)
     day_arr = xr.zeros_like(progression_arr.sel(day=0))
-    day_arr = xr.where(day_arr == 1, 0, np.nan)
+    day_arr = xr.where(day_arr == 1, np.nan, np.nan)  # set to nan
     for idx, (day) in enumerate(progression_arr.day):
         day = int(day)
         mean_ts = progression_arr.sel(day=day)
@@ -283,7 +283,6 @@ def get_quantile_progression_arr(ds, tps, start,
 
         # This overwrites old values
         day_arr = xr.where(mask, day, day_arr)
-
     return day_arr
 
 

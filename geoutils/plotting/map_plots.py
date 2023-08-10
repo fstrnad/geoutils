@@ -641,10 +641,10 @@ def plot_2D(
                                              **kwargs)
             else:
                 if isinstance(cmap, str):
-                    cmap = plt.get_cmap(cmap)
-                elif not isinstance(cmap, mpl.colors.Colormap) or not isinstance(cmap, mpl.colors.LinearSegmentedColormap):
-                    raise ValueError(
-                        f'cmap has to be of type str or mpl.colors.Colormap but is of type {type(cmap)}!')
+                    cmap, norm = put.create_cmap(cmap)
+                # elif not isinstance(cmap, mpl.colors.Colormap) or not isinstance(cmap, mpl.colors.LinearSegmentedColormap) or not isinstance(color, str):
+                #     raise ValueError(
+                #         f'cmap has to be of type str or mpl.colors.Colormap but is of type {type(cmap)}!')
                 norm = None
     else:
         sci = round_dec = norm = levels = None
@@ -939,10 +939,10 @@ def plot_wind_field(
 
     lw = kwargs.pop("lw", 4)
     scale = kwargs.pop("scale", None)
-    headwidth = kwargs.pop('headwidth', 6)
-    width = kwargs.pop('width', 0.03)
+    headwidth = kwargs.pop('headwidth', 5)
+    width = kwargs.pop('width', 0.006)
     headaxislength = kwargs.pop('headaxislength', 3)
-    headlength = kwargs.pop('headlength', 5)
+    headlength = kwargs.pop('headlength', 4)
     zorder = kwargs.pop('zorder', 10)
     if stream:
         magnitude = (u ** 2 + v ** 2) ** 0.5
@@ -967,7 +967,7 @@ def plot_wind_field(
                 transform=ccrs.PlateCarree(),
                 scale=scale,
                 headwidth=headwidth,
-                # width=width,
+                width=width,
                 headaxislength=headaxislength,
                 headlength=headlength,
                 linewidth=lw,
@@ -989,7 +989,7 @@ def plot_wind_field(
                 zorder=zorder,
             )
         key_length = kwargs.pop('key_length', 1)
-        wind_unit = kwargs.pop('wind_unit', r"$\frac{m}{s}$")
+        wind_unit = kwargs.pop('wind_unit', r"$ms^{-1}$")
         if key_loc:
             ax.quiverkey(
                 Q,

@@ -643,7 +643,7 @@ def get_cond_occ(tps, cond, counter):
     min_num_samples = 10
     # print(count_phase_act)
     count_phase_act = np.where(count_phase_act < min_num_samples,
-                               count_phase_act*1.22,
+                               count_phase_act, # *1.22,
                                count_phase_act)
     # print(count_phase_act)
     p_s_1_act = count_phase_act_sync/count_phase_act

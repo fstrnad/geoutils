@@ -9,6 +9,7 @@ import string
 import cartopy.crs as ccrs
 import geoutils.plotting.plot_settings as pst
 from importlib import reload
+import palettable as pt
 
 
 def get_available_mpl_colormaps():
@@ -29,7 +30,6 @@ def get_available_palettable_colormaps():
     Returns:
         list: A list of strings containing the names of available colormaps.
     """
-    import palettable as pt
 
     diverging_lst = [cmap for cmap in dir(
         pt.colorbrewer.diverging) if not cmap.startswith("__")]
@@ -37,13 +37,30 @@ def get_available_palettable_colormaps():
         pt.colorbrewer.qualitative) if not cmap.startswith("__")]
     sequential_lst = [cmap for cmap in dir(
         pt.colorbrewer.sequential) if not cmap.startswith("__")]
+    cmocean_div = [cmap for cmap in dir(
+        pt.cmocean.diverging) if not cmap.startswith("__")]
+    cmocean_seq = [cmap for cmap in dir(
+        pt.cmocean.sequential) if not cmap.startswith("__")]
+    scientific_seq = [cmap for cmap in dir(
+        pt.scientific.sequential) if not cmap.startswith("__")]
+    scientific_div = [cmap for cmap in dir(
+        pt.scientific.diverging) if not cmap.startswith("__")]
 
-    return np.array(diverging_lst + qualitative_lst + sequential_lst), diverging_lst, qualitative_lst, sequential_lst
+    return (np.array(diverging_lst + qualitative_lst + sequential_lst +
+                     cmocean_div + cmocean_seq +
+                     scientific_seq + scientific_div),
+            diverging_lst,
+            qualitative_lst,
+            sequential_lst,
+            cmocean_div,
+            cmocean_seq,
+            scientific_seq,
+            scientific_div)
 
 
-def get_cmap(cmap, n_colors=None):
+def get_cmap(cmap, levels=None):
     mpl_cmaps = get_available_mpl_colormaps()
-    pt_cmaps, d_cmaps, q_cmaps, s_cmaps = get_available_palettable_colormaps()
+    pt_cmaps, d_cmaps, q_cmaps, s_cmaps, cmocean_div, cmocean_seq, scientific_seq, scientific_div = get_available_palettable_colormaps()
     if cmap in mpl_cmaps:
         colormap = cmap
     elif cmap in pt_cmaps:
@@ -58,11 +75,26 @@ def get_cmap(cmap, n_colors=None):
         elif cmap in q_cmaps:
             colormap = pt.colorbrewer.get_map(
                 cmap_strs[0], 'qualitative',  number=int(cmap_strs[1]), reverse=reverse)
-
+        elif cmap in cmocean_div:
+            colormap = pt.cmocean.diverging.get_map(
+                name=cmap, reverse=reverse)
+        elif cmap in cmocean_seq:
+            colormap = pt.cmocean.sequential.get_map(
+                cmap, reverse=reverse)
+        elif cmap in scientific_seq:
+            colormap = pt.scientific.sequential.get_map(
+                cmap, reverse=reverse)
+        elif cmap in scientific_div:
+            colormap = pt.scientific.diverging.get_map(
+                cmap, reverse=reverse)
+        else:
+            raise ValueError(
+                f'Colormap {cmap} not found. Please choose from {mpl_cmaps} or {pt_cmaps}')
         colormap = colormap.mpl_colormap
     else:
         raise ValueError(
             f'Colormap {cmap} not found. Please choose from {mpl_cmaps} or {pt_cmaps}')
+    n_colors = len(levels) if levels is not None else None
     cmap = plt.get_cmap(colormap, n_colors)
 
     return cmap
@@ -221,28 +253,28 @@ def truncate_colormap(cmap='terrain_r', minval=0.0, maxval=1.0, n=100):
     return new_cmap
 
 
-def create_cmap(cmap, levels, **kwargs):
-    n_colors = len(levels)
+def create_cmap(cmap, levels=None, **kwargs):
     # set colormap
     if isinstance(cmap, str):
-        cmap = get_cmap(cmap, n_colors)
+        cmap = get_cmap(cmap, levels)
     elif not isinstance(cmap, mpl.colors.Colormap) or not isinstance(cmap, mpl.colors.LinearSegmentedColormap):
         raise ValueError(
             f'cmap has to be of type str or mpl.colors.Colormap but is of type {type(cmap)}!')
+    if levels is not None:
+        n_colors = len(levels)
+        # Set center of colormap to specific color
+        centercolor = kwargs.pop('centercolor', None)
+        if centercolor is not None:
+            colors = np.array([mpl.colors.rgb2hex(cmap(i))
+                            for i in range(n_colors)])
 
-    # Set center of colormap to specific color
-    centercolor = kwargs.pop('centercolor', None)
-    if centercolor is not None:
-        colors = np.array([mpl.colors.rgb2hex(cmap(i))
-                           for i in range(n_colors)])
-
-        centercolor = '#FFFFFF' if centercolor == 'white' else centercolor
-        idx = [len(colors) // 2 - 1, len(colors) // 2]
-        colors[idx] = centercolor
-        cmap = mpl.colors.ListedColormap(colors)
-    norm = mpl.colors.BoundaryNorm(
-        levels, ncolors=cmap.N, clip=True)
-    if levels is None:
+            centercolor = '#FFFFFF' if centercolor == 'white' else centercolor
+            idx = [len(colors) // 2 - 1, len(colors) // 2]
+            colors[idx] = centercolor
+            cmap = mpl.colors.ListedColormap(colors)
+        norm = mpl.colors.BoundaryNorm(
+            levels, ncolors=cmap.N, clip=True)
+    else:
         norm = None
 
     return cmap, norm
@@ -535,7 +567,10 @@ def plot_arrow(ax, x1, y1, x2, y2, **kwargs):
                     arrowprops=dict(arrowstyle='->',
                                     color=color,
                                     lw=lw,
-                                    linestyle=ls),
+                                    linestyle=ls,
+                                    ),
+                    fontsize=kwargs.pop('fontsize', pst.BIGGER_SIZE),
+                    weight=kwargs.pop('weight', 'normal'),
                     zorder=zorder,)
     else:
         ax.arrow(x1, y1, x2-x1, y2-y1,
