@@ -272,16 +272,13 @@ def create_map(
     set_map = kwargs.pop('set_map', True)
     set_global = kwargs.pop('set_global', False)
 
-    if projection != 'Nearside':
-        ext_dict = set_extent(
-            da=da, ax=ax,
-            lat_range=lat_range,
-            lon_range=lon_range,
-            dateline=dateline,
-            set_global=set_global,
-            **kwargs)
-    else:
-        ext_dict = None
+    ext_dict = set_extent(
+        da=da, ax=ax,
+        lat_range=lat_range,
+        lon_range=lon_range,
+        dateline=dateline,
+        set_global=set_global,
+        **kwargs)
 
     if set_map:
         # axes properties

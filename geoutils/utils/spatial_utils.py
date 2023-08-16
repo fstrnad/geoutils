@@ -826,6 +826,12 @@ def compute_correlation(data_array, ts,
     xarray.DataArray
         A DataArray with dimensions (lon, lat) containing the correlation values between t_p and the time series in data_array.
     """
+    data_array, ts = tu.equalize_time_points(ts1=data_array, ts2=ts)
+    # check whether the datarray is of dimension (lon, lat, time)
+    if len(data_array.dims) != 3:
+        raise ValueError(
+            f"The data_array must have dimensions (lon, lat, time). But has dimensions {data_array.dims}.")
+
     lag_arr = [0] if lag_arr is None else lag_arr
     if multi_lag:
         lag_arr = gut.make_arr_negative(arr=lag_arr) if prev_lags else gut.add_compliment(

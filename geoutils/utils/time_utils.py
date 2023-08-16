@@ -2357,11 +2357,40 @@ def get_dates_later_as(times, date):
     return new_times
 
 
-def equalize_time_points(ts1, ts2):
-    assert_has_time_dimension(ts1)
-    assert_has_time_dimension(ts2)
-    ts1 = get_sel_tps_ds(ts1, tps=ts2.time)
-    ts2 = get_sel_tps_ds(ts2, tps=ts1.time)
+def have_same_time_points(dataarray1, dataarray2):
+    """
+    Check if two xarray DataArrays have exactly the same time points.
+
+    Parameters:
+        dataarray1 (xarray.DataArray): The first xarray DataArray.
+        dataarray2 (xarray.DataArray): The second xarray DataArray.
+
+    Returns:
+        bool: True if both DataArrays have the same time points, False otherwise.
+    """
+    assert_has_time_dimension(dataarray1)
+    assert_has_time_dimension(dataarray2)
+    return set(dataarray1.time.values) == set(dataarray2.time.values)
+
+
+def equalize_time_points(ts1, ts2, verbose=True):
+    """Equalize the time points of two xarray dataarrays.
+
+    Args:
+        ts1 (xr.Dataarray): dataarray or dataset
+        ts2 (xr.Dataarray): dataarray or dataset
+
+    Returns:
+        tuple: tuple of two datasets with equal time points
+    """
+    if have_same_time_points(ts1, ts2):
+        return ts1, ts2
+    else:
+        assert_has_time_dimension(ts1)
+        assert_has_time_dimension(ts2)
+        gut.myprint('Equalize time points of both datasets!', verbose=verbose)
+        ts1 = get_sel_tps_ds(ts1, tps=ts2.time)
+        ts2 = get_sel_tps_ds(ts2, tps=ts1.time)
 
     return ts1, ts2
 
