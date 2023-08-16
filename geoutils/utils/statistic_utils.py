@@ -544,7 +544,9 @@ def ttest_field(X, Y, serial_data=False,
     return mean_x.unstack(), pvalues.unstack()
 
 
-def field_significance_mask(pvalues, alpha=0.05, corr_type="dunn"):
+def field_significance_mask(pvalues, alpha=0.05,
+                            corr_type="dunn",
+                            zdim=('lat', 'lon')):
     """Create mask field with 1, np.NaNs for significant values
     using a multiple test correction.
 

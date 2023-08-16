@@ -130,10 +130,10 @@ plevels = [50, 100, 150, 200,
 
 # plevels = [50, 150, 950, 600]
 
-# plevels = [100, 200, 300, 400,
-#            500, 600, 700, 800, ]
+plevels = [100, 200, 300, 400,
+           500, 600, 700, 800, 900]
 name = 'era5'
-grid_step = 1.5
+grid_step = 2.5
 
 
 for plevel in plevels:
@@ -174,8 +174,8 @@ for plevel in plevels:
     var_names = ['u', 'v', 'w', 'pv', 'z', 'q']
     var_names = ['u', 'v', 'z', 'pv']
     var_names = ['t', 'q']
-    var_names = ['u', 'v', 'w', 'z', 'q', 't']
-    var_names = ['u', 'v', 'w']
+    # var_names = ['u', 'v', 'w', 'z', 'q', 't']
+    # var_names = ['u', 'v', 'w']
 
     for idx, var_name in enumerate(var_names):
         fname = fnames_dict[var_name]

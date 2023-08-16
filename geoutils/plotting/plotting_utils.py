@@ -266,7 +266,7 @@ def create_cmap(cmap, levels=None, **kwargs):
         centercolor = kwargs.pop('centercolor', None)
         if centercolor is not None:
             colors = np.array([mpl.colors.rgb2hex(cmap(i))
-                            for i in range(n_colors)])
+                               for i in range(n_colors)])
 
             centercolor = '#FFFFFF' if centercolor == 'white' else centercolor
             idx = [len(colors) // 2 - 1, len(colors) // 2]
@@ -702,3 +702,12 @@ def check_plot_type(plot_type):
     if plot_type not in avail_types:
         raise ValueError(f'ERROR plot_type {plot_type} not available!')
     return True
+
+
+def get_lon_lat_ticklabels(array_lon=None, array_lat=None, deg_label='°E'):
+    lon = np.arange(0, 360, 30) if array_lon is None else array_lon
+    lat = np.arange(-90, 90, 30) if array_lat is None else array_lat
+    lon_labels = [f'{lon}°E' if lon > 0 and lon <
+                  180 else f'{lon}°W' for lon in lon]
+    lat_labels = [f'{lat}°N' if lat >= 0 else f'{lat}°S' for lat in lat]
+    return lon_labels, lat_labels

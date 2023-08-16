@@ -838,6 +838,7 @@ def compute_correlation(data_array, ts,
         (data_array.lon.size, data_array.lat.size, len(lag_arr))),
         dims=("lon", "lat", "lag"),
         name='p')
+    gut.myprint(f"Computing {correlation_type} correlation for {len(data_array.lon)} locations ...")
     for i, lon in enumerate(tqdm(data_array.lon)):
         for j, lat in enumerate(data_array.lat):
             for l, lag in enumerate(lag_arr):
@@ -859,7 +860,8 @@ def compute_correlation(data_array, ts,
     corr_array.coords["lat"] = data_array.lat
     corr_array.coords["lag"] = lag_arr
     da_corr = corr_array.to_dataset()
-    p_array_corr = sut.correct_p_values(pvals=p_array.data, method='fdr_bh')
+    p_array_corr = sut.correct_p_values(pvals=p_array.data,
+                                        method='fdr_bh')
     p_array_corr = xr.DataArray(
         p_array_corr,
         dims=("lon", "lat", "lag"),

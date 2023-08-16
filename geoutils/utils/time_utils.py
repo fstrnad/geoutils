@@ -1527,7 +1527,8 @@ def get_tw_periods(
     return {"range": all_time_periods, "tps": np.array(all_tps)}
 
 
-def get_periods_tps(tps, end=1, start=0, freq="D", include_start=True):
+def get_periods_tps(tps, start=0, end=1,
+                    freq="D", include_start=True):
     """Gives the all time points from tps to end.
 
     """
@@ -1540,25 +1541,15 @@ def get_periods_tps(tps, end=1, start=0, freq="D", include_start=True):
             end += sign  # because we have shifted the end
         if start != 0:
             if start < 0:
-                if np.abs(start) > np.abs(end):
-                    stps = add_time_step_tps(
-                        tps=tps, time_step=start, freq=freq)
-                elif np.abs(start) == np.abs(end):
-                    return add_time_step_tps(
-                        tps=tps, time_step=start, freq=freq)
-                else:
-                    gut.myprint(f'ERROR! Step needs to be larger than start!')
-                    stps = tps
+                if start > end:
+                    start, end = end, start  # always start from smaller number
+            elif np.abs(start) == np.abs(end):
+                return add_time_step_tps(
+                    tps=tps, time_step=start, freq=freq)
             else:
-                if start < end:
-                    stps = add_time_step_tps(
-                        tps=tps, time_step=start, freq=freq)
-                elif np.abs(start) == np.abs(end):
-                    return add_time_step_tps(
-                        tps=tps, time_step=start, freq=freq)
-                else:
-                    gut.myprint(f'ERROR! Step needs to be larger than start!')
-                    stps = tps
+                gut.myprint(f'Warning! Start {start} is > end {end}!')
+            stps = add_time_step_tps(
+                tps=tps, time_step=start, freq=freq)
 
         else:
             stps = tps

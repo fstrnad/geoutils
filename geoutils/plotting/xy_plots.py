@@ -128,7 +128,7 @@ def plot_xy(
                 cmap=lcmap, num_items=num_items,)
 
         alpha = kwargs.pop('alpha', 1)
-        inverted_z_order = kwargs.pop('inv_z_order', True)
+        inverted_z_order = kwargs.pop('inv_z_order', False)
         linearize_xaxis = kwargs.pop('linearize_xaxis', False)
         for idx in range(num_items):
             if x_arr is None:

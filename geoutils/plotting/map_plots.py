@@ -1041,26 +1041,29 @@ def create_multi_plot(nrows, ncols, projection=None,
     run_idx = 1
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx
+    map_axis = kwargs.pop('map_axis', [])
+    if len(map_axis) == 0:
+        map_axis = np.arange(nrows*ncols)
     if nrows*ncols/end_idx >= nrows:
         nrows = nrows - 1 if nrows > 1 else nrows
     set_map = kwargs.pop('set_map', True)
     for i in range(nrows):
         for j in range(ncols):
             axs.append(fig.add_subplot(gs[i, j], projection=proj))
-
-            if projection is not None:
-                map_dict = create_map(
-                    ax=axs[run_idx-1],
-                    projection=projection,
-                    central_longitude=central_longitude,
-                    plt_grid=plt_grid,
-                    lon_range=lon_range,
-                    lat_range=lat_range,
-                    dateline=dateline,
-                    set_map=set_map,
-                    **kwargs
-                )
-                kwargs = map_dict['kwargs']
+            if run_idx - 1 in map_axis:
+                if projection is not None:
+                    map_dict = create_map(
+                        ax=axs[run_idx-1],
+                        projection=projection,
+                        central_longitude=central_longitude,
+                        plt_grid=plt_grid,
+                        lon_range=lon_range,
+                        lat_range=lat_range,
+                        dateline=dateline,
+                        set_map=set_map,
+                        **kwargs
+                    )
+                    kwargs = map_dict['kwargs']
             run_idx += 1
             if run_idx > end_idx:
                 break
