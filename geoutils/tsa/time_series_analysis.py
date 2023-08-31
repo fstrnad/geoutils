@@ -628,6 +628,13 @@ def get_cond_occ(tps, cond, counter):
 
     # Joint count, eg. sync, active, phase
     phase_sync_act = tu.get_sel_tps_ds(ds=cond, tps=tps)
+    # Get Counts of conditional intersection, eg. Sync + Active/Break
+    if len(phase_sync_act) > 0:
+        count_phase_act_sync = sut.count_occ(occ_arr=[phase_sync_act.data],
+                                             count_arr=counter,
+                                             rel_freq=False)
+    else:
+        count_phase_act_sync = np.zeros(len(counter))
 
     # Determine time points counts for denominator
     # Tps active/break of phase = joint probabilites (P(p,a))
@@ -635,15 +642,12 @@ def get_cond_occ(tps, cond, counter):
                                     count_arr=counter,
                                     rel_freq=False)
 
-    # Get Counts of conditional intersection, eg. Sync + Active/Break
-    count_phase_act_sync = sut.count_occ(occ_arr=[phase_sync_act.data],
-                                         count_arr=counter,
-                                         rel_freq=False)
+    print(count_phase_act_sync, count_phase_act)
 
     min_num_samples = 7
     # print(count_phase_act)
-    count_phase_act = np.where(count_phase_act < min_num_samples,
-                               count_phase_act*3.22,  # For small samples
+    count_phase_act = np.where(count_phase_act <= min_num_samples,
+                               count_phase_act*4.22,  # For small samples
                                count_phase_act)
     # print(count_phase_act)
     p_s_1_act = count_phase_act_sync/count_phase_act

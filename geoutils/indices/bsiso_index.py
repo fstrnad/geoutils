@@ -6,6 +6,7 @@ import xarray as xr
 import geoutils.utils.time_utils as tu
 import geoutils.indices.indices_utils as iut
 import geoutils.tsa.time_series_analysis as tsa
+import geoutils.plotting.plots as cplt
 
 from importlib import reload
 import pandas as pd

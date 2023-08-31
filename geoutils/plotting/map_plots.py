@@ -709,10 +709,18 @@ def plot_2D(
                 transform=projection,
                 shading="auto",
             )
-    elif plot_type == "contourf":
+    elif plot_type == "contourf" or plot_type == "discrete":
         """
         see https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.contourf.html
         """
+        if plot_type == "discrete":
+            vmin = np.nanmin(z)
+            vmax = np.nanmax(z)
+            normticks = put.discrete_norm_ticks(
+                vmin, vmax, num_ticks=levels, shift_ticks=True)
+            ticks = normticks[:-1] + 0.5
+            levels = np.array(normticks[:], dtype=float)
+
         im = ax.contourf(
             x,
             y,
@@ -751,27 +759,6 @@ def plot_2D(
         if clabel:
             print(clabel)
             ax.clabel(im, inline=True, fontsize=10)
-
-    elif plot_type == "discrete":
-        vmin = np.nanmin(z)
-        vmax = np.nanmax(z)
-        cmap, norm = put.discrete_cmap(
-            vmin, vmax, colormap=cmap, num_ticks=levels, shift_ticks=True
-        )
-        normticks = put.discrete_norm_ticks(
-            vmin, vmax, num_ticks=levels, shift_ticks=True)
-        ticks = normticks[:-1] + 0.5
-
-        im = ax.pcolor(
-            x,
-            y,
-            z,
-            # vmin=vmin,
-            # vmax=vmax,
-            cmap=cmap,
-            transform=projection,
-            norm=norm,
-        )
 
     if plot_type == 'hatch' or significance_mask is not None:
         if significance_mask is not None:
@@ -814,17 +801,19 @@ def plot_2D(
                            y_title=y_title, **kwargs)
 
     if label is not None:
+        tick_step = kwargs.pop('tick_step', 2)
         cbar = put.make_colorbar(ax, im=im,
                                  norm=set_norm,
                                  ticks=levels,
                                  label=label,
                                  set_cax=True,
                                  sci=sci,
+                                 tick_step=tick_step if plot_type != 'discrete' else 1,
                                  **kwargs)
         if plot_type == "discrete":
             cbar.set_ticks(ticks)
-            cbar.ax.set_xticklabels(ticks, rotation=45)
-            cbar.set_ticklabels(normticks)
+            cbar.ax.set_xticklabels(normticks[:-1], rotation=45)
+            cbar.set_ticklabels(normticks[:-1])
     if plot_type != "points":
         return {"ax": ax, "fig": fig, "projection": projection, "im": im,
                 'ticks': levels, 'extend': extend}
@@ -936,8 +925,10 @@ def plot_wind_field(
 
     lw = kwargs.pop("lw", 4)
     scale = kwargs.pop("scale", None)
-    headwidth = kwargs.pop('headwidth', 5)
-    width = kwargs.pop('width', 0.006)
+    # headwidth = kwargs.pop('headwidth', 5)
+    # width = kwargs.pop('width', 0.006)
+    headwidth = kwargs.pop('headwidth', 4.5)
+    width = kwargs.pop('width', 0.003)
     headaxislength = kwargs.pop('headaxislength', 3)
     headlength = kwargs.pop('headlength', 4)
     zorder = kwargs.pop('zorder', 10)

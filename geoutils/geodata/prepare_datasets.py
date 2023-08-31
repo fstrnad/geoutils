@@ -132,6 +132,7 @@ plevels = [50, 100, 150, 200,
 
 plevels = [100, 200, 300, 400,
            500, 600, 700, 800, 900]
+plevels = [600, 800, 900]
 name = 'era5'
 grid_step = 2.5
 
@@ -146,11 +147,7 @@ for plevel in plevels:
         dirname_pv = f"/mnt/qb/goswami/data/era5/multi_pressure_level/potential_vorticity/{plevel}/"
         dirname_sh = f"/mnt/qb/goswami/data/era5/multi_pressure_level/specific_humidity/{plevel}/"
         dirname_temp = f"/mnt/qb/goswami/data/era5/multi_pressure_level/temperature/{plevel}/"
-    else:
-        dirname_uwind = f"/home/strnad/data/era5/multi_pressure_level/u_component_of_wind/{plevel}/"
-        dirname_vwind = f"/home/strnad/data/era5/multi_pressure_level/v_component_of_wind/{plevel}/"
-        dirname_w = f"/home/strnad/data/era5/multi_pressure_level/vertical_velocity/{plevel}/"
-        dirname_z = f"/home/strnad/data/era5/multi_pressure_level/geopotential/{plevel}/"
+        dirname_div = f"/mnt/qb/goswami/data/era5/multi_pressure_level/divergence/{plevel}/"
 
     fname_u = dirname_uwind + f'u_component_of_wind_{plevel}_1959_2021.nc'
     fname_v = dirname_vwind + f'v_component_of_wind_{plevel}_1959_2021.nc'
@@ -158,6 +155,7 @@ for plevel in plevels:
     fname_z = dirname_z + f'geopotential_{plevel}_1959_2021.nc'
 
     fname_pv = dirname_pv + f'potential_vorticity_{plevel}_1959_2021.nc'
+    fname_div = dirname_div + f'divergence_{plevel}_1959_2021.nc'
     fname_sh = dirname_sh + f'specific_humidity_{plevel}_1959_2021.nc'
     fname_temp = dirname_temp + f'temperature_{plevel}_1959_2021.nc'
 
@@ -168,14 +166,15 @@ for plevel in plevels:
         pv=fname_pv,
         q=fname_sh,
         t=fname_temp,
-        z=fname_z
+        z=fname_z,
+        d=fname_div,
     )
 
     var_names = ['u', 'v', 'w', 'pv', 'z', 'q']
     var_names = ['u', 'v', 'z', 'pv']
     var_names = ['t', 'q']
-    # var_names = ['u', 'v', 'w', 'z', 'q', 't']
     # var_names = ['u', 'v', 'w']
+    var_names = ['d']
 
     for idx, var_name in enumerate(var_names):
         fname = fnames_dict[var_name]
