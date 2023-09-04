@@ -22,4 +22,6 @@ dependencies:
   - ipywidgets
   - scikit-learn
   - windspharm
+  - statsmodels
+  - seaborn
 

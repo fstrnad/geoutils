@@ -5,24 +5,21 @@ Created on Tue Oct 20 11:09:03 2020
 
 @author: Felix Strnad
 """
-import geoutils.utils.file_utils as fut
 import geoutils.utils.general_utils as gut
 from importlib import reload
-import os
 import numpy as np
 import multiprocessing as mpi
 import time
 from joblib import Parallel, delayed
 from tqdm import tqdm
-import scipy.stats as st
-from itertools import product
 import geoutils.tsa.time_series_analysis as tsa
 import geoutils.utils.time_utils as tu
 
 reload(tu)
 
 
-def instant_synchronization(lag, times, es_array1, es_array2=None):
+def lagged_synchronization(lag, times, es_array1, es_array2=None):
+    print(lag)
     if es_array2 is None:
         gut.myprint(
             'No second event series given. Using first event series for both!')
@@ -54,10 +51,10 @@ def instant_synchronization(lag, times, es_array1, es_array2=None):
     return sync_ts
 
 
-def instant_synchronization_exclude_ts(lag, es_array1,
-                                       es_array2=None,
-                                       ts_exclude=None,
-                                       lag_exclude=None):
+def lagged_synchronization_exclude_ts(lag, es_array1,
+                                      es_array2=None,
+                                      ts_exclude=None,
+                                      lag_exclude=None):
     if es_array2 is None:
         gut.myprint(
             'No second event series given. Using first event series for both!')
@@ -78,6 +75,7 @@ def instant_synchronization_exclude_ts(lag, es_array1,
     ts_exclude_compliment = tsa.complement_evs_series(ts_exclude).values
 
     for this_lag in lag:
+        print(this_lag)
         if lag_exclude is not None and lag_exclude < this_lag and lag_exclude > 0:
             gut.myprint(f'Excluding events until lag {lag_exclude} steps')
             # Excludes all events until lag_exclude
@@ -94,6 +92,9 @@ def instant_synchronization_exclude_ts(lag, es_array1,
             if this_lag > 0:
                 this_ts_exclude_compl = ts_exclude_compliment[:-np.abs(
                     this_lag)]
+            elif this_lag < 0:
+                this_ts_exclude_compl = ts_exclude_compliment[np.abs(
+                    this_lag):]
             else:
                 this_ts_exclude_compl = ts_exclude_compliment
         es_array, es_array_lag = tu.get_lagged_ts_arr(

@@ -17,9 +17,11 @@ The following packages are required for running the package:
 - metpy
 - windspharm
 - matplotlib
+- seaborn
 - cartopy
 - scipy
 - scikit-learn
+- statsmodels
 - tqdm
 - palettable (for more colorbars)
 

@@ -20,6 +20,7 @@ if os.getenv("HOME") == '/home/goswami/fstrnad80' or os.getenv("HOME") == '/home
     dirname_slhf = "/mnt/qb/goswami/data/era5/single_pressure_level/surface_latent_heat_flux/"
     dirname_uvrs = "/mnt/qb/goswami/data/era5/single_pressure_level/downward_uv_radiation_at_the_surface/"
     dirname_tcw = "/mnt/qb/goswami/data/era5/single_pressure_level/total_column_water/"
+    dirname_tcwv = "/mnt/qb/goswami/data/era5/single_pressure_level/total_column_water_vapour/"
     dirname_mslp = "/mnt/qb/goswami/data/era5/single_pressure_level/mean_sea_level_pressure/"
 else:
     dirname_ttr = "/mnt/qb/goswami/data/era5/single_pressure_level/top_net_thermal_radiation/"
@@ -77,6 +78,8 @@ fname_uvrs = dirname_uvrs + \
     'downward_uv_radiation_at_the_surface_sfc_1959_2022.nc'
 fname_tcw = dirname_tcw + \
     'total_column_water_sfc_1959_2022.nc'
+fname_tcwv = dirname_tcwv + \
+    'total_column_water_vapour_sfc_1959_2022.nc'
 fname_mslp = dirname_mslp + \
     'mean_sea_level_pressure_sfc_1959_2022.nc'
 
@@ -96,12 +99,12 @@ fnames_dict = dict(
     slhf=fname_slhf,
     uvb=fname_uvrs,
     tcw=fname_tcw,
+    tcwv=fname_tcwv,
     msl=fname_mslp,
 )
 
 name = 'era5'
-var_names = ['vimd', 'ewvf', 'nwvf', 't2m', 'sp', 'ttr', 'tcrw']
-var_names = ['msl']
+var_names = ['tcwv']
 
 # for idx, var_name in enumerate(var_names):
 #     for grid_step in grid_steps:
@@ -132,7 +135,7 @@ plevels = [50, 100, 150, 200,
 
 plevels = [100, 200, 300, 400,
            500, 600, 700, 800, 900]
-plevels = [600, 800, 900]
+plevels = [100, 200, 300, 400]
 name = 'era5'
 grid_step = 2.5
 
@@ -155,7 +158,7 @@ for plevel in plevels:
     fname_z = dirname_z + f'geopotential_{plevel}_1959_2021.nc'
 
     fname_pv = dirname_pv + f'potential_vorticity_{plevel}_1959_2021.nc'
-    fname_div = dirname_div + f'divergence_{plevel}_1959_2021.nc'
+    fname_div = dirname_div + f'divergence_{plevel}_1959_2022.nc'
     fname_sh = dirname_sh + f'specific_humidity_{plevel}_1959_2021.nc'
     fname_temp = dirname_temp + f'temperature_{plevel}_1959_2021.nc'
 

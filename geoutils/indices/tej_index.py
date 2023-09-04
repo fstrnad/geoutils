@@ -133,7 +133,7 @@ if __name__ == '__main__':
     tej_tps = get_tej_strength(u200=u200,)
 
     im = cplt.create_multi_plot(nrows=1, ncols=3,
-                                title=f'Phases of the Tropical Easterly Jet ({ctype}, {200}hPa)',
+                                title=f'Phases of the Tropical Easterly Jet  ({ctype}, {200}hPa)',
                                 projection='PlateCarree',
                                 lon_range=[-50, 180],
                                 lat_range=[-30, 70],

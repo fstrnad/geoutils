@@ -9,5 +9,5 @@ setup(
     description=('Library for processing and plotting of climate data.'),
     author='Felix Strnad',
     author_email='felix.strnad@uni-tuebingen.de',
-    packages=find_packages()
+    packages=find_packages('geoutils'),
 )
