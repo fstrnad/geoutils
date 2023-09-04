@@ -6,6 +6,8 @@ import os
 import numpy as np
 from cdo import Cdo
 import argparse
+from importlib import reload
+reload(tu)
 
 
 def str2bool(v):
@@ -26,6 +28,7 @@ dict_era5 = {'t2m': '2m_temperature',
              'u10': '10m_u_component_of_wind',
              'v10': '10m_v_component_of_wind',
              'sst': 'sea_surface_temperature',
+             'ttr': 'top_net_thermal_radiation',
              }
 
 
@@ -41,7 +44,11 @@ def download_era5(variable, plevels=None,
                   start_day=1, end_day=31,
                   start_month='Jan', end_month='Dec',
                   start_hour=0, end_hour=23,
-                  run=True, **kwargs):
+                  filename=None,
+                  folder='./',
+                  daymean=False,
+                  run=True,
+                  **kwargs):
     """Download ERA5 data for a given variable.
 
     Args:
@@ -72,11 +79,23 @@ def download_era5(variable, plevels=None,
         run = True
 
     years = np.arange(starty, endy+1, 1)
-    smonths = tu.get_index_of_month(month=start_month)
-    emonths = tu.get_index_of_month(month=end_month)
-    months = np.arange(smonths, emonths+1, 1)
-    sdays = np.arange(start_day, end_day+1, 1)
-
+    smonths = tu.get_month_number(start_month)
+    emonths = tu.get_month_number(end_month)
+    marray = np.arange(smonths, emonths+1, 1)
+    months = tu.num2str_list(marray)
+    print(months)
+    days = np.arange(start_day, end_day+1, 1)
+    sdays = tu.num2str_list(days)
+    times = [
+        '00:00', '01:00', '02:00',
+        '03:00', '04:00', '05:00',
+        '06:00', '07:00', '08:00',
+        '09:00', '10:00', '11:00',
+        '12:00', '13:00', '14:00',
+        '15:00', '16:00', '17:00',
+        '18:00', '19:00', '20:00',
+        '21:00', '22:00', '23:00',
+    ]
     cdo = Cdo()    # Parameters
 
     for plevel in plevels:
@@ -84,21 +103,22 @@ def download_era5(variable, plevels=None,
         for year in years:
             gut.myprint(
                 f"Year {year}, Pressure Level {plevel}, Variable {variable}")
-
-            if spl is None:
-                folder = f'./multi_pressure_level/{variable}/{plevel}/'
-                fname_daymean = folder + \
-                    f'{variable}_{year}_{plevel}_daymean.nc'
-                filename = folder + f'{variable}_{year}_{plevel}.nc'
-            else:
-                folder = f'./single_pressure_level/{variable}/'
-                fname_daymean = folder + f'{variable}_{year}_daymean.nc'
-                filename = folder + f'{variable}_{year}.nc'
+            if filename is None:
+                if not spl:
+                    folder += f'/multi_pressure_level/{variable}/{plevel}/'
+                    fname_daymean = f'{variable}_{year}_{plevel}_daymean.nc'
+                    filename = f'{variable}_{year}_{plevel}.nc'
+                else:
+                    folder += f'/single_pressure_level/{variable}/'
+                    fname_daymean = f'{variable}_{year}_daymean.nc'
+                    filename = f'{variable}_{year}.nc'
 
             if not os.path.exists(folder):
                 gut.myprint(f"Make Dir: {folder}")
                 os.makedirs(folder)
 
+            filename = folder + filename
+            fname_daymean = folder + fname_daymean
             if os.path.exists(filename):
                 gut.myprint(f"File {filename} already exists!")
             else:
@@ -117,16 +137,7 @@ def download_era5(variable, plevels=None,
                                 'pressure_level': plevel,
                                 'month': months,
                                 'day': sdays,
-                                'time': [
-                                    '00:00', '01:00', '02:00',
-                                    '03:00', '04:00', '05:00',
-                                    '06:00', '07:00', '08:00',
-                                    '09:00', '10:00', '11:00',
-                                    '12:00', '13:00', '14:00',
-                                    '15:00', '16:00', '17:00',
-                                    '18:00', '19:00', '20:00',
-                                    '21:00', '22:00', '23:00',
-                                ],
+                                'time': times,
                             },
                             filename)
                     else:
@@ -137,35 +148,9 @@ def download_era5(variable, plevels=None,
                                 'format': 'netcdf',
                                 'variable': [variable],
                                 'year': [str(year)],
-                                'month': [
-                                    '01', '02', '03',
-                                    '04', '05', '06',
-                                    '07', '08', '09',
-                                    '10', '11', '12',
-                                ],
-                                'day': [
-                                    '01', '02', '03',
-                                    '04', '05', '06',
-                                    '07', '08', '09',
-                                    '10', '11', '12',
-                                    '13', '14', '15',
-                                    '16', '17', '18',
-                                    '19', '20', '21',
-                                    '22', '23', '24',
-                                    '25', '26', '27',
-                                    '28', '29', '30',
-                                    '31',
-                                ],
-                                'time': [
-                                    '00:00', '01:00', '02:00',
-                                    '03:00', '04:00', '05:00',
-                                    '06:00', '07:00', '08:00',
-                                    '09:00', '10:00', '11:00',
-                                    '12:00', '13:00', '14:00',
-                                    '15:00', '16:00', '17:00',
-                                    '18:00', '19:00', '20:00',
-                                    '21:00', '22:00', '23:00',
-                                ],
+                                'month': months,
+                                'day': sdays,
+                                'time': times,
                             },
                             filename)
                     del c
@@ -177,8 +162,9 @@ def download_era5(variable, plevels=None,
 
             inFiles.append(fname_daymean)
         if run:
-            fname_daymean_yrange = folder + \
-                f'{variable}_{plevel}_{starty}_{endy}.nc'
-            cdo.mergetime(options='-b F32 -f nc',
-                          input=inFiles,
-                          output=fname_daymean_yrange)
+            if daymean:
+                fname_daymean_yrange = folder + \
+                    f'{variable}_{plevel}_{starty}_{endy}.nc'
+                cdo.mergetime(options='-b F32 -f nc',
+                              input=inFiles,
+                              output=fname_daymean_yrange)

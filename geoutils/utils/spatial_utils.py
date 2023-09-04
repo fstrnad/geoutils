@@ -844,7 +844,8 @@ def compute_correlation(data_array, ts,
         (data_array.lon.size, data_array.lat.size, len(lag_arr))),
         dims=("lon", "lat", "lag"),
         name='p')
-    gut.myprint(f"Computing {correlation_type} correlation for {len(data_array.lon)} locations ...")
+    gut.myprint(
+        f"Computing {correlation_type} correlation for {len(data_array.lon)} locations ...")
     for i, lon in enumerate(tqdm(data_array.lon)):
         for j, lat in enumerate(data_array.lat):
             for l, lag in enumerate(lag_arr):
@@ -1042,7 +1043,12 @@ def remove_useless_variables(ds):
     vars = gut.get_vars(ds=ds)
     for var in vars:
         this_dims = gut.get_dims(ds[var])
-        if(
+        if 'expver' in this_dims:
+            gut.myprint(f'Remove expver from {var}!')
+            ds = ds.sel(expver=1).combine_first(ds.sel(expver=5))
+            ds.load()
+            gut.myprint(f'Combined expver 1 and 5 for {var}!')
+        if (
             (gut.compare_lists(this_dims, ['lat', 'lon', 'time'])) or
             (gut.compare_lists(this_dims, ['lat', 'lon'])) or
             (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'plevel'])) or

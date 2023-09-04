@@ -157,15 +157,34 @@ def get_month_number(*month_list):
     return idx_lst
 
 
+def num2str_list(num_list):
+    str_list = []
+    for num in num_list:
+        str_list.append(num2str(num))
+    return str_list
+
+
+def num2str(mi):
+    if isinstance(mi, int) or isinstance(mi, np.int64):
+        mstr = f'{mi}' if mi > 9 else f'0{mi}'
+    else:
+        print(type(mi))
+        raise ValueError(
+            f'Month number should be integer but is of type {type(mi)}!')
+
+    return mstr
+
+
 def month2str(month):
     mi = get_month_number(month)
-    mstr = f'{mi}' if mi > 9 else f'0{mi}'
+    mstr = num2str(mi)
     return mstr
 
 
 def get_month_name(month_number):
     if not isinstance(month_number, int):
-        raise ValueError(f'Month should be integer but is {type(int)}!')
+        raise ValueError(
+            f'Month should be integer but is {type(month_number)}!')
     if month_number < 1 or month_number > 12:
         raise ValueError(
             f'Month should be in range 1-12 but is {month_number}!')

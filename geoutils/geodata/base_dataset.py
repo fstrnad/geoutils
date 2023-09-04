@@ -31,8 +31,8 @@ class BaseDataset():
 
     def __init__(
         self,
-        var_name=None,
         data_nc=None,
+        var_name=None,
         time_range=None,
         lon_range=[-180, 180],
         lat_range=[-90, 90],

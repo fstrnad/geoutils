@@ -7,6 +7,13 @@ from importlib import reload
 # %%
 reload(d5)
 
-d5.download_era5(variable='t2m',
-                 starty=2023, endy=2023,
-                 start_month='Jun', end_month='Sep')
+d5.download_era5(variable='pr',
+                 starty=2023,
+                 endy=2023,
+                 start_month='Jun',
+                 end_month='Jun',
+                 folder='/home/strnad/data/era5/',  # full path
+                 run=True,
+                 )
+
+# %%
