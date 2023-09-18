@@ -27,7 +27,7 @@ else:
     dirname_ttr = "/mnt/qb/goswami/data/era5/single_pressure_level/top_net_thermal_radiation/"
     dirname_sp = "/home/strnad/data/era5/single_pressure_level/surface_pressure/"
     dirname_t2m = "/mnt/qb/goswami/data/era5/single_pressure_level/2m_temperature/"
-    output_dir = '/home/strnad/data/climnet/outputs/'
+    output_dir = '/home/strnad/data/climate_data'
     plot_dir = '/home/strnad/data/climnet/plots/'
 
 # %%

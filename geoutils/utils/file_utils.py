@@ -9,7 +9,34 @@ from importlib import reload
 reload(tu)
 reload(gut)
 
-#
+
+def get_files_in_folder(folder_path: str, verbose: bool = True) -> list:
+    """
+    Returns a list of all files in a given folder.
+
+    Args:
+        folder_path (str): The folder path to search in.
+
+    Returns:
+        list: A list of file paths.
+    """
+    assert_folder_exists(folder_path)
+
+    file_list = []
+    for root, dirs, files in os.walk(folder_path):
+        for file in files:
+            filepath = os.path.join(root, file)
+            if os.path.isfile(filepath):
+                file_list.append(filepath)
+
+    # Check that all files in the file list actually exist
+    for filepath in file_list:
+        assert_file_exists(filepath=filepath)
+
+    gut.myprint(f'Found {len(file_list)} files!',
+                verbose=verbose)
+
+    return np.array(file_list)
 
 
 def find_files_with_string(folder_path: str, search_string: str = None,
