@@ -113,7 +113,9 @@ def plot_xy(
                                    subplot_kw={'projection': 'polar'})
     else:
         fig = ax.get_figure()
-
+        set_axis = False
+    zorder = kwargs.pop('zorder', 0)
+    filled = kwargs.pop('filled', False)
     if plot_type != 'bar':
         if set_axis:
             if ts_axis:
@@ -138,7 +140,7 @@ def plot_xy(
                 x = np.arange(0, len(x))
 
             y = y_arr[idx] if len(y_arr) > 1 else y_arr[0]
-            zorder = len(y_arr) - idx if inverted_z_order else idx
+            zorder += len(y_arr) - idx if inverted_z_order else idx
             z = z_arr[idx] if len(z_arr) == 1 else None
             if norm is True:
                 y = sut.normalize(y)
@@ -225,6 +227,19 @@ def plot_xy(
                                  alpha=alpha,
                                  label=label
                                  )
+                    if filled:
+                        alpha_fill = kwargs.get('alpha_fill', 1)
+                        offset_fill = kwargs.get('offset_fill', 0)
+                        if offset_fill == 0:
+                            ax.fill_between(
+                                x, y, color=c, alpha=alpha_fill, zorder=zorder)
+                        else:
+                            y_linear = np.full_like(x, offset_fill)
+
+                            ax.fill_between(x, y, y_linear, where=(y <= y_linear),
+                                            color=c, alpha=alpha_fill,
+                                            zorder=zorder)
+
                 if len(x_err_arr) > idx or len(y_err_arr) > idx+1 or len(y_lb_arr) > idx+1:
 
                     if len(y_lb_arr) > idx:

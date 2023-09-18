@@ -684,6 +684,77 @@ def rename_da(da, name):
     return da
 
 
+def rename_var_era5(ds, verbose=True):
+    names = get_vars(ds=ds)
+
+    if "precipitation" in names:
+        ds = ds.rename({"precipitation": "pr"})
+        myprint("Rename precipitation: pr!")
+    if "precip" in names:
+        ds = ds.rename({"precip": "pr"})
+        myprint("Rename precip: pr!")
+    if "tp" in names:
+        ds = ds.rename({"tp": "pr"})
+        myprint("Rename tp to pr!")
+        ds['pr'] = ds['pr']*1000*24  # convert m/h to mm/day
+        myprint("Convert m/h to mm/day!")
+        ds['pr'].attrs.update({'units': 'mm/day'})
+        ds.attrs.update({'long_name': 'Precipitation'})
+
+    if 'sp' in names:
+        # PS is surface pressure but named according to CF convention
+        ds = ds.rename({"sp": "PS"})
+        myprint("Rename sp to PS!")
+        if ds['PS'].units == 'Pa':
+            myprint("Compute surface pressure from Pa to hPa!")
+            ds['PS'] /= 100  # compute Pa to hPa
+            ds.attrs.update({'units': 'hPa'})
+            ds['PS'].attrs.update({'units': 'hPa'})
+
+    if "p86.162" in names:
+        ds = ds.rename({"p86.162": "vidtef"})
+        myprint(
+            "Rename vertical integral of divergence of total energy flux to: vidtef!"
+        )
+    if "p71.162" in names:
+        ds = ds.rename({"p71.162": "ewvf"})
+        myprint(
+            "Rename vertical integral of eastward water vapour flux to: ewvf!")
+
+    if "p72.162" in names:
+        ds = ds.rename({"p72.162": "nwvf"})
+        myprint(
+            "Rename vertical integral of northward water vapour flux to: ewvf!")
+
+    if "z" in names:
+        import metpy.calc as metcalc
+        from metpy.units import units
+        ds['z'].attrs.update({'units': 'm'})
+        ds['z'].attrs.update({'long_name': 'Geopotential Height'})
+        g = 9.80665
+        ds['z'] = ds['z'] / g  # convert to m
+        myprint(
+            f'Compute geopotential height from z! \n Multiply by 1/{g}',
+            verbose=verbose)
+
+    if "ttr" in names:
+        ds = ds.rename({"ttr": "olr"})
+        myprint(
+            "Rename top net thermal radiation (ttr) to: olr!\n Multiply by -1/3600!")
+        ds['olr'] *= -1./3600  # convert to W/m2
+        ds['olr'].attrs.update({'units': 'W/m2'})
+        ds.attrs.update({'long_name': 'Outgoing longwave radiation'})
+        ds['olr'].attrs.update(
+            {'long_name': 'Outgoing longwave radiation'})
+
+    if "ar_binary_tag" in names:
+        ds = ds.rename({"ar_binary_tag": "ar"})
+        myprint(
+            "Rename ar_binary_tag (atmospheric rivers) to: ar!",
+            verbose=verbose)
+    return ds
+
+
 def merge_datasets(ds1, ds2):
     """
     Merge two xarray Dataset objects into a single Dataset object.
@@ -882,7 +953,7 @@ def split_array_by_half(arr, keyword):
     if keyword == 'first' or keyword == 1:
         return arr[:midpoint] if len(arr) % 2 == 0 else arr[:midpoint + 1]
     elif keyword == 'second' or keyword == -1:
-        return arr[midpoint:] if len(arr) % 2 == 1 else arr[midpoint -1:]
+        return arr[midpoint:] if len(arr) % 2 == 1 else arr[midpoint - 1:]
     else:
         raise ValueError("Keyword must be either 'first' or 'second'.")
 
@@ -915,4 +986,5 @@ def delete_element_at_index(arr, i, axis=0):
     if i < len(arr):
         return np.delete(arr, i, axis=axis)
     else:
-        raise IndexError("Index out of range. The index must be less than the length of the array.")
+        raise IndexError(
+            "Index out of range. The index must be less than the length of the array.")

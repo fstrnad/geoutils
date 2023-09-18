@@ -29,7 +29,7 @@ def get_cah_index(z200, lev=200, var='z_an_month'):
             Defauts to None
 
     Returns:
-        cahi_index (xr.Dataset): Nino indices.
+        cahi_index (xr.Dataset): CAH indices.
     """
     gut.myprint(f'Computing CAH index with {var} on level {lev}hPa')
     da_low = z200[var].sel(lev=lev)

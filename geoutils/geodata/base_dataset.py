@@ -156,6 +156,7 @@ class BaseDataset():
         verbose=True,
         **kwargs,
     ):
+        reload(gut)
         gut.myprint("Start processing data!", verbose=verbose)
 
         if large_ds:
@@ -180,7 +181,7 @@ class BaseDataset():
             ds, ts_days=decode_times, verbose=verbose,
             **kwargs)
         self.dims = self.get_dims(ds=ds)
-        ds = self.rename_var_era5(ds, verbose=verbose)
+        ds = gut.rename_var_era5(ds=ds, verbose=verbose)
 
         if 'time' in self.dims:
             ds = self.get_data_timerange(ds, time_range)
@@ -239,7 +240,8 @@ class BaseDataset():
         time.sleep(0.1)
         return xda
 
-    def load(self, load_nc, lon_range=[-180, 180], lat_range=[-90, 90]):
+    def load(self, load_nc, lon_range=[-180, 180], lat_range=[-90, 90],
+             verbose=True):
         """Load dataset object from file.
 
         Parameters:
@@ -266,7 +268,7 @@ class BaseDataset():
         self.info_dict = copy.deepcopy(ds.attrs)  # TODO
 
         # Read and create grid class
-        ds = self.rename_var_era5(ds)
+        ds = gut.rename_var_era5(ds=ds, verbose=verbose)
         self.vars = self.get_vars(ds=ds, verbose=True)
         self.dims = self.get_dims(ds=ds)
 
@@ -402,69 +404,6 @@ class BaseDataset():
         gut.myprint(f"Rename {old_var_name} to {new_var_name}!")
         self.vars = self.get_vars()
         self.set_var(verbose=False)
-        return ds
-
-    def rename_var_era5(self, ds, verbose=True):
-        names = gut.get_vars(ds=ds)
-
-        if "precipitation" in names:
-            ds = ds.rename({"precipitation": "pr"})
-            gut.myprint("Rename precipitation: pr!")
-        if "precip" in names:
-            ds = ds.rename({"precip": "pr"})
-            gut.myprint("Rename precip: pr!")
-        if "tp" in names:
-            ds = ds.rename({"tp": "pr"})
-            gut.myprint("Rename tp: pr!")
-
-        if 'sp' in names:
-            # PS is surface pressure but named according to CF convention
-            ds = ds.rename({"sp": "PS"})
-            gut.myprint("Rename sp to PS!")
-            if ds['PS'].units == 'Pa':
-                gut.myprint("Compute surface pressure from Pa to hPa!")
-                ds['PS'] /= 100  # compute Pa to hPa
-                ds.attrs.update({'units': 'hPa'})
-                ds['PS'].attrs.update({'units': 'hPa'})
-
-        if "p86.162" in names:
-            ds = ds.rename({"p86.162": "vidtef"})
-            gut.myprint(
-                "Rename vertical integral of divergence of total energy flux to: vidtef!"
-            )
-        if "p71.162" in names:
-            ds = ds.rename({"p71.162": "ewvf"})
-            gut.myprint(
-                "Rename vertical integral of eastward water vapour flux to: ewvf!")
-
-        if "p72.162" in names:
-            ds = ds.rename({"p72.162": "nwvf"})
-            gut.myprint(
-                "Rename vertical integral of northward water vapour flux to: ewvf!")
-
-        if "z" in names:
-            import metpy.calc as metcalc
-            from metpy.units import units
-            ds['z'].attrs.update({'units': 'm'})
-            ds['z'].attrs.update({'long_name': 'Geopotential Height'})
-            g = 9.80665
-            ds['z'] = ds['z'] / g  # convert to m
-            gut.myprint(f'Compute geopotential height from z! \n Multiply by 1/{g}', verbose=verbose)
-
-        if "ttr" in names:
-            ds = ds.rename({"ttr": "olr"})
-            gut.myprint(
-                "Rename top net thermal radiation (ttr) to: olr!\n Multiply by -1/3600!")
-            ds['olr'] *= -1./3600  # convert to W/m2
-            ds['olr'].attrs.update({'units': 'W/m2'})
-            ds.attrs.update({'long_name': 'Outgoing longwave radiation'})
-            ds['olr'].attrs.update(
-                {'long_name': 'Outgoing longwave radiation'})
-
-        if "ar_binary_tag" in names:
-            ds = ds.rename({"ar_binary_tag": "ar"})
-            gut.myprint(
-                "Rename ar_binary_tag (atmospheric rivers) to: ar!", verbose=verbose)
         return ds
 
     def delete_var(self, var_name):

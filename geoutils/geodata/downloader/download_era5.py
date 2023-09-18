@@ -29,6 +29,7 @@ dict_era5 = {'t2m': '2m_temperature',
              'v10': '10m_v_component_of_wind',
              'sst': 'sea_surface_temperature',
              'ttr': 'top_net_thermal_radiation',
+             'olr': 'top_net_thermal_radiation',
              }
 
 
@@ -55,7 +56,6 @@ def download_era5(variable, plevels=None,
         variable (str): Variable to be downloaded.
     """
     variable = rename_era5(variable)
-    gut.myprint(f"We use the following variables: {variable}")
     if plevels is not None:
         if plevels == 'all':
             # Default are all pressure levels from 100 -- 1000
@@ -70,8 +70,6 @@ def download_era5(variable, plevels=None,
         plevels = ['sfc']
         spl = True
 
-    gut.myprint(f'Download pressure levels {plevels}...')
-
     if not run:
         print("WARNING! Dry run!")
         run = False
@@ -83,7 +81,6 @@ def download_era5(variable, plevels=None,
     emonths = tu.get_month_number(end_month)
     marray = np.arange(smonths, emonths+1, 1)
     months = tu.num2str_list(marray)
-    print(months)
     days = np.arange(start_day, end_day+1, 1)
     sdays = tu.num2str_list(days)
     times = [
@@ -96,6 +93,11 @@ def download_era5(variable, plevels=None,
         '18:00', '19:00', '20:00',
         '21:00', '22:00', '23:00',
     ]
+    gut.myprint(f"We use the following variables: {variable}")
+    gut.myprint(f'Download pressure levels {plevels}...')
+    gut.myprint(f"Download years {years}...")
+    gut.myprint(f"Download months {months}...")
+
     cdo = Cdo()    # Parameters
 
     for plevel in plevels:
@@ -106,12 +108,12 @@ def download_era5(variable, plevels=None,
             if filename is None:
                 if not spl:
                     folder += f'/multi_pressure_level/{variable}/{plevel}/'
-                    fname_daymean = f'{variable}_{year}_{plevel}_daymean.nc'
-                    filename = f'{variable}_{year}_{plevel}.nc'
+                    filename = f'{variable}_{year}_{plevel}_{months[0]}_{months[-1]}.nc'
+                    fname_daymean = f'{variable}_{year}_{plevel}_{months[0]}_{months[-1]}_daymean.nc'
                 else:
                     folder += f'/single_pressure_level/{variable}/'
-                    fname_daymean = f'{variable}_{year}_daymean.nc'
-                    filename = f'{variable}_{year}.nc'
+                    filename = f'{variable}_{year}_{months[0]}_{months[-1]}.nc'
+                    fname_daymean = f'{variable}_{year}_{months[0]}_{months[-1]}_daymean.nc'
 
             if not os.path.exists(folder):
                 gut.myprint(f"Make Dir: {folder}")

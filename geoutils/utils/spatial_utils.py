@@ -1040,14 +1040,25 @@ def average_num_eres(data):
 
 def remove_useless_variables(ds):
 
+    # Remove useless dimensions in ds for all variables
+    dims = gut.get_dims(ds=ds)
+    if 'expver' in dims:
+        # occurs for ERA5 data for total precipitation
+        gut.myprint(f'Combine expver from ds!')
+        ds = ds.sel(expver=1).combine_first(ds.sel(expver=5))
+        ds.load()
+        gut.myprint(f'Combined expver 1 and 5 for ds!')
+        dims = gut.get_dims(ds=ds)
+
+    for dim in dims:
+        if dim not in ['time', 'lat', 'lon', 'plevel', 'lev', 'dimx_lon', 'dimy_lon', 'dimz_lon', 'x']:
+            ds = ds.drop_dims(dim)
+            gut.myprint(f'Remove dimension {dim}!')
+
+    # Remove useless variables
     vars = gut.get_vars(ds=ds)
     for var in vars:
         this_dims = gut.get_dims(ds[var])
-        if 'expver' in this_dims:
-            gut.myprint(f'Remove expver from {var}!')
-            ds = ds.sel(expver=1).combine_first(ds.sel(expver=5))
-            ds.load()
-            gut.myprint(f'Combined expver 1 and 5 for {var}!')
         if (
             (gut.compare_lists(this_dims, ['lat', 'lon', 'time'])) or
             (gut.compare_lists(this_dims, ['lat', 'lon'])) or
@@ -1064,12 +1075,6 @@ def remove_useless_variables(ds):
         else:
             ds = ds.drop(var)
             gut.myprint(f'Remove variable {var} with dims: {this_dims}!')
-
-    dims = gut.get_dims(ds=ds)
-    for dim in dims:
-        if dim not in ['time', 'lat', 'lon', 'plevel', 'lev', 'dimx_lon', 'dimy_lon', 'dimz_lon', 'x']:
-            ds = ds.drop_dims(dim)
-            gut.myprint(f'Remove dimension {dim}!')
 
     return ds
 

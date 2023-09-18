@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/574990518.svg)](https://zenodo.org/badge/latestdoi/574990518)
+
 # Geoutils
 
 This is a small package for processing and plotting geodata provided as nc-files and pre- and postprocessing them accordingly.

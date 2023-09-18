@@ -7,6 +7,7 @@ output_folder = 'climate_data'
 time_range = ['1959-01-01', '2019-12-31']
 
 if os.getenv("HOME") == '/home/goswami/fstrnad80' or os.getenv("HOME") == '/home/goswami/jschloer46':
+    dirname_tp = "/mnt/qb/goswami/data/era5/single_pressure_level/total_precipitation/"
     dirname_sp = "/mnt/qb/goswami/data/era5/single_pressure_level/surface_pressure/"
     dirname_t2m = "/mnt/qb/goswami/data/era5/single_pressure_level/2m_temperature/"
     dirname_sst = "/mnt/qb/goswami/data/era5/single_pressure_level/sea_surface_temperature/"
@@ -58,6 +59,8 @@ else:
 # ERA 5 single pressure levels
 fname_sp = dirname_sp + \
     'surface_pressure_sfc_1959_2021.nc'
+fname_tp = dirname_tp + \
+    'total_precipitation_sfc_1950_2020.nc'
 fname_t2m = dirname_t2m + \
     '2m_temperature_sfc_1959_2021.nc'
 fname_sst = dirname_sst + \
@@ -88,6 +91,7 @@ fname_mslp = dirname_mslp + \
 print('Loading Data', flush=True)
 grid_steps = [2.5, 1]
 fnames_dict = dict(
+    tp=fname_tp,
     vimd=fname_vimd,
     t2m=fname_t2m,
     sst=fname_sst,
@@ -104,24 +108,24 @@ fnames_dict = dict(
 )
 
 name = 'era5'
-var_names = ['tcwv']
+var_names = ['tp']
 
-# for idx, var_name in enumerate(var_names):
-#     for grid_step in grid_steps:
-#         fname = fnames_dict[var_name]
-#         dataset_file = output_dir + \
-#             f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_ds.nc"
+for idx, var_name in enumerate(var_names):
+    for grid_step in grid_steps:
+        fname = fnames_dict[var_name]
+        dataset_file = output_dir + \
+            f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_ds.nc"
 
-#         if os.path.exists(dataset_file) is False:
-#             gut.myprint(f'Create Dataset {dataset_file}')
-#             ds = BaseDataset(data_nc=fname,
-#                              #  var_name=var_name,
-#                              grid_step=grid_step,
-#                              large_ds=True,
-#                              )
-#             ds.save(dataset_file)
-#         else:
-#             gut.myprint(f'File {fname} already exists!')
+        if os.path.exists(dataset_file) is False:
+            gut.myprint(f'Create Dataset {dataset_file}')
+            ds = BaseDataset(data_nc=fname,
+                             #  var_name=var_name,
+                             grid_step=grid_step,
+                             large_ds=True,
+                             )
+            ds.save(dataset_file)
+        else:
+            gut.myprint(f'File {fname} already exists!')
 
 # %%  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Wind and geopot fields on different pressure levels
@@ -179,22 +183,22 @@ for plevel in plevels:
     # var_names = ['u', 'v', 'w']
     var_names = ['d']
 
-    for idx, var_name in enumerate(var_names):
-        fname = fnames_dict[var_name]
-        dataset_file = output_dir + \
-            f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_{plevel}_ds.nc"
+    # for idx, var_name in enumerate(var_names):
+    #     fname = fnames_dict[var_name]
+    #     dataset_file = output_dir + \
+    #         f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_{plevel}_ds.nc"
 
-        if not fut.exist_file(dataset_file):
-            gut.myprint(f'Create Dataset {dataset_file}')
-            ds = BaseDataset(data_nc=fname,
-                             grid_step=grid_step,
-                             large_ds=True,
-                             #  time_range=time_range,
-                             )
-            ds.save(dataset_file)
-            del ds
-        else:
-            gut.myprint(f'File {dataset_file} already exists!')
+    #     if not fut.exist_file(dataset_file):
+    #         gut.myprint(f'Create Dataset {dataset_file}')
+    #         ds = BaseDataset(data_nc=fname,
+    #                          grid_step=grid_step,
+    #                          large_ds=True,
+    #                          #  time_range=time_range,
+    #                          )
+    #         ds.save(dataset_file)
+    #         del ds
+    #     else:
+    #         gut.myprint(f'File {dataset_file} already exists!')
 
 
 # %%

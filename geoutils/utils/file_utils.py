@@ -57,12 +57,33 @@ def assert_file_exists(filepath):
         raise ValueError(f"File {filepath} does not exist.")
 
 
-def exist_file(filepath, verbose=True):
+def exist_file(filepath, verbose=False):
     if os.path.exists(filepath):
         gut.myprint(f"File {filepath} exists!", verbose=verbose)
         return True
     else:
         return False
+
+
+def exist_files(filepath_arr, verbose=False):
+    """Check whether all files in filepath_arr exist.
+
+    Args:
+        filepath_arr (list): list of filepaths provided as strings
+        verbose (bool, optional): Verbose results. Defaults to False.
+
+    Returns:
+        bool: True if all files exist, False otherwise.
+    """
+    if len(filepath_arr) == 0:
+        gut.myprint(f"Filepath array is empty!", verbose=verbose)
+        return False
+    for filepath in filepath_arr:
+        if not exist_file(filepath=filepath, verbose=False):
+            gut.myprint(f"File {filepath} does not exist!", verbose=verbose)
+            return False
+
+    return True
 
 
 def exist_folder(filepath, verbose=True):

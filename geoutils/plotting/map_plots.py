@@ -776,7 +776,7 @@ def plot_2D(
                 # norm=norm,
                 hatches=[hatch_type],
                 alpha=0.0,
-                zorder=15,
+                zorder=10,
             )
         else:
             im_tmp = ax.pcolor(
@@ -825,7 +825,7 @@ def plot_edges(
     ds,
     edges,
     weights=None,
-    central_longitude=0,
+    central_longitude=None,
     fig=None,
     ax=None,
     projection="EqualEarth",
@@ -837,18 +837,21 @@ def plot_edges(
 
     plt_grid = kwargs.pop("plt_grid", False)
     set_map = kwargs.pop("set_map", False)
-    map_dict = create_map(
-        da=ds.ds,
-        ax=ax,
-        projection=projection,
-        central_longitude=central_longitude,
-        plt_grid=plt_grid,
-        set_map=set_map,
-        **kwargs
-    )
-    ax = map_dict['ax']
-    fig = map_dict['fig']
-    kwargs = map_dict['kwargs']
+    if ax is None:
+        map_dict = create_map(
+            da=ds.ds,
+            ax=ax,
+            projection=projection,
+            central_longitude=central_longitude,
+            plt_grid=plt_grid,
+            set_map=set_map,
+            **kwargs
+        )
+        ax = map_dict['ax']
+        fig = map_dict['fig']
+        kwargs = map_dict['kwargs']
+    else:
+        fig = ax.get_figure()
     counter = 0
     lw = kwargs.pop("lw", 1)
     alpha = kwargs.pop("alpha", 1)
