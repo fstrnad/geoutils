@@ -92,13 +92,19 @@ def k_means_clustering(data,
 
     if plot_statistics:
         sample_sc = skm.silhouette_samples(data, Z)
-        cplt.plot_xy(x_arr=[np.arange(len(Z))],
-                     y_arr=[sample_sc],
-                     ls_arr=['None'],
-                     mk_arr=['.'],
-                     ylabel="Shilhouette Score",
-                     ylim=(0., .5)
-                     )
+        im = cplt.plot_xy(x_arr=[np.arange(len(Z))],
+                          y_arr=[sample_sc],
+                          ls_arr=['None'],
+                          mk_arr=['.'],
+                          ylabel="Shilhouette Score",
+                          ylim=(0., .5)
+                          )
+        if sc_th is not None:
+            cplt.plot_hline(
+                y=sc_th, ls='--', color='k',
+                ax=im['ax'])
+    else:
+        im = None
 
     if rem_outlayers or sc_th != 0.05:
         gut.myprint('Remove Outlayers...')
@@ -106,9 +112,15 @@ def k_means_clustering(data,
         sign_Z = np.where(sample_sc >= sc_th)[0]
         gut.myprint(
             f'Removed {1 - np.count_nonzero(sign_Z)/len(Z)} of all inputs!')
-        return Z, sign_Z
+        return {'cluster': Z,
+                'significance': sign_Z,
+                'fit': skm,
+                'im': im}
 
-    return Z, None
+    return {'cluster': Z,
+            'significance': None,
+            'fit': skm,
+            'im': im}
 
 
 def agglomerative_clustering(data, **kwargs):
@@ -152,7 +164,9 @@ def agglomerative_clustering(data, **kwargs):
     # Cluster labels for each point in the dataset given to fit(). Noisy samples are given the label -1.
     Z = clustering.labels_
 
-    return Z, None
+    return {'cluster': Z,
+            'significance': None,
+            'fit': skm}
 
 
 def birch_clustering(data,
@@ -167,7 +181,9 @@ def birch_clustering(data,
                n_clusters=k).fit(data)
 
     Z = br.predict(data)
-    return Z, None
+    return {'cluster': Z,
+            'significance': None,
+            'fit': skm}
 
 
 def affinity_clustering(data,
@@ -178,7 +194,9 @@ def affinity_clustering(data,
     br = AffinityPropagation(damping=damping).fit(data)
 
     Z = br.predict(data)
-    return Z, None
+    return {'cluster': Z,
+            'significance': None,
+            'fit': skm}
 
 
 def spectral_clustering(data,
@@ -190,7 +208,9 @@ def spectral_clustering(data,
 
     Z = SpectralClustering(n_clusters=k).fit_predict(data)
 
-    return Z, None
+    return {'cluster': Z,
+            'significance': None,
+            'fit': skm}
 
 
 def mean_shift_clustering(data,
@@ -200,7 +220,9 @@ def mean_shift_clustering(data,
 
     Z = MeanShift(bandwidth=bandwidth).fit_predict(data)
 
-    return Z, None
+    return {'cluster': Z,
+            'significance': None,
+            'fit': skm}
 
 
 def gm_clustering(data,
@@ -220,7 +242,9 @@ def gm_clustering(data,
                          ).fit(data)
 
     Z = gm.predict(data)
-    return Z, None
+    return {'cluster': Z,
+            'significance': None,
+            'fit': gm}
 
 
 def hdbscan_clustering(data, **kwargs):
@@ -259,7 +283,9 @@ def dbscan_clustering(data, **kwargs):
     print(clustering.labels_)
     Z = clustering.labels_
 
-    return Z, None
+    return {'cluster': Z,
+            'significance': None,
+            'fit': skm}
 
 
 def optics_clustering(data, **kwargs):
@@ -286,7 +312,9 @@ def optics_clustering(data, **kwargs):
 
     Z = clustering.labels_
 
-    return Z, None
+    return {'cluster': Z,
+            'significance': None,
+            'fit': clustering}
 
 
 def tps_cluster_2d_data(data_arr, tps,
@@ -309,9 +337,50 @@ def tps_cluster_2d_data(data_arr, tps,
 
     # The data needs to be  reshped in a row-wise of array. Therefore, each row is an object or data.
     # We always check if data is 3d (x,y,time)
-    coll_data = []
-    cluster_names = kwargs.pop('cluster_names', None)
 
+    cluster_names = kwargs.pop('cluster_names', None)
+    rm_ol = kwargs.pop('rm_ol', False)
+
+    data_input = create_2d_clustering_data(data_arr, tps, gf)
+
+    if method == 'kmeans':
+        cluster_dict = k_means_clustering(data=data_input,
+                                          rm_ol=rm_ol, **kwargs)
+    elif method == 'gm':
+        cluster_dict = gm_clustering(data=data_input, **kwargs)
+    elif method == 'dbscan':
+        cluster_dict = dbscan_clustering(data=data_input, **kwargs)
+    elif method == 'optics':
+        cluster_dict = optics_clustering(data=data_input, **kwargs)
+    elif method == 'agglomerative':
+        cluster_dict = agglomerative_clustering(data=data_input, **kwargs)
+    elif method == 'birch':
+        cluster_dict = birch_clustering(data=data_input, **kwargs)
+    elif method == 'spectral':
+        cluster_dict = spectral_clustering(data=data_input, **kwargs)
+    elif method == 'affinity':
+        cluster_dict = affinity_clustering(data=data_input, **kwargs)
+    elif method == 'mean_shift':
+        cluster_dict = mean_shift_clustering(data=data_input, **kwargs)
+    else:
+        raise ValueError(f'Method {method} not implemented yet!')
+
+    Z = cluster_dict['cluster']
+    if rm_ol and method == 'kmeans':
+        sign_Z = cluster_dict['significance']
+        Z = Z[sign_Z]
+        tps = tps[sign_Z]
+
+    grp_tps_dict = get_cluster_dict(Z=Z, cluster_x=tps,
+                                    cluster_names=cluster_names)
+
+    grp_tps_dict['Z'] = cluster_dict['cluster']
+    grp_tps_dict['im'] = cluster_dict['im']
+    return grp_tps_dict
+
+
+def create_2d_clustering_data(data_arr, tps, gf=(0, 0)):
+    coll_data = []
     for data in data_arr:
         if isinstance(data, xr.DataArray):
             if gut.compare_lists(list(data.dims), ['time', 'lon', 'lat']):
@@ -342,41 +411,10 @@ def tps_cluster_2d_data(data_arr, tps,
         new_arr = data.reshape(*data.shape[:1], -1)
         coll_data.append(new_arr)
 
-    rm_ol = kwargs.pop('rm_ol', False)
-
     # concatenate along 1 dimension
     data_input = np.concatenate(coll_data, axis=1)
     gut.myprint(f'Shape of input data_input: {data_input.shape}')
-    if method == 'kmeans':
-        Z, sign_Z = k_means_clustering(data=data_input,
-                                       rm_ol=rm_ol, **kwargs)
-    elif method == 'gm':
-        Z, sign_Z = gm_clustering(data=data_input, **kwargs)
-    elif method == 'dbscan':
-        Z, sign_Z = dbscan_clustering(data=data_input, **kwargs)
-    elif method == 'optics':
-        Z, sign_Z = optics_clustering(data=data_input, **kwargs)
-    elif method == 'agglomerative':
-        Z, sign_Z = agglomerative_clustering(data=data_input, **kwargs)
-    elif method == 'birch':
-        Z, sign_Z = birch_clustering(data=data_input, **kwargs)
-    elif method == 'spectral':
-        Z, sign_Z = spectral_clustering(data=data_input, **kwargs)
-    elif method == 'affinity':
-        Z, sign_Z = affinity_clustering(data=data_input, **kwargs)
-    elif method == 'mean_shift':
-        Z, sign_Z = mean_shift_clustering(data=data_input, **kwargs)
-    else:
-        raise ValueError(f'Method {method} not implemented yet!')
-
-    if rm_ol and sign_Z is not None:
-        Z = Z[sign_Z]
-        tps = tps[sign_Z]
-
-    grp_tps_dict = get_cluster_dict(Z=Z, cluster_x=tps,
-                                    cluster_names=cluster_names)
-
-    return grp_tps_dict
+    return data_input
 
 
 def get_cluster_dict(Z, cluster_x, cluster_names=None):
@@ -417,32 +455,33 @@ def apply_cluster_data(data,
 
     gut.myprint(f'Shape of input data_input: {data.shape}')
     if method == 'kmeans':
-        Z, sign_Z = k_means_clustering(data=data,
-                                       rm_ol=rm_ol, **kwargs)
+        cluster_dict = k_means_clustering(data=data,
+                                          rm_ol=rm_ol, **kwargs)
     elif method == 'gm':
-        Z, sign_Z = gm_clustering(data=data, **kwargs)
+        cluster_dict = gm_clustering(data=data, **kwargs)
     elif method == 'dbscan':
-        Z, sign_Z = dbscan_clustering(data=data, **kwargs)
+        cluster_dict = dbscan_clustering(data=data, **kwargs)
     elif method == 'optics':
-        Z, sign_Z = optics_clustering(data=data, **kwargs)
+        cluster_dict = optics_clustering(data=data, **kwargs)
     elif method == 'agglomerative':
-        Z, sign_Z = agglomerative_clustering(data=data, **kwargs)
+        cluster_dict = agglomerative_clustering(data=data, **kwargs)
     elif method == 'birch':
-        Z, sign_Z = birch_clustering(data=data, **kwargs)
+        cluster_dict = birch_clustering(data=data, **kwargs)
     elif method == 'spectral':
-        Z, sign_Z = spectral_clustering(data=data, **kwargs)
+        cluster_dict = spectral_clustering(data=data, **kwargs)
     elif method == 'affinity':
-        Z, sign_Z = affinity_clustering(data=data, **kwargs)
+        cluster_dict = affinity_clustering(data=data, **kwargs)
     elif method == 'mean_shift':
-        Z, sign_Z = mean_shift_clustering(data=data, **kwargs)
+        cluster_dict = mean_shift_clustering(data=data, **kwargs)
     else:
         raise ValueError(f'Method {method} not implemented yet!')
-
 
     if objects is None:
         objects = np.arange(len(data))
 
-    if rm_ol and sign_Z is not None:
+    Z = cluster_dict['cluster']
+    if rm_ol and method == 'kmeans':
+        sign_Z = cluster_dict['significance']
         Z = Z[sign_Z]
         objects = objects[sign_Z]
 

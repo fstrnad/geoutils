@@ -99,13 +99,14 @@ def plot_xy(
     ts_axis=False,
     kde=False,
     plot_type='xy',
-    set_axis=True,
+    set_axis=False,
     **kwargs,
 ):
     reload(sut)
     reload(gut)
     if ax is None:
         figsize = kwargs.pop("figsize", (8, 5))
+        set_axis = True
         if plot_type != 'polar':
             fig, ax = plt.subplots(figsize=(figsize), nrows=1, ncols=1)
         else:
@@ -113,7 +114,6 @@ def plot_xy(
                                    subplot_kw={'projection': 'polar'})
     else:
         fig = ax.get_figure()
-        set_axis = False
     zorder = kwargs.pop('zorder', 0)
     filled = kwargs.pop('filled', False)
     if plot_type != 'bar':

@@ -192,6 +192,12 @@ def save_np_dict(arr_dict, sp, verbose=True):
     return None
 
 
+def load_pkl(sp):
+    with open(sp, "rb") as fp:   # Unpickling
+        all_stats = pickle.load(fp)
+    return all_stats
+
+
 def save_pkl_dict(arr_dict, sp, verbose=True):
     gut.myprint(f'Store to {sp}', verbose=verbose)
     with open(sp, 'wb') as f:

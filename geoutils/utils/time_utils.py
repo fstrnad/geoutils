@@ -234,6 +234,9 @@ def get_ts_arr_ds(da):
         time_series_arr = da.data.T
     elif da.dims == ('points', 'time'):
         time_series_arr = da.data
+    elif da.dims == ('lat', 'lon', 'time'):
+        time_series_arr = da.data.reshape(
+            (da.shape[0]*da.shape[1], da.shape[2]))
     else:
         raise ValueError(f'this dimension is unknown: {da.dims}!')
     return time_series_arr
@@ -1097,7 +1100,7 @@ def remove_duplicate_times(da):
 
 
 def compute_anomalies(dataarray, climatology_array=None,
-                      group="dayofyear", base_period=None,
+                      group=None, base_period=None,
                       verbose=True):
     """Calculate anomalies.
 
@@ -1115,15 +1118,16 @@ def compute_anomalies(dataarray, climatology_array=None,
     -------
     anomalies: xr.dataarray
     """
-
-    if climatology_array is None:
-        climatology_array = dataarray
-
+    if group is None and climatology_array is None:
+        raise ValueError(
+            "ERROR! If climatology_array is None, group has to be specified!")
     if base_period is None:
         base_period = np.array(
             [dataarray.time.data.min(), dataarray.time.data.max()])
 
     if group in ["dayofyear", "month", "season"]:
+        if climatology_array is None:
+            climatology_array = dataarray
         climatology = (
             climatology_array.sel(time=slice(base_period[0], base_period[1]))
             .groupby(f"time.{group}")
@@ -1132,18 +1136,20 @@ def compute_anomalies(dataarray, climatology_array=None,
         anomalies = dataarray.groupby(f"time.{group}") - climatology
     else:
         month_ids = []
-        monthly_groups = climatology_array.groupby("time.month")
-
-        if group == "JJAS":
-            for month in ["Jun", "Jul", "Aug", "Sep"]:
-                month_ids.append(get_month_number(month))
-        elif group == 'DJFM':  # here it is important to include the December of the previous year
-            for month in ["Dec", "Jan", "Feb", "Mar"]:
-                month_ids.append(get_month_number(month))
-        climatology = (
-            monthly_groups.mean(dim="time").sel(
-                month=month_ids).mean(dim="month")
-        )
+        if climatology_array is None:
+            monthly_groups = dataarray.groupby("time.month")
+            if group == "JJAS":
+                for month in ["Jun", "Jul", "Aug", "Sep"]:
+                    month_ids.append(get_month_number(month))
+            elif group == 'DJFM':  # here it is important to include the December of the previous year
+                for month in ["Dec", "Jan", "Feb", "Mar"]:
+                    month_ids.append(get_month_number(month))
+            climatology = (
+                monthly_groups.mean(dim="time").sel(
+                    month=month_ids).mean(dim="month")
+            )
+        else:
+            climatology = climatology_array
         anomalies = dataarray - climatology
     if verbose:
         gut.myprint(f"Created {group}ly anomalies!")
@@ -1188,7 +1194,7 @@ def compute_evs(dataarray,
                 q=0.9,
                 min_threshold=1,
                 th_eev=5,
-                min_evs=3):
+                min_evs=1):
     """Creates an event series from an input time series.
 
     Args:

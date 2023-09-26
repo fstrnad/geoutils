@@ -646,7 +646,7 @@ def plt_text(ax, text, xpos=0, ypos=0,
     color = kwargs.pop("color", "k")
     zorder = kwargs.pop('zorder', 10)
     rot = kwargs.pop("rot", 0)
-    fsize = kwargs.pop('fsize', pst.MEDIUM_SIZE)
+    fsize = kwargs.pop('fsize', pst.BIGGER_SIZE)
     weight = kwargs.pop('weight', "bold")
     trafo_axis = kwargs.pop('transform', False)
     box = kwargs.pop('box', False)

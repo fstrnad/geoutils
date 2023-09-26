@@ -789,7 +789,7 @@ def plot_2D(
                 hatch=hatch_type,
                 alpha=0.0,
                 shading='nearest',
-                zorder=15,
+                zorder=10,
             )
         if plot_type == 'hatch':
             im = im_tmp
@@ -802,6 +802,8 @@ def plot_2D(
 
     if label is not None:
         tick_step = kwargs.pop('tick_step', 2)
+        unset_sci = kwargs.pop('unset_sci', False)
+        sci = sci if not unset_sci else None
         cbar = put.make_colorbar(ax, im=im,
                                  norm=set_norm,
                                  ticks=levels,
@@ -1197,7 +1199,8 @@ def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
                      color=color,
                      xpos=np.mean(lon_range),
                      # always plot above(!) the rectangle
-                     ypos=np.max(lat_range)+2
+                     ypos=np.max(lat_range)+2,
+                     zorder=zorder+1,
                      )
 
     return ax

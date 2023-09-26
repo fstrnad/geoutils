@@ -82,7 +82,6 @@ def get_day_progression_arr(data, tps, start,
                 mean_ts = this_comp_ts if gut.is_single_tp(this_tps) else this_comp_ts.sum(dim='time')
             else:
                 mean_ts = this_comp_ts if gut.is_single_tp(this_tps) else this_comp_ts.mean(dim='time')
-
         mean_ts = gut.remove_non_dim_coords(mean_ts)
         mean_ts = mean_ts.expand_dims(
             {'day': 1}).assign_coords({'day': [thisstep]})
@@ -91,7 +90,8 @@ def get_day_progression_arr(data, tps, start,
     gut.myprint(
         'Merge selected composite days into 1 xr.DataSet...', verbose=verbose)
     composite_arrs = xr.merge(composite_arrs)
-
+    var_names = gut.get_vars(composite_arrs)
+    composite_arrs = composite_arrs[var] if var is not None else composite_arrs[var_names[0]]
     return composite_arrs
 
 
@@ -167,7 +167,7 @@ def get_hovmoeller_single_tps(ds, tps, num_days,
                                        dateline=dateline)
         if gf[0] != 0 or gf[1] != 0:
             tmp_data = sp.ndimage.filters.gaussian_filter(
-                this_hov_data[var].data, sigma, mode='constant')
+                this_hov_data.data, sigma, mode='constant')
             this_hov_data = xr.DataArray(data=tmp_data,
                                          dims=this_hov_data.dims,
                                          coords=this_hov_data.coords)

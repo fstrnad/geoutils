@@ -1365,11 +1365,12 @@ class BaseDataset():
         if dataset is None:
             dataset = self.ds
         ds_all = []
-        for name, da in dataset.data_vars.items():
+        all_vars = self.get_vars(ds=dataset)
+        for name in all_vars:
             gut.myprint(f"Month range for: {name}")
             ds_all.append(
                 self.get_month_range_data(
-                    dataarray=da,
+                    dataarray=dataset[name],
                     start_month=start_month,
                     end_month=end_month,
                     set_zero=set_zero,
