@@ -1,3 +1,4 @@
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.offsetbox import AnchoredText
 import matplotlib as mpl
 from matplotlib.cm import ScalarMappable
@@ -427,16 +428,26 @@ def make_colorbar(ax, im, fig=None, **kwargs):
 
     orientation = kwargs.pop("orientation", "horizontal")
     set_cax = kwargs.pop('set_cax', False)
-    pad = kwargs.pop('pad', "35%")  # defines distance to lower y-range
     if set_cax:
         if orientation == "vertical":
             loc = "right"
-            pad = "3%"
+            pad = kwargs.pop('pad', -5)
+            # divider = make_axes_locatable(ax)
+            # cax = divider.append_axes(loc, "5%", pad=pad, axes_class=plt.Axes)
+            cax = inset_axes(ax,
+                             width="5%",
+                             height="100%",
+                             loc=loc,
+                             borderpad=pad)
+
         elif orientation == "horizontal":
-            loc = "bottom"
-            pad = pad
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes(loc, "5%", pad=pad, axes_class=plt.Axes)
+            loc = "lower center"
+            pad = kwargs.pop('pad', -5)
+            cax = inset_axes(ax,
+                             width="100%",
+                             height="5%",
+                             loc=loc,
+                             borderpad=pad)
     else:
         cax = ax
 

@@ -1,3 +1,4 @@
+from scipy.fft import irfft
 import geoutils.utils.time_utils as tu
 from statsmodels.tsa.arima_process import ArmaProcess
 from importlib import reload
@@ -7,7 +8,7 @@ from statsmodels.tsa.ar_model import AutoReg
 import xarray as xr
 import scipy.signal as sig
 import numpy as np
-from scipy.fftpack import fft, fftfreq
+from scipy.fft import rfft, rfftfreq
 import pandas as pd
 import geoutils.tsa.filters as flt
 import nitime.algorithms as spectrum
@@ -21,19 +22,22 @@ reload(flt)
 
 
 def compute_fft(ts, freq_m=1,
-                window='blackman',
+                window=None,
                 K=1,
-                cutoff=1):
+                cutoff=1,
+                stdize=False):
     if isinstance(ts, xr.DataArray):
         data = ts.values
     else:
         data = ts
-    data = sut.standardize(data)
+    if stdize:
+        data = sut.standardize(data)
 
     ts = flt.apply_butter_filter(ts,
                                  cutoff=cutoff)
-    N = len(data)
-    T = 1/freq_m  # measurements per day
+    T = len(data)  # Duration
+    sample_rate = int(freq_m)  # how many samples per Unit of time
+    N = sample_rate * T
     if window == 'multitaper':
         NW = int((K+1)/2)
         w, power, nu = spectrum.multi_taper_psd(data,
@@ -50,27 +54,58 @@ def compute_fft(ts, freq_m=1,
             window = sig.hamming(N)
         elif window == 'hannig':
             window = sig.hannig(N)
-        elif window == 1 or window == 'linear':
+        elif window is None or window == 'linear':
             gut.myprint('No window size for FFT!', verbose=False)
             window = 1
         else:
             raise ValueError(f'This window does not exist: {window}!')
 
-        ts_fft = fft(data*window, N)[1:N//2]  # only positive values
-        power = np.abs(ts_fft)
-        w = fftfreq(N, T)[1:N//2]  # The corresponding positive frequencies, # exclude w=0
+        ts_fft = rfft(data*window)
+        power = np.abs(ts_fft)  # only positive values
+        # The corresponding positive frequencies, # exclude w=0
+        w = rfftfreq(N, 1/sample_rate)
         # w, power = spectrum.periodogram(data*window, Fs=T)
         if cutoff > 1:
             power = flt.apply_butter_filter(power,
                                             cutoff=cutoff)
+
         var_ps = w * power
 
-    results = {'freq': w, 'power': power, 'var_ps': var_ps, 'period': 1./w}
+    points_per_freq = int(len(w) / (sample_rate/2))
+
+    results = {'freq': w,
+               'power': power,
+               'var_ps': var_ps,
+               'period': 1./w,
+               'fft': ts_fft,
+               'ppf': points_per_freq,
+               }
 
     return results
 
 
+def inverse_fft(ts_fft):
+    ts = irfft(ts_fft)
+    return ts
+
+
+def revmove_harmonics(ts, num_harmonics=1):
+    fft_dict = compute_fft(ts)
+    fft = fft_dict['fft']
+    sorted_peaks = sut.find_and_sort_peaks(fft)
+    for peak in sorted_peaks[:num_harmonics]:
+        fft[peak-1: peak+2] = 0
+
+    ifft = inverse_fft(fft)
+
+    return xr.DataArray(data=ifft,
+                        dims=ts.dims,
+                        coords={'time': ts.time[:-1]},
+                        name=ts.name)
+
 # Define a short function to compute confidence bounds.
+
+
 def chi2conf(K, Sxx=1, ci=.95):
     '''
     Returns confidence bounds computed using chi-square
@@ -107,7 +142,6 @@ def fft_period(ts, dp=365):
     return results, grouped_p
 
 
-
 def fft_by_year(ts, fft_prop='power',
                 window='blackman',
                 cutoff=1):
@@ -122,7 +156,6 @@ def fft_by_year(ts, fft_prop='power',
         'freq': this_fft['freq'],
         fft_prop: mean_fft,
         'surr': None}
-
 
 
 def generate_ar1_surrogates(data, N):
@@ -178,7 +211,6 @@ def ar1(x, lags=25, verbose=False):
     param_dict['model'] = res
 
     return param_dict
-
 
 
 def ar1_surrogates(data, N=1000, lags=10, verbose=False):

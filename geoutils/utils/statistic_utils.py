@@ -1,3 +1,4 @@
+from scipy.signal import find_peaks
 import statsmodels.stats as sm
 from statsmodels.tsa.ar_model import AutoReg
 import geoutils.utils.time_utils as tu
@@ -658,3 +659,26 @@ def get_values_above_val(dataarray, val=None, q=None, dim='time'):
         'below': below_val,
         'between': between_val
     }
+
+
+def find_and_sort_peaks(time_series):
+    """
+    Find peaks in a time series and return the peak indices sorted by amplitude in descending order.
+
+    Parameters:
+    time_series (xarray.DataArray): The input time series as an xarray DataArray.
+
+    Returns:
+    np.ndarray: An array containing peak indices sorted by amplitude (highest to lowest).
+    """
+    # Ensure time_series is a 1D numpy array
+    if not isinstance(time_series, np.ndarray):
+        time_series = time_series.values
+
+    # Find peaks using the find_peaks function from scipy
+    peaks, _ = find_peaks(time_series)
+
+    # Sort the peaks by amplitude in descending order
+    sorted_peaks = sorted(peaks, key=lambda x: -time_series[x])
+
+    return np.array(sorted_peaks)

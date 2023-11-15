@@ -304,7 +304,8 @@ def get_most_sync_days_evs(ts, q=0.95):
     times = ts.time
     num_tp = len(times)
     sync_days_ts = np.zeros(num_tp)
-    _, indices = gut.get_quantile_of_ts(ts, q=q, return_indices=True)
+    # _, indices = gut.get_quantile_of_ts(ts, q=q, return_indices=True)
+    indices = gut.get_locmax_composite_tps(ts=ts, q=q)['peak_idx']
     sync_days_ts[indices] = 1
     sync_days_ts = tu.create_xr_ts(data=sync_days_ts, times=times)
 
@@ -624,7 +625,7 @@ def get_expt_ees(evs, tps, timemean='year'):
     return frac_ees / norm
 
 
-def get_cond_occ(tps, cond, counter):
+def get_cond_occ(tps, cond, counter, small_sample_corection=True):
 
     # Joint count, eg. sync, active, phase
     phase_sync_act = tu.get_sel_tps_ds(ds=cond, tps=tps)
@@ -642,13 +643,17 @@ def get_cond_occ(tps, cond, counter):
                                     count_arr=counter,
                                     rel_freq=False)
 
-    print(count_phase_act_sync, count_phase_act)
+    # print(count_phase_act_sync, count_phase_act)
 
-    min_num_samples = 7
+    min_num_samples = 4
     # print(count_phase_act)
-    count_phase_act = np.where(count_phase_act <= min_num_samples,
-                               count_phase_act*4.22,  # For small samples
-                               count_phase_act)
+    if small_sample_corection:
+        gut.myprint('Small sample correction is applied!')
+        count_phase_act = np.where(count_phase_act <= min_num_samples,
+                                   count_phase_act*4.22,
+                                   count_phase_act)
+    # correct for 0 counts
+    count_phase_act = np.where(count_phase_act == 0, np.inf, count_phase_act)
     # print(count_phase_act)
     p_s_1_act = count_phase_act_sync/count_phase_act
 

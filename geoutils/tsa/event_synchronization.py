@@ -163,7 +163,7 @@ def parallel_event_synchronization(event_data,
 
     # For parallel Programming
     num_cpus_avail = mpi.cpu_count() if num_cpus is None else num_cpus
-    print(f"Use {num_cpus_avail} CPUs in parallel!")
+    gut.myprint(f"Use {num_cpus_avail} CPUs in parallel!")
 
     parallelArray = []
 

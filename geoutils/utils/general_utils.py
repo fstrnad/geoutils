@@ -1,6 +1,7 @@
 """General Util functions."""
 from collections import Counter
 import pickle
+from pprint import pprint
 import cftime
 from itertools import combinations_with_replacement
 from scipy.signal import find_peaks
@@ -11,9 +12,12 @@ import xarray as xr
 SEED = 42
 
 
-def myprint(str, verbose=True):
+def myprint(str, verbose=True, lines=False):
     if verbose:
-        print(str, flush=True)
+        if lines:
+            pprint(str)
+        else:
+            print(str, flush=True)
     return
 
 
@@ -386,7 +390,76 @@ def get_locmax_composite_tps(ts, q=0.95, distance=3):
     # print(peak_idx)
     # print(idx_ep)
 
-    return {'peaks': peak_ts, 'sps': sp_ts, 'eps': ep_ts}
+    return {'peaks': peak_ts,
+            'sps': sp_ts,
+            'eps': ep_ts,
+            'peak_idx': peak_idx, }
+
+
+def invert_array(arr):
+    """
+    Inverts the values of a NumPy array containing only 0s and 1s.
+
+    Args:
+    arr (numpy.ndarray): The input NumPy array containing 0s and 1s.
+
+    Returns:
+    numpy.ndarray: A NumPy array with inverted values, where 0s are replaced by 1s
+    and 1s are replaced by 0s.
+
+    Raises:
+    ValueError: If the input array contains values other than 0 and 1.
+
+    Example:
+    >>> input_array = np.array([[1, 0, 1], [0, 1, 0]])
+    >>> inverted_array = invert_numpy_array(input_array)
+    >>> print(inverted_array)
+    [[0 1 0]
+     [1 0 1]]
+    """
+    arr = np.array(arr)
+    # Check if the input contains values other than 0 and 1
+    if not np.all(np.logical_or(arr == 0, arr == 1)):
+        raise ValueError("Input array must contain only 0s and 1s.")
+
+    # Use NumPy's logical_not function to invert the values
+    inverted_arr = np.logical_not(arr).astype(int)
+    return inverted_arr
+
+
+def set_neighbors_to_1(arr):
+    """
+    Sets the items to the left and right of each 1 in the input array to 1.
+
+    Args:
+    arr (numpy.ndarray): The input NumPy array containing 0s and 1s.
+
+    Returns:
+    numpy.ndarray: A modified array with items to the left and right of each 1 set to 1.
+
+    Example:
+    >>> input_array = np.array([[0, 1, 0], [1, 0, 1]])
+    >>> modified_array = set_neighbors_to_1(input_array)
+    >>> print(modified_array)
+    [[1 1 1]
+     [1 1 1]]
+    """
+    # Ensure that the input is a NumPy array
+    if not isinstance(arr, np.ndarray):
+        raise ValueError("Input must be a NumPy array.")
+
+    # Create a mask for 1s in the input array
+    ones_mask = arr == 1
+
+    # Create a new array with the same shape as the input
+    modified_arr = np.zeros_like(arr)
+
+    # Iterate through the dimensions and set neighbors to 1
+    for dim in range(arr.ndim):
+        padded = np.pad(ones_mask, [(0, 0) if i != dim else (1, 1) for i in range(arr.ndim)], mode='constant')
+        modified_arr += np.logical_or.reduce(padded, axis=dim, keepdims=True)
+
+    return modified_arr
 
 
 def find_roots(y, x=None, y_0=0):
@@ -988,3 +1061,33 @@ def delete_element_at_index(arr, i, axis=0):
     else:
         raise IndexError(
             "Index out of range. The index must be less than the length of the array.")
+
+
+def convert_to_integers(arr):
+    """
+    Recursively checks if all elements in the input array (including NumPy arrays)
+    and its nested arrays are integers and converts them if they are not.
+
+    Args:
+        arr (list, np.ndarray, int): The input array, which can be nested, and can be either a regular list or a NumPy array.
+
+    Returns:
+        list, np.ndarray, int: The input array (or nested arrays) with all elements converted to integers.
+                              If the input is a NumPy array, the output will also be a NumPy array.
+
+    Example:
+        >>> input_array = ["1", [2.5, "3"], [4, ["5", 6]]]
+        >>> convert_to_integers(input_array)
+        [1, [2, 3], [4, [5, 6]]]
+    """
+    if isinstance(arr, list) or isinstance(arr, np.ndarray):
+        if isinstance(arr, np.ndarray):
+            arr = arr.tolist()
+        return np.array([convert_to_integers(item) for item in arr])
+    elif isinstance(arr, int):
+        return arr
+    else:
+        try:
+            return int(arr)
+        except (ValueError, TypeError):
+            return arr

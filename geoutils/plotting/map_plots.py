@@ -480,8 +480,8 @@ def plot_map(dmap: xr.DataArray,
     elif plot_type == 'colormesh':
         plot_type += '_map'
 
-    # defines distance to lower y-range (different for maps and xy-plots)
-    pad = kwargs.pop('pad', "15%")
+    # defines distance to lower y-range (different for maps and xy-plots) is passed to make_colorbar
+    pad = kwargs.pop('pad', -2)
     # not to run into conflicts with significance mask
     im = plot_2D(x=x, y=y, z=z,
                  fig=fig, ax=ax, plot_type=plot_type, projection=projection,
@@ -804,13 +804,16 @@ def plot_2D(
         tick_step = kwargs.pop('tick_step', 2)
         unset_sci = kwargs.pop('unset_sci', False)
         sci = sci if not unset_sci else None
-        cbar = put.make_colorbar(ax, im=im,
+        orientation = kwargs.pop('orientation', 'horizontal')
+
+        cbar = put.make_colorbar(ax=ax, im=im,
                                  norm=set_norm,
                                  ticks=levels,
                                  label=label,
                                  set_cax=True,
                                  sci=sci,
                                  tick_step=tick_step if plot_type != 'discrete' else 1,
+                                 orientation=orientation,
                                  **kwargs)
         if plot_type == "discrete":
             cbar.set_ticks(ticks)

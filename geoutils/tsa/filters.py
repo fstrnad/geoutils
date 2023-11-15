@@ -1,7 +1,6 @@
 import xarray as xr
 from scipy.signal import filtfilt, cheby1, argrelmax,  find_peaks
 import numpy as np
-from scipy.fftpack import fft, fftfreq
 import scipy.ndimage as ndim
 import geoutils.utils.general_utils as gut
 from importlib import reload

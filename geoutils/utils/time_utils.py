@@ -116,12 +116,14 @@ def check_timepoints_in_dataarray(dataarray, timepoints, verbose=True):
         timepoints_times = timepoints.time
 
     # Check if all time points in the set exist in the data array
+    points_in_array = True
     for time in timepoints_times:
         if time.data not in dataarray_times.data:
-            gut.myprint(f'{time.data} not in dataset!', verbose=verbose)
-            return False
+            tpstr = tp2str(time)
+            gut.myprint(f'{tpstr} not in dataset!', verbose=verbose)
+            points_in_array = False
 
-    return True
+    return points_in_array
 
 
 def get_index_of_month(month):
@@ -363,7 +365,7 @@ def get_sel_years_dates(years,
     return sel_dates
 
 
-def remove_consecutive_tps(tps, steps=1):
+def remove_consecutive_tps(tps, steps=1, remove_last=True):
     """Removes consecutive steps in a set of time points until steps after.
 
     Args:
@@ -376,8 +378,11 @@ def remove_consecutive_tps(tps, steps=1):
         tps_step = add_time_step_tps(tps=rem_tps, time_step=step)
         common_tps = get_common_tps(tps1=rem_tps, tps2=tps_step)
         if len(common_tps) > 0:
-            rem_tps = rem_tps.drop_sel(time=common_tps)
-
+            if remove_last:
+                rem_tps = rem_tps.drop_sel(time=common_tps)
+            else:
+                first_tps = add_time_step_tps(common_tps, time_step=-step)
+                rem_tps = rem_tps.drop_sel(time=first_tps)
     gut.myprint(f'Removed {num_init_tps - len(rem_tps)} time points!')
 
     return rem_tps
@@ -1012,6 +1017,29 @@ def compute_timemean(ds, timemean, dropna=True, verbose=True):
     return ds
 
 
+def compute_mean(ds, dropna=True, verbose=False):
+    """Computes the mean of a given xr.dataset
+
+    Args:
+        ds (xr.dataset): xr dataset for the dataset
+
+    Returns:
+        xr.dataset: monthly average dataset
+    """
+    tps = ds.time
+    if gut.is_single_tp(tps=tps):
+        gut.myprint('Single time point selected!', verbose=verbose)
+        return ds
+    else:
+        gut.myprint(
+            f"Compute mean of all variables!", verbose=verbose)
+        if dropna:
+            ds = ds.dropna(dim='time').mean("time")
+        else:
+            ds = ds.mean(dim="time")
+    return ds
+
+
 def compute_timemax(ds, timemean,  dropna=True, verbose=True):
     """Computes the monmax on a given xr.dataset
 
@@ -1309,6 +1337,7 @@ def tp2str(tp, m=True, d=True):
     Returns:
         str: string of the date
     """
+
     if isinstance(tp, xr.DataArray):
         tp = tp.time.data
     if isinstance(tp, str):
@@ -1323,6 +1352,16 @@ def tp2str(tp, m=True, d=True):
         if d:
             date = ts.strftime('%Y-%m-%d')
     return date
+
+
+def tps2str(tps, m=True, d=True):
+    if gut.is_single_tp(tps=tps):
+        return tp2str(tp=tps, m=m, d=d)
+    else:
+        stps, etps = get_start_end_date(tps)
+        sstr = tp2str(tp=stps, m=m, d=d)
+        estr = tp2str(tp=etps, m=m, d=d)
+        return f'{sstr} - {estr}'
 
 
 def get_ymdh_date(date):
@@ -1919,7 +1958,9 @@ def get_lagged_ts(ts1, ts2=None, lag=0):
     return ts1, ts2
 
 
-def get_lagged_ts_arr(ts1_arr, ts2_arr, lag=0):
+def get_lagged_ts_arr(ts1_arr, ts2_arr=None, lag=0):
+    if ts2_arr is None:
+        ts2_arr = ts1_arr
     if lag > 0:
         ts1_arr = ts1_arr[:, :-np.abs(lag)]
         ts2_arr = ts2_arr[:, np.abs(lag):]
@@ -2471,3 +2512,39 @@ def select_random_timepoints(dataarray, sample_size=1, seed=None):
         time_vals, size=sample_size, replace=False)
     random_sample.sort()
     return dataarray.sel(time=random_sample)
+
+
+def sliding_window_mean(da, length):
+    """
+    Compute the sliding window mean for an xarray DataArray where each value
+    represents the average of the previous l time steps.
+
+    Parameters:
+    da (xarray.DataArray): The input DataArray.
+    length (int): The length of the sliding window.
+
+    Returns:
+    xarray.DataArray: The DataArray with sliding window means.
+    """
+    # Initialize an empty array to store the results
+    result = np.zeros_like(da)
+
+    # Iterate through each time step
+    for t in range(len(da)):
+        # Calculate the start and end indices for the window
+        start = max(0, t - length + 1)
+        end = t + 1
+
+        # Slice the data for the current window
+        window_data = da[start:end]
+
+        # Compute the mean for the window and assign it to the result array
+        result[t] = window_data.mean()
+
+    # Create a new DataArray with the computed means
+    sliding_mean = xr.DataArray(result,
+                                coords=da.coords,
+                                dims=da.dims,
+                                attrs=da.attrs)
+
+    return sliding_mean

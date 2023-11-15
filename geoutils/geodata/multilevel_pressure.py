@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Dec 22 08:53:08 2020
-Class for network of rainfall events
+Created on Tue 1 March 08:53:08 2023
+Class for multilevel pressure datasets
 @author: Felix Strnad
 """
 # %%
@@ -39,7 +39,8 @@ class MultiPressureLevelDataset(bds.BaseDataset):
             plevels = [0]
         for file in data_nc:
             fut.print_file_location_and_size(filepath=file, verbose=False)
-        gut.myprint(f'All files are available! Loading {data_nc}...')
+        gut.myprint(f'All files are available! Loading {data_nc}...',
+                    lines=True)
         super().__init__(data_nc=data_nc,
                          plevels=plevels,
                          can=can,
