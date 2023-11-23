@@ -146,8 +146,7 @@ def days_in_month(month):
         return 31
 
 
-# def get_month_number(month):
-#     return int(get_index_of_month(month) + 1)
+# def get_month_number(month): return int(get_index_of_month(month) + 1)
 
 def get_month_number(*month_list):
     idx_lst = []
@@ -259,7 +258,9 @@ def get_max_num_tps(ds, q=None):
 def get_sel_tps_ds(ds, tps, remove_tp=False,
                    drop_dim=True,
                    verbose=False,
-                   timemean='day'):
+                   timemean='day',
+                   sig_test=False,
+                   varname=None):
     if isinstance(tps, xr.DataArray):
         tps = tps.time
     else:
@@ -278,8 +279,8 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
         if remove_tp:
             ds_sel = ds.sel(time=tps, method='nearest')
         else:
-            # ds_max = compute_timemax(ds=ds, timemean=timemean)
-            # tps_max = compute_timemax(ds=tps, timemean=timemean)
+            # ds_max = compute_timemax(ds=ds, timemean=timemean) tps_max =
+            # compute_timemax(ds=tps, timemean=timemean)
 
             # Build always intersection
             if not stp:
@@ -310,6 +311,40 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
                         ds_sel = ds_sel.mean(dim='time')
 
     return ds_sel
+
+
+def get_mean_tps(da, tps, varname=None, sig_test=True):
+
+    this_comp = get_sel_tps_ds(ds=da, tps=tps)
+
+    if sig_test:
+        if varname is None and isinstance(this_comp, xr.Dataset):
+            raise ValueError(
+                """Significance test can only be applied on specific dataarray.
+                Please specify varname!""")
+        dims = list(this_comp.dims)
+        dims = gut.delete_element_from_arr(dims, 'time')
+        mean, pvalues_ttest = sut.ttest_field(
+            this_comp, da, zdim=dims)
+        mask = sut.field_significance_mask(
+            pvalues_ttest, alpha=0.05, corr_type=None)
+
+        return mean, mask
+    else:
+        return this_comp.mean(dim='time')
+
+
+def normlize_time_slides(data, min=0, max=1):
+    mean_data_arr = []
+    times = data.time
+    for i, (tp) in enumerate(times):
+        mean_data = get_sel_tps_ds(ds=data, tps=[tp.data]).mean(
+            dim='time')  # get single time steps
+        res_ds = sut.normalize(data=mean_data, min=min, max=max)
+        mean_data_arr.append(res_ds.to_dataset(name='norm'))
+    xr_new = xr.concat(mean_data_arr, times)
+
+    return xr_new
 
 
 def get_sel_tps_lst(ds, tps_lst, remove_tp=False,
@@ -369,8 +404,8 @@ def remove_consecutive_tps(tps, steps=1, remove_last=True):
     """Removes consecutive steps in a set of time points until steps after.
 
     Args:
-        tps (xr.DataArray): time points
-        steps (int): number of steps to have no consecutive time points.
+        tps (xr.DataArray): time points steps (int): number of steps to have no
+        consecutive time points.
     """
     num_init_tps = len(tps)
     rem_tps = copy.deepcopy(tps)
@@ -393,11 +428,10 @@ def get_common_tps(tps1, tps2, offset=0, delay=0, step=1):
     are a certain offset later until some max delay.
 
     Args:
-        tps1 (xr.DataArray): dataarray containing time points.
-        tps2 (xr.DataArray): dataarray containing time points.
-        offset (int, optional): offset. Defaults to 0.
-        delay (int, optional): maximum delay. Defaults to 0.
-        step (int, optional): stepsize of time points later. Defaults to 1.
+        tps1 (xr.DataArray): dataarray containing time points. tps2 (xr.DataArray):
+        dataarray containing time points. offset (int, optional): offset. Defaults to 0.
+        delay (int, optional): maximum delay. Defaults to 0. step (int, optional):
+        stepsize of time points later. Defaults to 1.
 
     Raises:
         ValueError:
@@ -457,13 +491,16 @@ def is_tp_smaller(date1, date2):
 
 def find_common_time_range(time_series_array):
     """
-    Find the earliest and latest time points that are within all the time series in an array.
+    Find the earliest and latest time points that are within all the time series in an
+    array.
 
     Parameters:
-        time_series_array (array-like): Array containing xarray DataArrays representing time series.
+        time_series_array (array-like): Array containing xarray DataArrays representing
+        time series.
 
     Returns:
-        tuple: A tuple of two datetime64 objects representing the earliest and latest common time points.
+        tuple: A tuple of two datetime64 objects representing the earliest and latest
+        common time points.
     """
     # Initialize the earliest and latest time points as None
     earliest_time = None
@@ -515,7 +552,8 @@ def get_time_range_data(ds, time_range,
         tps = get_dates_of_time_range(
             time_range=[time_range_0, time_range_1], freq=freq)
         ds_sel = ds.sel(time=slice(tps[0], tps[-1]))
-        # ds_sel = ds.sel(time=tps, method='bfill')  # always that one that is closest to last
+        # ds_sel = ds.sel(time=tps, method='bfill')  # always that one that is closest to
+        # last
 
         if start_month != 'Jan' or end_month != 'Dec':
             ds_sel = get_month_range_data(dataset=ds_sel,
@@ -528,8 +566,8 @@ def get_time_range_data(ds, time_range,
 
 def split_by_year(ds, start_month='Jan', end_month='Dec'):
     """
-    Splits an xarray object with a time dimension spanning multiple years into
-    individual datasets for each year.
+    Splits an xarray object with a time dimension spanning multiple years into individual
+    datasets for each year.
 
     Parameters:
         ds (xarray.DataArray or xarray.Dataset): The xarray object to split.
@@ -559,9 +597,8 @@ def is_in_month_range(month, start_month, end_month):
 
 def get_month_range_data(dataset, start_month="Jan", end_month="Dec", verbose=True):
     """
-    This function generates data within a given month range.
-    It can be from smaller month to higher (eg. Jul-Sep) but as well from higher month
-    to smaller month (eg. Dec-Feb)
+    This function generates data within a given month range. It can be from smaller month
+    to higher (eg. Jul-Sep) but as well from higher month to smaller month (eg. Dec-Feb)
 
     Parameters
     ----------
@@ -594,7 +631,8 @@ def select_month_day_range(da, start_month=None, start_day=None,
                            end_month=None, end_day=None,
                            include_last=False):
     """
-    Selects all values of an xarray DataArray that fall within a specified range of months and days, across all years.
+    Selects all values of an xarray DataArray that fall within a specified range of months
+    and days, across all years.
 
     Parameters
     ----------
@@ -612,7 +650,8 @@ def select_month_day_range(da, start_month=None, start_day=None,
     Returns
     -------
     xarray.DataArray
-        A new dataarray that includes all values within the specified range of months and days.
+        A new dataarray that includes all values within the specified range of months and
+        days.
 
     """
 
@@ -674,8 +713,7 @@ def get_idx_tps_times(tps, times):
     """Get the indices of time points in another time series.
 
     Args:
-        tps (list): list of time points
-        times (xr.dataarray): dataarray of time series
+        tps (list): list of time points times (xr.dataarray): dataarray of time series
 
     Returns:
         list: list of indices of tps in time series.
@@ -688,12 +726,10 @@ def time_difference_in_hours(time1, time2, abs_diff=True):
     """
     Calculate the time difference in hours between two time points as xarray dataarrays.
 
-    Parameters:
-    time1 (xarray.DataArray): First time point.
-    time2 (xarray.DataArray): Second time point.
+    Parameters: time1 (xarray.DataArray): First time point. time2 (xarray.DataArray):
+    Second time point.
 
-    Returns:
-    time_diff (float): Time difference in hours.
+    Returns: time_diff (float): Time difference in hours.
     """
     # Convert time1 and time2 to pandas Timestamp objects
     pd_time1 = pd.to_datetime(str(time1.values))
@@ -718,7 +754,8 @@ def set_hours_to_zero(x):
         x (xarray.DataArray or xarray.Dataset): The input xarray object.
 
     Returns:
-        xarray.DataArray or xarray.Dataset: The modified xarray object with hours set to 0.
+        xarray.DataArray or xarray.Dataset: The modified xarray object with hours set to
+        0.
     """
     # Set hours to 0 using the dt accessor
     x['time'] = x['time'].dt.floor('D')
@@ -749,8 +786,8 @@ def get_month_range(da):
 
 def get_time_range_years(dataarray: xr.DataArray) -> tuple:
     """
-    Given an xarray DataArray, return the start and end year of the time dimension
-    as well as the difference in years between them.
+    Given an xarray DataArray, return the start and end year of the time dimension as well
+    as the difference in years between them.
 
     Parameters
     ----------
@@ -794,9 +831,9 @@ def get_sy_ey_time(times, sy=None, ey=None, sm=None, em=None):
     datetime object
 
     Args:
-        times (xr.Datetime): xr.Datetime object that contains time
-        sy (int, optional): other startyear if specified. Defaults to None.
-        ey (int, optional): end endyear. Defaults to None.
+        times (xr.Datetime): xr.Datetime object that contains time sy (int, optional):
+        other startyear if specified. Defaults to None. ey (int, optional): end endyear.
+        Defaults to None.
 
     Returns:
         int, int: start and end year
@@ -834,10 +871,7 @@ def get_start_end_date_shift(time, sm, em, shift=0):
     """Same as normal get_start_date_year but the start and end shifted by shift days
 
     Args:
-        sm (str): Start Month
-        em (str): End Month
-        sy (int): start Year
-        ey (int): end Year
+        sm (str): Start Month em (str): End Month sy (int): start Year ey (int): end Year
         shift (int, optional): shift by days. Defaults to 0.
 
     Returns:
@@ -1226,20 +1260,20 @@ def compute_evs(dataarray,
     """Creates an event series from an input time series.
 
     Args:
-        dataarray (xr.dataarray): The time series of a variable of
-        q (float, optional): Quantile for defining an extreme event. Defaults to 0.95.
-        min_threshold (int, optional): Threshold. Removes all values in time series.
+        dataarray (xr.dataarray): The time series of a variable of q (float, optional):
+        Quantile for defining an extreme event. Defaults to 0.95. min_threshold (int,
+        optional): Threshold. Removes all values in time series.
             Eg. important to get wet days. Defaults to 1.
-        th_eev (int, optional): Minimum value of an extreme event. Defaults to 15.
-        min_evs (int, optional): Minimum number of extreme event within 1 time series. Defaults to 20.
+        th_eev (int, optional): Minimum value of an extreme event. Defaults to 15. min_evs
+        (int, optional): Minimum number of extreme event within 1 time series. Defaults to
+        20.
 
     Raises:
-        ValueError: [description]
-        ValueError: [description]
+        ValueError: [description] ValueError: [description]
 
     Returns:
-        event_series (xr.Dataarray): Event time series of 0 and 1 (1=event).
-        mask (xr.dataarray): Gives out which values are masked out.
+        event_series (xr.Dataarray): Event time series of 0 and 1 (1=event). mask
+        (xr.dataarray): Gives out which values are masked out.
     """
     if q > 1 or q < 0:
         raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
@@ -1247,7 +1281,8 @@ def compute_evs(dataarray,
         raise ValueError(
             f"ERROR! min_thresholdreshold for values min_threshold = {min_threshold} has to be > 0!")
 
-    # Compute percentile data, remove all values below percentile, but with a minimum of threshold q
+    # Compute percentile data, remove all values below percentile, but with a minimum of
+    # threshold q
     gut.myprint(
         f"Start remove values below q={q} and at least with q_value >= {th_eev} ...")
     _, ee_map, data_above_quantile, _ = get_ee_ds(
@@ -1307,9 +1342,8 @@ def correlation_per_timeperiod(x, y, time_period):
     """Correlation per time period.
 
     Args:
-        x ([type]): [description]
-        y ([type]): [description]
-        time_period ([type]): [description]
+        x ([type]): [description] y ([type]): [description] time_period ([type]):
+        [description]
 
     Returns:
         [type]: [description]
@@ -1330,9 +1364,8 @@ def tp2str(tp, m=True, d=True):
     """Returns the string for np.datetime(64) object.
 
     Args:
-        tp (np.datetime): time point
-        m (bool, optional): Return month as well. Defaults to False.
-        d (bool, optional): Return day as well. Defaults to False.
+        tp (np.datetime): time point m (bool, optional): Return month as well. Defaults to
+        False. d (bool, optional): Return day as well. Defaults to False.
 
     Returns:
         str: string of the date
@@ -1486,7 +1519,8 @@ def add_time_window_old(date, time_step=1, freq="D"):
 
 def add_time_window(date, time_step=1, freq='D'):
     """
-    Add a specified number of days, months, or years to the time dimension of an xarray DataArray.
+    Add a specified number of days, months, or years to the time dimension of an xarray
+    DataArray.
 
     Parameters
     ----------
@@ -1495,7 +1529,8 @@ def add_time_window(date, time_step=1, freq='D'):
     num : int
         The number of units (days, months or years) to add to the time dimension.
     freq : str, optional
-        The frequency of the units to add. Valid values are 'days', 'months' or 'years'. Defaults to 'days'.
+        The frequency of the units to add. Valid values are 'days', 'months' or 'years'.
+        Defaults to 'days'.
 
     Returns
     -------
@@ -1708,9 +1743,9 @@ def get_dates_for_time_steps(start='0-01-01', num_steps=1, freq='D'):
     specified date.
 
     Args:
-        start (str, optional): startpoint. Defaults to '0-01-01'.
-        num_steps (int, optional): number of steps. Defaults to 1.
-        freq (str, optional): frequency of timesteps (day, month, year...). Defaults to 'D'.
+        start (str, optional): startpoint. Defaults to '0-01-01'. num_steps (int,
+        optional): number of steps. Defaults to 1. freq (str, optional): frequency of
+        timesteps (day, month, year...). Defaults to 'D'.
     """
     dates = []
     for step in np.arange(num_steps):
@@ -1746,8 +1781,8 @@ def sliding_time_window(
     """Computes a sliding time window approach for a given dataset.
 
     Args:
-        da (xr.dataarray): dataarray that contains the time series of
-        points (list, optional): list of spatial points to applay the method.
+        da (xr.dataarray): dataarray that contains the time series of points (list,
+        optional): list of spatial points to applay the method.
                                  Defaults to None.
     """
     reload(sut)
@@ -1802,7 +1837,8 @@ def mean_slw(corr_time_dict, corr_key="st_corr"):
 
     Args:
         corr_time_dict (dict): dict that contains the time points and cross correlations
-        corr_key (str, optional): Which correlation to use: source correlations, targetcorr
+        corr_key (str, optional): Which correlation to use: source correlations,
+        targetcorr
                                   or st_corr. Defaults to 'st_corr'.
 
     Returns:
@@ -1889,8 +1925,8 @@ def get_corr_full_ts(
             f"Wrong dimension of corr matrix {corr.shape} != {(num_nodes, num_nodes)}!"
         )
 
-    # Define source - correlations, target correlations and source-target correlations
-    # in correlation matrix
+    # Define source - correlations, target correlations and source-target correlations in
+    # correlation matrix
     st_dict = gut.get_source_target_corr(corr=corr, sids=sids)
 
     corr_time_dict.update(
@@ -2004,8 +2040,7 @@ def lead_lag_corr(ts1, ts2,
         corr_range.append(corr)
         p_val_arr.append(p_val)
     corr_range = np.array(corr_range)
-    # if cutoff > 1:
-    #     corr_range = flt.apply_butter_filter(corr_range, cutoff=cutoff)
+    # if cutoff > 1: corr_range = flt.apply_butter_filter(corr_range, cutoff=cutoff)
 
     min_max_dict = gut.find_local_min_max_xy(data=corr_range, x=tau_arr)
 
@@ -2075,8 +2110,8 @@ def select_time_snippets(ds, time_snippets):
     """Cut time snippets from dataset and concatenate them.
 
     Args:
-        ds (xr.Dataset): Dataset to snip.
-        time_snippets (np.array): Array of n time snippets
+        ds (xr.Dataset): Dataset to snip. time_snippets (np.array): Array of n time
+        snippets
             with dimension (n,2).
 
     Returns:
@@ -2104,14 +2139,16 @@ def fill_time_series_val(ts: xr.DataArray, start_month: str = 'Jan', end_month: 
     Adds zeros to a time series in an xarray dataarray object.
 
     Args:
-        ts (xarray.DataArray): The input time series as an xarray DataArray object with dimensions (time, lon, lat).
-        start_month (str): The starting month for the time series. Defaults to 'Jan'.
-        end_month (str): The ending month for the time series. Defaults to 'Dec'.
-        freq (str): The frequency of the time series. Defaults to 'D' for daily.
-        fill_value (float): The value to use for filling any missing data in the time series. Defaults to 0.
+        ts (xarray.DataArray): The input time series as an xarray DataArray object with
+        dimensions (time, lon, lat). start_month (str): The starting month for the time
+        series. Defaults to 'Jan'. end_month (str): The ending month for the time series.
+        Defaults to 'Dec'. freq (str): The frequency of the time series. Defaults to 'D'
+        for daily. fill_value (float): The value to use for filling any missing data in
+        the time series. Defaults to 0.
 
     Returns:
-        xarray.DataArray: The padded time series as an xarray DataArray object with dimensions (time, lon, lat).
+        xarray.DataArray: The padded time series as an xarray DataArray object with
+        dimensions (time, lon, lat).
 
     Raises:
         ValueError: If the input time series does not have a time dimension.
@@ -2119,15 +2156,14 @@ def fill_time_series_val(ts: xr.DataArray, start_month: str = 'Jan', end_month: 
     Examples:
         import xarray as xr
 
-        # create example dataarray with monthly data
-        time = pd.date_range(start='2000-01-01', end='2001-12-31', freq='M')
-        lon = [-100, -90, -80, -70]
-        lat = [30, 40, 50]
-        data = np.random.rand(len(time), len(lon), len(lat))
-        da = xr.DataArray(data, coords={'time': time, 'lon': lon, 'lat': lat}, dims=('time', 'lon', 'lat'))
+        # create example dataarray with monthly data time =
+        pd.date_range(start='2000-01-01', end='2001-12-31', freq='M') lon = [-100, -90,
+        -80, -70] lat = [30, 40, 50] data = np.random.rand(len(time), len(lon), len(lat))
+        da = xr.DataArray(data, coords={'time': time, 'lon': lon, 'lat': lat},
+        dims=('time', 'lon', 'lat'))
 
-        # add padding to time series
-        padded_da = fill_time_series_val(da, start_month='Apr', end_month='Nov', freq='M', fill_value=0)
+        # add padding to time series padded_da = fill_time_series_val(da,
+        start_month='Apr', end_month='Nov', freq='M', fill_value=0)
     """
     assert_has_time_dimension(da=ts)
     sy, ey, _ = get_time_range_years(dataarray=ts)
@@ -2150,11 +2186,12 @@ def get_values_by_year(dataarray, years):
     """Return all values of the input dataarray that belong to one of the specified years.
 
     Args:
-        dataarray (xarray.DataArray): Input dataarray with a time dimension.
-        years (list or array-like): List or array of years to select.
+        dataarray (xarray.DataArray): Input dataarray with a time dimension. years (list
+        or array-like): List or array of years to select.
 
     Returns:
-        xarray.DataArray: New dataarray with only the values belonging to the specified years.
+        xarray.DataArray: New dataarray with only the values belonging to the specified
+        years.
     """
     assert_has_time_dimension(dataarray)
     if isinstance(years, xr.DataArray):
@@ -2171,21 +2208,23 @@ def get_values_by_year(dataarray, years):
 
 def count_time_points(time_points, freq='Y'):
     """
-    Returns a time series that gives per year (or per month in the year) the number of time points.
+    Returns a time series that gives per year (or per month in the year) the number of
+    time points.
 
     Parameters
     ----------
     time_points : xarray.DataArray
         An xarray DataArray containing a time dimension of multiple time points.
     freq : str, optional
-        The frequency of the output counts. Valid options are 'Y' (per year) and 'M' (per month in the year).
-        Default is 'Y'.
+        The frequency of the output counts. Valid options are 'Y' (per year) and 'M' (per
+        month in the year). Default is 'Y'.
 
     Returns
     -------
     xarray.DataArray
-        An xarray DataArray with a time dimension of type np.datetime64 and the number of time points as data.
-        The time dimension is continuous from the earliest time point in the input array to the last time point of the input array.
+        An xarray DataArray with a time dimension of type np.datetime64 and the number of
+        time points as data. The time dimension is continuous from the earliest time point
+        in the input array to the last time point of the input array.
     """
     assert_has_time_dimension(time_points)
 
@@ -2258,8 +2297,8 @@ def get_time_count_number(tps, counter='week'):
 
 def get_week_dates(weeks):
     """
-    Given an array of week numbers, return a list of tuples, where each tuple contains
-    the first calendar day of the corresponding week and the month as a string.
+    Given an array of week numbers, return a list of tuples, where each tuple contains the
+    first calendar day of the corresponding week and the month as a string.
 
     Parameters
     ----------
@@ -2270,8 +2309,8 @@ def get_week_dates(weeks):
     -------
     list of tuple
         A list of tuples, where each tuple contains a datetime object representing the
-        first calendar day of the corresponding week, and a string representing the
-        month (e.g., "January", "February", etc.)
+        first calendar day of the corresponding week, and a string representing the month
+        (e.g., "January", "February", etc.)
 
     """
     year = 1000
@@ -2298,7 +2337,8 @@ def daily_max(da):
     Returns
     -------
     daily_max : xarray.DataArray
-        An xarray DataArray containing the daily maximum for each location. Only days with values are included and NaNs at the end are excluded.
+        An xarray DataArray containing the daily maximum for each location. Only days with
+        values are included and NaNs at the end are excluded.
     """
     # Resample the data to daily frequency, taking the maximum value for each day
     da_daily = da.resample(time='1D').max(keep_attrs=True)
@@ -2311,8 +2351,8 @@ def daily_max(da):
 
 def parse_AR_date_string(date_string):
     """
-    Parses a date string in the format 'yyyy-mm-dd hh:mm:ss_x' and returns a numpy.datetime64
-    object representing the date and time.
+    Parses a date string in the format 'yyyy-mm-dd hh:mm:ss_x' and returns a
+    numpy.datetime64 object representing the date and time.
 
     Parameters
     ----------
@@ -2331,8 +2371,8 @@ def parse_AR_date_string(date_string):
 
 def convert_AR_xarray_to_timepoints(da):
     """
-    Converts an xarray dataarray containing dates in the format 'yyyy-mm-dd hh:mm:ss_x'
-    to an xarray dataarray of time points.
+    Converts an xarray dataarray containing dates in the format 'yyyy-mm-dd hh:mm:ss_x' to
+    an xarray dataarray of time points.
 
     Parameters
     ----------
@@ -2355,7 +2395,8 @@ def convert_AR_xarray_to_timepoints(da):
 
 def check_AR_strings(da):
     """
-    Checks if all strings in a given xarray object match the format 'X-Y-Z A:B:C_D' where X, Y, Z, A, B, C and D can be any integer.
+    Checks if all strings in a given xarray object match the format 'X-Y-Z A:B:C_D' where
+    X, Y, Z, A, B, C and D can be any integer.
 
     Args:
         da (xarray.DataArray): The input xarray object with the data array to check.
@@ -2372,7 +2413,8 @@ def check_AR_strings(da):
 
 def check_AR_string_format(s):
     """
-    Checks if a given string matches the format 'X-Y-Z A:B:C_D' where X, Y, Z, A, B, C and D can be any integer.
+    Checks if a given string matches the format 'X-Y-Z A:B:C_D' where X, Y, Z, A, B, C and
+    D can be any integer.
 
     Args:
         s (str): The input string to check.
@@ -2386,14 +2428,14 @@ def check_AR_string_format(s):
 
 def filter_nan_values(dataarray, dims=['lon', 'lat'], th=1.):
     """
-    Takes an xarray DataArray with dimensions (time, lon, lat) and removes time points where
-    the number of NaN values exceeds th.
+    Takes an xarray DataArray with dimensions (time, lon, lat) and removes time points
+    where the number of NaN values exceeds th.
 
-    Parameters:
-    da (xarray.DataArray): The input DataArray with dimensions (time, lon, lat).
+    Parameters: da (xarray.DataArray): The input DataArray with dimensions (time, lon,
+    lat).
 
-    Returns:
-    xarray.DataArray: A new DataArray without time points where the number of NaN values exceeds 100.
+    Returns: xarray.DataArray: A new DataArray without time points where the number of NaN
+    values exceeds 100.
     """
     # Count number of non-NaN values along the time dimension
     non_nan_counts = dataarray.count(dim=dims)
@@ -2428,8 +2470,8 @@ def have_same_time_points(dataarray1, dataarray2):
     Check if two xarray DataArrays have exactly the same time points.
 
     Parameters:
-        dataarray1 (xarray.DataArray): The first xarray DataArray.
-        dataarray2 (xarray.DataArray): The second xarray DataArray.
+        dataarray1 (xarray.DataArray): The first xarray DataArray. dataarray2
+        (xarray.DataArray): The second xarray DataArray.
 
     Returns:
         bool: True if both DataArrays have the same time points, False otherwise.
@@ -2443,8 +2485,7 @@ def equalize_time_points(ts1, ts2, verbose=True):
     """Equalize the time points of two xarray dataarrays.
 
     Args:
-        ts1 (xr.Dataarray): dataarray or dataset
-        ts2 (xr.Dataarray): dataarray or dataset
+        ts1 (xr.Dataarray): dataarray or dataset ts2 (xr.Dataarray): dataarray or dataset
 
     Returns:
         tuple: tuple of two datasets with equal time points
@@ -2475,7 +2516,8 @@ def check_time_overlap(da1, da2, return_overlap=False):
     Returns:
     --------
     bool
-        True if there is any overlap in the time dimension between both dataarrays, False if not
+        True if there is any overlap in the time dimension between both dataarrays, False
+        if not
     """
     assert_has_time_dimension(da1)
     assert_has_time_dimension(da2)
@@ -2495,15 +2537,16 @@ def check_time_overlap(da1, da2, return_overlap=False):
 
 def select_random_timepoints(dataarray, sample_size=1, seed=None):
     """
-    Returns a random sample of time points from an xarray dataarray along the time dimension.
-    The time points are sorted in time.
+    Returns a random sample of time points from an xarray dataarray along the time
+    dimension. The time points are sorted in time.
 
     Parameters:
-        dataarray (xarray.DataArray): The input dataarray.
-        sample_size (int): The number of time points to sample.
+        dataarray (xarray.DataArray): The input dataarray. sample_size (int): The number
+        of time points to sample.
 
     Returns:
-        xarray.DataArray: A DataArray containing a random sample of time points, sorted in time.
+        xarray.DataArray: A DataArray containing a random sample of time points, sorted in
+        time.
     """
     time_vals = dataarray.time.values
     if seed is not None:
@@ -2516,15 +2559,13 @@ def select_random_timepoints(dataarray, sample_size=1, seed=None):
 
 def sliding_window_mean(da, length):
     """
-    Compute the sliding window mean for an xarray DataArray where each value
-    represents the average of the previous l time steps.
+    Compute the sliding window mean for an xarray DataArray where each value represents
+    the average of the previous l time steps.
 
-    Parameters:
-    da (xarray.DataArray): The input DataArray.
-    length (int): The length of the sliding window.
+    Parameters: da (xarray.DataArray): The input DataArray. length (int): The length of
+    the sliding window.
 
-    Returns:
-    xarray.DataArray: The DataArray with sliding window means.
+    Returns: xarray.DataArray: The DataArray with sliding window means.
     """
     # Initialize an empty array to store the results
     result = np.zeros_like(da)

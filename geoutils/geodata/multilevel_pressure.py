@@ -41,14 +41,18 @@ class MultiPressureLevelDataset(bds.BaseDataset):
             fut.print_file_location_and_size(filepath=file, verbose=False)
         gut.myprint(f'All files are available! Loading {data_nc}...',
                     lines=True)
+        set_metpy_labels = kwargs.pop('metpy_labels', False)
         super().__init__(data_nc=data_nc,
                          plevels=plevels,
                          can=can,
+                         metpy_labels=False,
                          **kwargs)
         gut.myprint(
             f'Loaded Pressure levels {plevels} as dimension {self.plevel_name}!')
 
         self.set_plevel_attrs()
+        if set_metpy_labels:
+            self.set_metpy_labels()
 
     def load_dataset_attributes(self, base_ds, **kwargs):
 
@@ -63,10 +67,12 @@ class MultiPressureLevelDataset(bds.BaseDataset):
             self.mask = base_ds.mask
             self.indices_flat = base_ds.indices_flat
             self.idx_map = base_ds.idx_map
-            self.lon_range = base_ds.lon_range
-            self.lat_range = base_ds.lat_range
             self.info_dict = base_ds.info_dict
         self.dims = base_ds.dims
+        self.lon_range = base_ds.lon_range
+        self.lat_range = base_ds.lat_range
+        self.lon_name = base_ds.lon_name
+        self.lat_name = base_ds.lat_name
 
     def set_plevel_attrs(self):
         self.plevel_attrs = self.ds[self.plevel_name].attrs

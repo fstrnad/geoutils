@@ -44,6 +44,7 @@ class BaseDataset():
         lsm_file=None,
         decode_times=True,
         verbose=True,
+        metpy_labels=False,  # labelling according to metpy convention
         **kwargs,
     ):
         """Initializes a BaseDataset object with an nc file provided.
@@ -134,6 +135,9 @@ class BaseDataset():
         self.set_source_attrs(verbose=verbose)
 
         self.set_ds_objects()
+
+        if metpy_labels:
+            self.ds = self.set_metpy_labels()
 
     def set_ds_objects(self):
         if 'time' in self.dims:
@@ -355,11 +359,18 @@ class BaseDataset():
                                    keep_time=keep_time,
                                    freq=freq,
                                    verbose=verbose)
+        self.set_dim_names()
         # Set time series to days
         if len(list(ds.dims)) > 2:
             ds = self.check_time(ds, **kwargs)
 
         return ds
+
+    def set_dim_names(self):
+        self.lon_name = 'lon'
+        self.lat_name = 'lat'
+        self.time_name = 'time'
+        self.lev_name = 'lev'
 
     def check_time(self, ds, **kwargs):
         """Sets the respective calender!
@@ -395,7 +406,13 @@ class BaseDataset():
             set_ds = False
         if old_var_name is None:
             old_var_name = self.var_name
-        if old_var_name not in self.get_vars(ds=ds):
+        if old_var_name in self.get_dims():
+            if old_var_name == 'lon' or old_var_name == 'lat':
+                if old_var_name == 'lon':
+                    self.lon_name = new_var_name
+                else:
+                    self.lat_name = new_var_name
+        elif old_var_name not in self.get_vars(ds=ds):
             raise ValueError(
                 f'This variable {old_var_name} does not exist in dataset!')
         ds = ds.rename({old_var_name: new_var_name})
@@ -448,8 +465,8 @@ class BaseDataset():
         self.var_attrs = {}
         for var in self.vars:
             self.var_attrs[var] = ds[var].attrs
-        self.lon_attrs = ds.lon.attrs
-        self.lat_attrs = ds.lat.attrs
+        self.lon_attrs = ds[self.lon_name].attrs
+        self.lat_attrs = ds[self.lat_name].attrs
         self.time_attrs = None
         self.lon_attrs['standard_name'] = self.lon_attrs['long_name'] = 'longitude'
         self.lon_attrs['units'] = 'degree_east'
@@ -471,8 +488,8 @@ class BaseDataset():
         self.ds.attrs.update(self.source_attrs)
         for var in list(self.var_attrs.keys()):
             self.ds[var].attrs.update(self.var_attrs[var])
-        self.ds.lon.attrs.update(self.lon_attrs)
-        self.ds.lat.attrs.update(self.lat_attrs)
+        self.ds[self.lon_name].attrs.update(self.lon_attrs)
+        self.ds[self.lat_name].attrs.update(self.lat_attrs)
         if 'time' in self.dims:
             self.ds.time.attrs.update(self.time_attrs)
 
@@ -635,8 +652,8 @@ class BaseDataset():
         #     data=data_map,
         #     dims=['points'],
         #     coords=dict(points=self.ds.points.data,
-        #                 lon=("points", self.ds.lon.data),
-        #                 lat=("points", self.ds.lat.data)),
+        #                 lon=("points", self.ds[self.lon_name].data),
+        #                 lat=("points", self.ds[self.lat_name].data)),
         #     name=name)
 
         dmap = xr.DataArray(
@@ -991,8 +1008,10 @@ class BaseDataset():
         time_range = [ds.time.data[0], ds.time.data[-1]
                       ] if len(dims) > 2 else None
         if len(dims) >= 2:
-            lon_range = [float(ds.lon.min()), float(ds.lon.max())]
-            lat_range = [float(ds.lat.min()), float(ds.lat.max())]
+            lon_range = [float(ds[self.lon_name].min()),
+                         float(ds[self.lon_name].max())]
+            lat_range = [float(ds[self.lat_name].min()),
+                         float(ds[self.lat_name].max())]
         else:
             lon_range = lat_range = None
         return time_range, lon_range, lat_range
@@ -1653,6 +1672,11 @@ class BaseDataset():
             dataarray=da, dims=dims, th=th).to_dataset()
         self.set_var()
         return self.ds
+
+    def set_metpy_labels(self):
+        self.rename_var(old_var_name='lon', new_var_name='longitude')
+        self.rename_var(old_var_name='lat', new_var_name='latitude')
+
 
     #  #################### EVS time series ##############
     def create_evs_ds(

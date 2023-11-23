@@ -112,6 +112,33 @@ def get_mean_lon_lat_range(lon_range, lat_range):
     return np.mean(lon_range), np.mean(lat_range)
 
 
+def in_lon_lat_range(lon, lat, lon_range, lat_range, dateline=False):
+    """Check if lon, lat is in lon_range and lat_range
+
+    Args:
+        lon (float): longitude
+        lat (float): latitude
+        lon_range (list): list of longitude range
+        lat_range (list): list of latitude range
+
+    Returns:
+        boolean: True if lon, lat is in lon_range and lat_range
+    """
+    if dateline is False:
+        if lon_range[1] < lon_range[0]:
+            lon_range = lon_range[::-1]
+        lon_in_range = (lon >= lon_range[0]) & (lon <= lon_range[1])
+    else:
+        lon_range = lon2_360(lon_range)
+        lon_in_range = (lon >= lon_range[0]) | (lon <= lon_range[1])
+
+    if lat_range[0] < lat_range[1]:
+        lat_in_range = (lat >= lat_range[0]) & (lat <= lat_range[1])
+    else:
+        lat_in_range = (lat >= lat_range[0]) | (lat <= lat_range[1])
+
+    return lon_in_range & lat_in_range
+
 def compute_rm(da, rm_val, dim='time', sm='Jan', em='Dec'):
     """This function computes a rolling mean on an input
     xarray dataarray. The first and last rm_val elements
@@ -1039,56 +1066,57 @@ def average_num_eres(data):
 
 
 def remove_useless_variables(ds):
-
-    # Remove useless dimensions in ds for all variables
-    dims = gut.get_dims(ds=ds)
-    if 'expver' in dims:
-        # occurs for ERA5 data for total precipitation
-        gut.myprint(f'Combine expver from ds!')
-        ds = ds.sel(expver=1).combine_first(ds.sel(expver=5))
-        ds.load()
-        gut.myprint(f'Combined expver 1 and 5 for ds!')
+    if isinstance(ds, xr.Dataset):
+        # Remove useless dimensions in ds for all variables
         dims = gut.get_dims(ds=ds)
+        if 'expver' in dims:
+            # occurs for ERA5 data for total precipitation
+            gut.myprint(f'Combine expver from ds!')
+            ds = ds.sel(expver=1).combine_first(ds.sel(expver=5))
+            ds.load()
+            gut.myprint(f'Combined expver 1 and 5 for ds!')
+            dims = gut.get_dims(ds=ds)
 
-    for dim in dims:
-        if dim not in ['time', 'lat', 'lon', 'plevel', 'lev', 'dimx_lon', 'dimy_lon', 'dimz_lon', 'x']:
-            ds = ds.drop_dims(dim)
-            gut.myprint(f'Remove dimension {dim}!')
+        for dim in dims:
+            if dim not in ['time', 'lat', 'lon', 'plevel', 'lev', 'dimx_lon', 'dimy_lon', 'dimz_lon', 'x']:
+                ds = ds.drop_dims(dim)
+                gut.myprint(f'Remove dimension {dim}!')
 
-    # Remove useless variables
-    vars = gut.get_vars(ds=ds)
-    for var in vars:
-        this_dims = gut.get_dims(ds[var])
-        if (
-            (gut.compare_lists(this_dims, ['lat', 'lon', 'time'])) or
-            (gut.compare_lists(this_dims, ['lat', 'lon'])) or
-            (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'plevel'])) or
-            (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'lev'])) or
-            (gut.compare_lists(this_dims, ['lat', 'lon', 'lev'])) or
-            (gut.compare_lists(this_dims, ['lat', 'lon', 'plevel'])) or
-            (gut.compare_lists(this_dims, ['time', 'dimx_lon'])) or
-            (gut.compare_lists(this_dims, ['time', 'dimy_lon'])) or
-            (gut.compare_lists(this_dims, ['time', 'dimz_lon'])) or
-            (gut.compare_lists(this_dims, ['time', 'x']))
-        ):
-            continue
-        else:
-            ds = ds.drop(var)
-            gut.myprint(f'Remove variable {var} with dims: {this_dims}!')
+        # Remove useless variables
+        vars = gut.get_vars(ds=ds)
+        for var in vars:
+            this_dims = gut.get_dims(ds[var])
+            if (
+                (gut.compare_lists(this_dims, ['lat', 'lon', 'time'])) or
+                (gut.compare_lists(this_dims, ['lat', 'lon'])) or
+                (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'plevel'])) or
+                (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'lev'])) or
+                (gut.compare_lists(this_dims, ['lat', 'lon', 'lev'])) or
+                (gut.compare_lists(this_dims, ['lat', 'lon', 'plevel'])) or
+                (gut.compare_lists(this_dims, ['time', 'dimx_lon'])) or
+                (gut.compare_lists(this_dims, ['time', 'dimy_lon'])) or
+                (gut.compare_lists(this_dims, ['time', 'dimz_lon'])) or
+                (gut.compare_lists(this_dims, ['time', 'x']))
+            ):
+                continue
+            else:
+                ds = ds.drop(var)
+                gut.myprint(f'Remove variable {var} with dims: {this_dims}!')
 
     return ds
 
 
 def remove_single_dim(ds):
-    dims = dict(ds.dims)
-    for dim, num in dims.items():
-        if num < 2:
-            # Time and pressure level dimension is the only one that is allowed to be kept
-            if dim not in ['time', 'lev', 'plevel']:
-                ds = ds.mean(dim=dim)  # Removes the single variable axis
-                gut.myprint(f'Remove single value dimension {dim}!')
-            else:
-                gut.myprint(f'WARNING: dimension {dim} contains only 1 value!')
+    if isinstance(ds, xr.Dataset):
+        dims = dict(ds.dims)
+        for dim, num in dims.items():
+            if num < 2:
+                # Time and pressure level dimension is the only one that is allowed to be kept
+                if dim not in ['time', 'lev', 'plevel', 'points']:
+                    ds = ds.mean(dim=dim)  # Removes the single variable axis
+                    gut.myprint(f'Remove single value dimension {dim}!')
+                else:
+                    gut.myprint(f'WARNING: dimension {dim} contains only 1 value!')
     return ds
 
 
@@ -1148,24 +1176,25 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
     dims = list(ds.dims)
     numdims = len(dims)
 
-    if numdims == 4:
-        clim_dims = ['time', 'lev', 'lat', 'lon']
-    elif numdims == 3:
-        clim_dims = ['time', 'lat', 'lon']
-    elif numdims == 2:
-        if 'time' in dims:
-            clim_dims = ['time', 'x']
-            sort = False
+    if not 'points' in dims:
+        if numdims == 4:
+            clim_dims = ['time', 'lev', 'lat', 'lon']
+        elif numdims == 3:
+            clim_dims = ['time', 'lat', 'lon']
+        elif numdims == 2:
+            if 'time' in dims:
+                clim_dims = ['time', 'x']
+                sort = False
+            else:
+                clim_dims = ['lat', 'lon']
+        elif numdims == 1:
+            clim_dims = ['time']
         else:
-            clim_dims = ['lat', 'lon']
-    elif numdims == 1:
-        clim_dims = ['time']
-    else:
-        raise ValueError(f'Too many dimensions: {numdims}!')
-    for dim in clim_dims:
-        if dim not in dims:
-            raise ValueError(
-                f"The dimension {dims} not consistent with required dims {clim_dims}!")
+            raise ValueError(f'Too many dimensions: {numdims}!')
+        for dim in clim_dims:
+            if dim not in dims:
+                raise ValueError(
+                    f"The dimension {dims} not consistent with required dims {clim_dims}!")
 
     if numdims == 4:
         # Actually change location in memory if necessary!
@@ -1179,9 +1208,9 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
     elif numdims == 2:
         if 'lon' in dims:
             ds = ds.transpose('lat', 'lon').compute()
-        gut.myprint('2d oject transposed to lat-lon!')
+        gut.myprint('2d oject transposed to lat-lon!', verbose=verbose)
     elif numdims == 1:
-        gut.myprint('1d oject only!')
+        gut.myprint('1d oject only!', verbose=verbose)
 
     if numdims >= 2 and 'lon' in dims:
         # If lon from 0 to 360 shift to -180 to 180
@@ -1198,7 +1227,8 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
             ds = ds.sortby('lon')
             ds = ds.sortby('lat')
             gut.myprint(
-                'Sorted longitudes and latitudes in ascending order!', verbose=verbose)
+                'Sorted longitudes and latitudes in ascending order!',
+                verbose=verbose)
 
     if 'time' in dims:
         if ts_days:

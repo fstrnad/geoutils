@@ -1063,6 +1063,39 @@ def delete_element_at_index(arr, i, axis=0):
             "Index out of range. The index must be less than the length of the array.")
 
 
+def delete_element_from_arr(arr, item):
+    """
+    Deletes the specified item from the input array.
+
+    Args:
+        arr (list or numpy.ndarray): The input array of items.
+        item (int or str): The item to be deleted.
+
+    Returns:
+        same_type_as_input: The modified array after deleting the specified item.
+
+    Examples:
+        >>> my_array = [1, 2, 3, 4, 5]
+        >>> new_array = delete_element_from_arr(my_array, 2)
+        >>> print(new_array)
+        [1 3 4 5]
+
+        >>> import numpy as np
+        >>> my_array = np.array([10, 20, 30, 40, 50])
+        >>> new_array = delete_element_from_arr(my_array, 20)
+        >>> print(new_array)
+        [10 30 40 50]
+    """
+
+    arr = np.array(arr)  # Convert input to NumPy array
+    if item in arr:
+        return np.delete(arr, np.where(arr == item))
+    else:
+        myprint(
+            "Item not found in array. The item must be present in the array.")
+        return arr
+
+
 def convert_to_integers(arr):
     """
     Recursively checks if all elements in the input array (including NumPy arrays)

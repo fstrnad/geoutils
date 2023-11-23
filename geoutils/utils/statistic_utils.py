@@ -144,18 +144,6 @@ def count_occ(occ_arr, count_arr, rel_freq=False, norm_fac=1.):
     return res_c_occ
 
 
-def normlize_time_slides(data, min=0, max=1):
-    mean_data_arr = []
-    times = data.time
-    for i, (tp) in enumerate(times):
-        mean_data = tu.get_sel_tps_ds(ds=data, tps=[tp.data]).mean(
-            dim='time')  # get single time steps
-        res_ds = normalize(data=mean_data, min=min, max=max)
-        mean_data_arr.append(res_ds.to_dataset(name='norm'))
-    xr_new = xr.concat(mean_data_arr, times)
-
-    return xr_new
-
 
 def rank_data(data, axis=0, method='min'):
     data_rk = st.rankdata(
@@ -512,19 +500,20 @@ def ttest_field(X, Y, serial_data=False,
         statistics (xr.Dataarray): T-statistics
         pvalues (xr.Dataarray): P-values
     """
+    zdim = tuple(zdim)
     if weights is not None:
         # Weighted mean
         X_weighted = X.weighted(weights)
-        mean_x = X_weighted.mean(dim='time').stack(z=zdim)
-        std_x = X_weighted.std(dim='time').stack(z=zdim)
+        mean_x = X_weighted.mean(dim='time').stack(z=tuple(zdim))
+        std_x = X_weighted.std(dim='time').stack(z=tuple(zdim))
         # Use threshold on weights to crop X for a realistic sample size
         ids = np.where(weights.data >= weight_threshold)[0]
         X = X.isel(time=ids)
     else:
-        mean_x = X.mean(dim='time', skipna=True).stack(z=zdim)
-        std_x = X.std(dim='time', skipna=True).stack(z=zdim)
+        mean_x = X.mean(dim='time', skipna=True).stack(z=tuple(zdim))
+        std_x = X.std(dim='time', skipna=True).stack(z=tuple(zdim))
 
-    mean_y = Y.mean(dim='time', skipna=True).stack(z=zdim)
+    mean_y = Y.mean(dim='time', skipna=True).stack(z=tuple(zdim))
     std_y = Y.std(dim='time', skipna=True).stack(z=zdim)
     if serial_data:
         nobs_x = effective_sample_size_parallel(

@@ -169,13 +169,14 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
     def compute_vertical_shear(self, plevel_up=200, plevel_low=850,
                                group='JJAS'):
         gut.myprint(f'Compute Vertical shear winds.')
-        shear_wind = self.ds[self.u_name].sel(
-            lev=plevel_up) - self.ds[self.u_name].sel(lev=plevel_low)
-        self.ds['vertical_shear'] = shear_wind.rename('vertical_shear')
-        for group in self.an_types:
-            shear_wind_an = tu.compute_anomalies(
-                dataarray=self.ds['vertical_shear'], group=group)
-            self.ds[shear_wind_an.name] = shear_wind_an
+        if 'vertical_shear' not in self.get_vars():
+            shear_wind = self.ds[self.u_name].sel(
+                lev=plevel_up) - self.ds[self.u_name].sel(lev=plevel_low)
+            self.ds['vertical_shear'] = shear_wind.rename('vertical_shear')
+            for group in self.an_types:
+                shear_wind_an = tu.compute_anomalies(
+                    dataarray=self.ds['vertical_shear'], group=group)
+                self.ds[shear_wind_an.name] = shear_wind_an
 
         return self.ds
 

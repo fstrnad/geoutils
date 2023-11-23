@@ -387,7 +387,7 @@ def plot_map(dmap: xr.DataArray,
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
     plt_grid = kwargs.pop("plt_grid", False)
-
+    dmap = sput.check_dimensions(dmap, verbose=False)
     put.check_plot_type(plot_type)
     if ax is not None and projection is not None:
         raise ValueError(
