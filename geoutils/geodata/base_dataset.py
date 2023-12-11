@@ -1677,8 +1677,8 @@ class BaseDataset():
         self.rename_var(old_var_name='lon', new_var_name='longitude')
         self.rename_var(old_var_name='lat', new_var_name='latitude')
 
-
     #  #################### EVS time series ##############
+
     def create_evs_ds(
         self, var_name,
         q=0.95,
@@ -1813,3 +1813,27 @@ class BaseDataset():
         }
         ds.attrs = param_class
         return ds
+
+    def horizontal_gradient(self, var, dim='lon', can=True):
+        """Calculate horizontal gradient of variable.
+
+        Args:
+            var (str): variable name
+            dim (str, optional): dimension to take gradient over. Defaults to 'lon'.
+
+        Returns:
+            xr.Dataarray: horizontal gradient
+        """
+        v_bar = self.ds[var]
+        new_name = var+'_grad_'+dim
+        grad_vbar = v_bar.differentiate(dim).rename(new_name)
+
+        self.ds[new_name] = grad_vbar
+
+        if can:
+            for an_type in self.an_types:
+                sf_an = tu.compute_anomalies(
+                    dataarray=self.ds[new_name], group=an_type)
+                self.ds[sf_an.name] = sf_an
+
+        return grad_vbar

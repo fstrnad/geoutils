@@ -625,7 +625,9 @@ def get_expt_ees(evs, tps, timemean='year'):
     return frac_ees / norm
 
 
-def get_cond_occ(tps, cond, counter, small_sample_corection=True):
+def get_cond_occ(tps, cond, counter,
+                 small_sample_corection=True,
+                 min_num_samples=5):
 
     # Joint count, eg. sync, active, phase
     phase_sync_act = tu.get_sel_tps_ds(ds=cond, tps=tps)
@@ -645,7 +647,6 @@ def get_cond_occ(tps, cond, counter, small_sample_corection=True):
 
     # print(count_phase_act_sync, count_phase_act)
 
-    min_num_samples = 4
     # print(count_phase_act)
     if small_sample_corection:
         gut.myprint('Small sample correction is applied!')

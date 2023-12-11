@@ -456,7 +456,8 @@ def set_neighbors_to_1(arr):
 
     # Iterate through the dimensions and set neighbors to 1
     for dim in range(arr.ndim):
-        padded = np.pad(ones_mask, [(0, 0) if i != dim else (1, 1) for i in range(arr.ndim)], mode='constant')
+        padded = np.pad(ones_mask, [(0, 0) if i != dim else (
+            1, 1) for i in range(arr.ndim)], mode='constant')
         modified_arr += np.logical_or.reduce(padded, axis=dim, keepdims=True)
 
     return modified_arr
@@ -621,7 +622,9 @@ def cust_range(*args, rtol=1e-05, atol=1e-08,
 
 
 def crange(*args, **kwargs):
-    return cust_range(*args, **kwargs, include=[True, True])
+    dtype = type(args[2]) if len (args) > 2 else type(args[1])
+    return cust_range(*args, **kwargs, include=[True, True],
+                      dtype=dtype)
 
 
 def orange(*args, **kwargs):
@@ -1124,3 +1127,17 @@ def convert_to_integers(arr):
             return int(arr)
         except (ValueError, TypeError):
             return arr
+
+
+def check_contains_substring(main_string, sub_string):
+    """
+    Check if a main string contains a given sub string.
+
+    Args:
+        main_string (str): The main string to check.
+        sub_string (str): The sub string to search for.
+
+    Returns:
+        bool: True if the sub string is found in the main string, False otherwise.
+    """
+    return sub_string in main_string

@@ -1,7 +1,9 @@
 from importlib import reload
 import os
 import matplotlib.pyplot as plt
+import geoutils.utils.general_utils as gut
 
+# plotting utils
 import geoutils.plotting.plot_settings
 import geoutils.plotting.map_plots
 import geoutils.plotting.xy_plots
@@ -34,8 +36,16 @@ def mk_plot_dir(savepath):
         return
 
 
-def save_fig(savepath, fig=None, dpi='figure'):
+def save_fig(savepath, fig=None,
+             extension='png',
+             dpi='figure'):
     mk_plot_dir(savepath)
+
+    if not gut.check_contains_substring(
+        main_string=savepath,
+        sub_string=extension
+    ):
+        savepath += f".{extension}"
     if fig is None:
         plt.savefig(savepath,
                     bbox_inches='tight',

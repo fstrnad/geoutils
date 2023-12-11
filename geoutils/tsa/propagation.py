@@ -60,7 +60,8 @@ def get_day_progression_arr(data, tps, start,
             # the sign is because average is for the preceeding periode
             # signum of thisstep
             av_step = step * -1 * math.copysign(1, thisstep) if thisstep != 0 else -1
-            this_tps = tu.get_periods_tps(tps=this_tps, step=av_step)
+            this_tps = tu.get_periods_tps(tps=this_tps, start=0,
+                                          end=av_step)
 
         this_comp_ts = tu.get_sel_tps_ds(ds=data, tps=this_tps, drop_dim=False)
         if var == 'evs':

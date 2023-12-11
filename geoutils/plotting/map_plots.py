@@ -102,6 +102,7 @@ def set_grid(ax, alpha=0.5,
     Returns:
         _type_: _description_
     """
+    print(ext_dict)
     # Set grid steps for longitude and latitude
     if ext_dict is not None:
         gs_lon = kwargs.pop('gs_lon', None)
@@ -155,6 +156,9 @@ def set_extent(da, ax,
     verbose = kwargs.get('verbose', False)
     min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat = ax.get_extent()
     if dateline:
+        if ax.projection.proj4_params['lon_0'] != 180:
+            raise ValueError(
+                f'Axis is not set to dateline, but central_longitude not to 180!')
         projection = ccrs.PlateCarree(central_longitude=0)
         if lon_range is not None:
             lon_range = sput.lon2_360(lon_range)
@@ -261,6 +265,7 @@ def create_map(
         ax_central_longitude = ax.projection.proj4_params['lon_0']
         if ax_central_longitude == 180:
             dateline = True
+
             gut.myprint('Dateline set to true!')
 
         if central_longitude is not None:
@@ -346,7 +351,6 @@ def plot_map(dmap: xr.DataArray,
              vmin: float = None,
              vmax: float = None,
              cmap: str = 'coolwarm',
-             bar: bool = True,
              projection: str = None,
              label: str = None,
              title: str = None,
@@ -386,7 +390,7 @@ def plot_map(dmap: xr.DataArray,
     figsize = kwargs.pop("figsize", (9, 6))
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
-    plt_grid = kwargs.pop("plt_grid", False)
+    plt_grid = kwargs.pop("plt_grid", True)
     dmap = sput.check_dimensions(dmap, verbose=False)
     put.check_plot_type(plot_type)
     if ax is not None and projection is not None:
@@ -417,13 +421,6 @@ def plot_map(dmap: xr.DataArray,
     fig = map_dict['fig']
     kwargs = map_dict['kwargs']
     projection = ccrs.PlateCarree()  # nicht: central_longitude=central_longitude!
-
-    if bar == "discrete":
-        kwargs_pl = dict()  # kwargs plot function
-        kwargs_cb = dict()  # kwargs colorbar
-        normticks = np.arange(0, dmap.max(skipna=True) + 2, 1)
-        kwargs_pl["norm"] = mpl.colors.BoundaryNorm(normticks, cmap.N)
-        kwargs_cb["ticks"] = normticks + 0.5
 
     # interpolate grid of points to regular grid
     grid_step = kwargs.pop('grid_step', 1)  # by default 1 grid
@@ -1001,7 +998,7 @@ def plot_wind_field(
 
 def create_multi_plot(nrows, ncols, projection=None,
                       lon_range=None, lat_range=None,
-                      plt_grid=True, **kwargs):
+                      plt_grid=False, **kwargs):
     reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
@@ -1026,15 +1023,12 @@ def create_multi_plot(nrows, ncols, projection=None,
         central_longitude = kwargs.pop("central_longitude", None)
         central_latitude = kwargs.pop("central_latitude", None)
         dateline = kwargs.pop('dateline', False)
-        proj = get_projection(projection=projection,
-                              central_longitude=central_longitude,
-                              central_latitude=central_latitude,
-                              dateline=dateline)
+        dateline_arr = kwargs.pop('dateline_arr', None)
     else:
         proj = None
     axs = []
 
-    run_idx = 1
+    run_idx = 0
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx
     map_axis = kwargs.pop('map_axis', [])
@@ -1042,14 +1036,20 @@ def create_multi_plot(nrows, ncols, projection=None,
         map_axis = np.arange(nrows*ncols)
     if nrows*ncols/end_idx >= nrows:
         nrows = nrows - 1 if nrows > 1 else nrows
-    set_map = kwargs.pop('set_map', True)
+    set_map = kwargs.pop('set_map', False) # is set later
     for i in range(nrows):
         for j in range(ncols):
-            axs.append(fig.add_subplot(gs[i, j], projection=proj))
-            if run_idx - 1 in map_axis:
-                if projection is not None:
+            if projection is not None:
+                if dateline_arr is not None:
+                    dateline = dateline_arr[run_idx]
+                proj = get_projection(projection=projection,
+                                    central_longitude=central_longitude,
+                                    central_latitude=central_latitude,
+                                    dateline=dateline)
+                if run_idx in map_axis:
+                    axs.append(fig.add_subplot(gs[i, j], projection=proj))
                     map_dict = create_map(
-                        ax=axs[run_idx-1],
+                        ax=axs[run_idx],
                         projection=projection,
                         central_longitude=central_longitude,
                         plt_grid=plt_grid,

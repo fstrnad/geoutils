@@ -431,7 +431,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
     if set_cax:
         if orientation == "vertical":
             loc = "right"
-            pad = kwargs.pop('pad', -5)
+            pad = kwargs.pop('pad', -1)  # distance from right border
             # divider = make_axes_locatable(ax)
             # cax = divider.append_axes(loc, "5%", pad=pad, axes_class=plt.Axes)
             cax = inset_axes(ax,

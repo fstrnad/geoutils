@@ -1,3 +1,7 @@
+import re
+import shutil
+import string
+import random
 import pickle
 import numpy as np
 import os
@@ -40,7 +44,7 @@ def get_files_in_folder(folder_path: str, verbose: bool = True) -> list:
 
 
 def find_files_with_string(folder_path: str, search_string: str = None,
-                           verbose: bool = True) -> list:
+                           sort: str = 'Number', verbose: bool = True) -> list:
     """
     Finds all file paths that contain a certain string in a given folder and its subfolders.
 
@@ -63,6 +67,13 @@ def find_files_with_string(folder_path: str, search_string: str = None,
                 else:
                     if search_string in file:
                         file_list.append(filepath)
+
+    if sort:
+        if sort == 'Number':
+            file_list = sort_filenames_by_number(file_list)
+            print(file_list)
+        else:
+            file_list.sort()
 
     # Check that all files in the file list actually exist
     for filepath in file_list:
@@ -291,3 +302,83 @@ def load_nx(filepath):
     gut.myprint(f"... Loading {filepath} successful!")
 
     return cnx
+
+
+def create_random_folder(path='./', k=8, extension=None):
+    # Generate a random folder name
+    folder_name = ''.join(random.choices(
+        string.ascii_letters + string.digits, k=k))
+
+    # Create the full path
+    folder_path = os.path.join(path, folder_name)
+
+    # Create the folder if it doesn't exist
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        gut.myprint(f"Random folder '{folder_name}' created at: {folder_path}")
+    else:
+        gut.myprint(f"Folder '{folder_name}' already exists at: {folder_path}")
+
+    return folder_path
+
+
+def create_random_filename(folder_path='./', k=8,
+                           startstring=None,
+                           extension=None):
+    while True:
+        # Generate a random filename
+        file_name = ''.join(random.choices(string.ascii_letters + string.digits,
+                                           k=k))
+        # Add startstring if provided
+        if startstring is not None:
+            file_name = f'{startstring}_{file_name}'
+
+        # Add extension if provided
+        if extension:
+            file_name += f".{extension.strip('.')}"
+
+        # Create the full file path
+        file_path = os.path.join(folder_path, file_name)
+
+        # Check if the file already exists, if not, return the filename
+        if not os.path.exists(file_path):
+            return file_path
+
+
+def delete_folder(folder_path):
+    """
+    Deletes a folder and its contents.
+
+    Args:
+        folder_path (str): The path to the folder to be deleted.
+
+    Raises:
+        OSError: If an error occurs while deleting the folder.
+
+    Returns:
+        None
+    """
+    try:
+        shutil.rmtree(folder_path)
+        print(f"Folder '{folder_path}' and its contents deleted successfully.")
+    except OSError as e:
+        print(f"Error: {folder_path} - {e.strerror}")
+
+
+def get_filename_path(file_path):
+    return os.path.basename(file_path)
+
+
+def sort_filenames_by_number(file_list):
+    def extract_number(filename):
+        # Using regular expression to extract the leading number from the filename
+        match = re.match(r'^(\d+)', filename)
+        if match:
+            return int(match.group(1))
+        # Assign a very large number for filenames without numbers
+        return float('inf')
+
+    # Sort the file paths based on the extracted numbers from filenames
+    sorted_paths = sorted(
+        file_list, key=lambda path: extract_number(os.path.basename(path)))
+    return sorted_paths

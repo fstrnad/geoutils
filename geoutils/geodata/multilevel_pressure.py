@@ -105,7 +105,7 @@ class MultiPressureLevelDataset(bds.BaseDataset):
         vert_int = c*np.cumsum(v_bar*dp, axis=v_bar.dims.index('lev'))
         return vert_int
 
-    def horizontal_gradient(self, var, dim='lon'):
+    def x(self, var, dim='lon', can=True):
         """Calculate horizontal gradient of variable.
 
         Args:
@@ -120,4 +120,11 @@ class MultiPressureLevelDataset(bds.BaseDataset):
         grad_vbar = v_bar.differentiate(dim).rename(new_name)
 
         self.ds[new_name] = grad_vbar
+
+        if can:
+            for an_type in self.an_types:
+                sf_an = tu.compute_anomalies(
+                    dataarray=self.ds[new_name], group=an_type)
+                self.ds[sf_an.name] = sf_an
+
         return grad_vbar

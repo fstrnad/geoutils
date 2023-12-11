@@ -98,7 +98,7 @@ fnames_dict = dict(
     nwvf=fname_nwvf,
     slhf=fname_slhf,
     uvb=fname_uvrs,
-    tcw=fname_tcw,  
+    tcw=fname_tcw,
     tcwv=fname_tcwv,
     msl=fname_mslp,
 )
@@ -134,9 +134,10 @@ plevels = [50, 100, 150, 200,
 # plevels = [50, 150, 950, 600]
 
 plevels = [100, 200, 300, 400,
-           500, 600, 700, 800, 900]
-plevels = [100, 200, 300, 400]
-plevels = [200, 850]
+           500, 600, 700, 800,
+           850, 900, 1000]
+# plevels = [100, 200, 300, 400]
+# plevels = [200, 850]
 name = 'era5'
 grid_step = 2.5
 
@@ -160,6 +161,7 @@ for plevel in plevels:
     fname_z = dirname_z + f'geopotential_{plevel}_1959_2021.nc'
 
     fname_pv = dirname_pv + f'potential_vorticity_{plevel}_1959_2021.nc'
+    fname_pv = dirname_pv + f'potential_vorticity_{plevel}_1979_2020.nc'
     fname_div = dirname_div + f'divergence_{plevel}_1959_2022.nc'
     fname_sh = dirname_sh + f'specific_humidity_{plevel}_1959_2021.nc'
     fname_temp = dirname_temp + f'temperature_{plevel}_1959_2021.nc'
@@ -180,24 +182,27 @@ for plevel in plevels:
     var_names = ['u', 'v', 'z', 'pv']
     var_names = ['t', 'q']
     # var_names = ['u', 'v', 'w']
-    var_names = ['vo']
+    var_names = ['pv']
 
     for idx, var_name in enumerate(var_names):
         fname = fnames_dict[var_name]
-        dataset_file = output_dir + \
-            f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_{plevel}_ds.nc"
+        if fut.exist_file(fname):
+            dataset_file = output_dir + \
+                f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_{plevel}_ds.nc"
 
-        if not fut.exist_file(dataset_file):
-            gut.myprint(f'Create Dataset {dataset_file}')
-            ds = BaseDataset(data_nc=fname,
-                             grid_step=grid_step,
-                             large_ds=True,
-                             #  time_range=time_range,
-                             )
-            ds.save(dataset_file)
-            del ds
+            if not fut.exist_file(dataset_file):
+                gut.myprint(f'Create Dataset {dataset_file}')
+                ds = BaseDataset(data_nc=fname,
+                                 grid_step=grid_step,
+                                 large_ds=True,
+                                 #  time_range=time_range,
+                                 )
+                ds.save(dataset_file)
+                del ds
+            else:
+                gut.myprint(f'File {dataset_file} already exists!')
         else:
-            gut.myprint(f'File {dataset_file} already exists!')
+            gut.myprint(f'File {fname} does not exist! Continuing...')
 
 
 # %%

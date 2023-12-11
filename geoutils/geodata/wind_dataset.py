@@ -255,21 +255,25 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         return self.ds
 
     def compute_streamfunction(self, can=True):
-        vw = VectorWind(self.ds[self.u_name], self.ds[self.v_name])
+        """Compute streamfunction from u and v components """
+        if 'sf' not in self.get_vars():
+            vw = VectorWind(self.ds[self.u_name], self.ds[self.v_name])
 
-        gut.myprint(f'Compute Stream Function...')
-        sf, vp = vw.sfvp()
-        self.ds['sf'] = sf.rename('sf')
-        self.ds['vp'] = vp.rename('vp')
+            gut.myprint(f'Compute Stream Function...')
+            sf, vp = vw.sfvp()
+            self.ds['sf'] = sf.rename('sf')
+            self.ds['vp'] = vp.rename('vp')
 
-        if can:
-            for an_type in self.an_types:
-                sf_an = tu.compute_anomalies(
-                    dataarray=self.ds['sf'], group=an_type)
-                self.ds[sf_an.name] = sf_an
-                vp_an = tu.compute_anomalies(
-                    dataarray=self.ds['vp'], group=an_type)
-                self.ds[vp_an.name] = vp_an
+            if can:
+                for an_type in self.an_types:
+                    sf_an = tu.compute_anomalies(
+                        dataarray=self.ds['sf'], group=an_type)
+                    self.ds[sf_an.name] = sf_an
+                    vp_an = tu.compute_anomalies(
+                        dataarray=self.ds['vp'], group=an_type)
+                    self.ds[vp_an.name] = vp_an
+        else:
+            gut.myprint(f'Stream Function already computed!')
 
         return self.ds
 
