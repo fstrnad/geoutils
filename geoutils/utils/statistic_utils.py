@@ -144,7 +144,6 @@ def count_occ(occ_arr, count_arr, rel_freq=False, norm_fac=1.):
     return res_c_occ
 
 
-
 def rank_data(data, axis=0, method='min'):
     data_rk = st.rankdata(
         data, axis=axis, method=method)
@@ -549,6 +548,10 @@ def field_significance_mask(pvalues, alpha=0.05,
         mask (xr.Dataarray): Mask
     """
     if corr_type is not None:
+        pval_dims = tuple(pvalues.dims)
+        if pval_dims != zdim:
+            zdim = tuple(pvalues.dims)
+            print(zdim)
         pvals_flat = pvalues.stack(z=zdim)
         mask_flat = xr.DataArray(data=np.zeros(len(pvals_flat), dtype=bool),
                                  coords=pvals_flat.coords)
@@ -560,6 +563,27 @@ def field_significance_mask(pvalues, alpha=0.05,
         mask = xr.where(pvalues < alpha, True, False)
 
     return mask
+
+
+def sig_multiple_field(sig_mask_x, sig_mask_y, method='or'):
+    """Combine two significance masks.
+
+    Args:
+        sig_mask_x (xr.Dataarray): Significance mask of first field.
+        sig_mask_y (xr.Dataarray): Significance mask of second field.
+        method (str, optional): Method to combine significance masks. Defaults to 'or'.
+
+    Returns:
+        sig_mask (xr.Dataarray): Combined significance mask.
+    """
+    if method == 'or':
+        sig_mask = xr.where(sig_mask_x | sig_mask_y, True, False)
+    elif method == 'and':
+        sig_mask = xr.where(sig_mask_x & sig_mask_y, True, False)
+    else:
+        raise ValueError(f'Method {method} not implemented!')
+
+    return sig_mask
 
 
 def polyfit_regressor(data_array, predictor,  order=1):

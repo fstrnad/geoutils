@@ -1141,3 +1141,29 @@ def check_contains_substring(main_string, sub_string):
         bool: True if the sub string is found in the main string, False otherwise.
     """
     return sub_string in main_string
+
+
+def set_first_element(arr, item):
+    """
+    Sets the specified item as the first element of the array.
+
+    Parameters:
+    arr (list or numpy.ndarray): The input array.
+    item: The item to be set as the first element of the array.
+
+    Returns:
+    list or numpy.ndarray: The modified array with the specified item as the first element.
+    """
+
+    if isinstance(arr, list):
+        if item in arr:
+            arr.remove(item)
+            arr.insert(0, item)
+        return arr
+    elif isinstance(arr, np.ndarray):
+        if item in arr:
+            arr = np.delete(arr, np.where(arr == item))
+            arr = np.insert(arr, 0, item)
+        return arr
+    else:
+        raise ValueError("Unsupported array type. Please provide a list or numpy.ndarray.")

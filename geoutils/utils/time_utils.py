@@ -313,25 +313,39 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
     return ds_sel
 
 
-def get_mean_tps(da, tps, varname=None, sig_test=True):
+def get_mean_tps(da, tps, varname=None,
+                 sig_test=True,
+                #  corr_type='dunn',
+                 corr_type=None,
+                 first_dim='lev'):
+    """Get mean of dataarray for specific time points."""
 
     this_comp = get_sel_tps_ds(ds=da, tps=tps)
+    dims = list(this_comp.dims)
 
     if sig_test:
         if varname is None and isinstance(this_comp, xr.Dataset):
             raise ValueError(
                 """Significance test can only be applied on specific dataarray.
                 Please specify varname!""")
-        dims = list(this_comp.dims)
         dims = gut.delete_element_from_arr(dims, 'time')
         mean, pvalues_ttest = sut.ttest_field(
             this_comp, da, zdim=dims)
         mask = sut.field_significance_mask(
-            pvalues_ttest, alpha=0.05, corr_type=None)
+            pvalues_ttest, alpha=0.05,
+            corr_type=corr_type)
 
+        if first_dim in dims:
+            dims = gut.set_first_element(dims, first_dim)
+            mean = mean.transpose(*dims)
+            mask = mask.transpose(*dims)
         return mean, mask
     else:
-        return this_comp.mean(dim='time')
+        mean = this_comp.mean(dim='time')
+        if first_dim in dims:
+            dims = gut.set_first_element(dims, first_dim)
+            mean = mean.transpose(*dims)
+        return mean
 
 
 def normlize_time_slides(data, min=0, max=1):
@@ -1567,6 +1581,28 @@ def add_time_window(date, time_step=1, freq='D'):
 def add_time_step_tps(tps, time_step=1, freq="D", ):
     return add_time_window(date=tps,
                            time_step=time_step, freq=freq)
+
+
+def get_tps_range(tps, start=0, time_step=1, freq="D", ):
+    if isinstance(tps, xr.DataArray):
+        tps = tps.time
+    if len(np.array([tps.time.data]).shape) == 1:
+        tps = [tps]
+    ntps = []
+    tps = add_time_step_tps(tps=tps, time_step=start, freq=freq)
+    for tp in tps:
+        ntp = add_time_step_tps(tps=tp, time_step=time_step, freq=freq)
+        if time_step > 0:
+            new_tps = get_dates_in_range(start_date=tp,
+                                         end_date=ntp, freq=freq)
+        else:
+            new_tps = get_dates_in_range(start_date=ntp,
+                                         end_date=tp, freq=freq)
+        ntps.append(new_tps)
+    ntps = merge_time_arrays(ntps, multiple=None)
+    ntps = remove_duplicate_times(ntps)
+
+    return ntps
 
 
 def add_time_step_tps_old(tps, time_step=1, freq="D", ):

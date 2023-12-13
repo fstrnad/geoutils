@@ -102,7 +102,6 @@ def set_grid(ax, alpha=0.5,
     Returns:
         _type_: _description_
     """
-    print(ext_dict)
     # Set grid steps for longitude and latitude
     if ext_dict is not None:
         gs_lon = kwargs.pop('gs_lon', None)
@@ -477,13 +476,11 @@ def plot_map(dmap: xr.DataArray,
     elif plot_type == 'colormesh':
         plot_type += '_map'
 
-    # defines distance to lower y-range (different for maps and xy-plots) is passed to make_colorbar
-    pad = kwargs.pop('pad', -2)
     # not to run into conflicts with significance mask
     im = plot_2D(x=x, y=y, z=z,
                  fig=fig, ax=ax, plot_type=plot_type, projection=projection,
                  vmin=vmin, vmax=vmax, cmap=cmap, label=label, title=title,
-                 alpha=alpha, pad=pad,
+                 alpha=alpha,
                  **kwargs)
 
     # areas which are dotted are mask
@@ -740,22 +737,32 @@ def plot_2D(
     elif plot_type == "contour":
         cmap = cmap if color is None else None
         ls = kwargs.pop('ls', 'solid')
-        im = ax.contour(
-            x,
-            y,
-            z,
-            levels=levels,
-            cmap=cmap,
-            transform=projection,
-            colors=color,  # color all levels with the same color, see documentation
-            linewidths=lw,  # maybe linewidth=
-            alpha=alpha,
-            linestyles=ls,
-        )
         clabel = kwargs.pop('clabel', False)
-        if clabel:
-            print(clabel)
-            ax.clabel(im, inline=True, fontsize=10)
+
+        if color == 'solid_dashed':
+            colors = ['red', 'blue']
+            styles = ['solid', 'dashed']
+            level_arr = [levels[levels > 0], levels[levels < 0]]
+        else:
+            colors = [color]
+            styles = [ls]
+            level_arr = [levels]
+
+        for color, ls, this_levels in zip(colors, styles, level_arr):
+            im = ax.contour(
+                x,
+                y,
+                z,
+                levels=this_levels,
+                cmap=cmap,
+                transform=projection,
+                colors=color,  # color all levels with the same color, see documentation
+                linewidths=lw,  # maybe linewidth=
+                alpha=alpha,
+                linestyles=ls,
+            )
+            if clabel:
+                ax.clabel(im, inline=True, fontsize=pst.MINI_SIZE)
 
     if plot_type == 'hatch' or significance_mask is not None:
         if significance_mask is not None:
@@ -1036,18 +1043,20 @@ def create_multi_plot(nrows, ncols, projection=None,
         map_axis = np.arange(nrows*ncols)
     if nrows*ncols/end_idx >= nrows:
         nrows = nrows - 1 if nrows > 1 else nrows
-    set_map = kwargs.pop('set_map', False) # is set later
+    set_map = kwargs.pop('set_map', False)  # is set later
     for i in range(nrows):
         for j in range(ncols):
+            proj = None
             if projection is not None:
                 if dateline_arr is not None:
                     dateline = dateline_arr[run_idx]
                 proj = get_projection(projection=projection,
-                                    central_longitude=central_longitude,
-                                    central_latitude=central_latitude,
-                                    dateline=dateline)
+                                      central_longitude=central_longitude,
+                                      central_latitude=central_latitude,
+                                      dateline=dateline)
+                axs.append(fig.add_subplot(gs[i, j], projection=proj))
+
                 if run_idx in map_axis:
-                    axs.append(fig.add_subplot(gs[i, j], projection=proj))
                     map_dict = create_map(
                         ax=axs[run_idx],
                         projection=projection,
@@ -1060,8 +1069,12 @@ def create_multi_plot(nrows, ncols, projection=None,
                         **kwargs
                     )
                     kwargs = map_dict['kwargs']
+            else:
+                axs.append(fig.add_subplot(gs[i, j]))
+
             run_idx += 1
             if run_idx > end_idx:
+                print(run_idx, end_idx)
                 break
     fig.tight_layout()
     if nrows > 1 or ncols > 1:

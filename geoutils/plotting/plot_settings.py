@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 
-
+TINY_SIZE = 8
+MINI_SIZE = 10
 SMALL_SIZE = 12
 MEDIUM_SIZE = 14
 BIGGER_SIZE = 16

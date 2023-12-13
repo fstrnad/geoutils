@@ -104,10 +104,11 @@ def get_cmap(cmap, levels=None):
 def set_title(title, ax=None, fig=None, **kwargs):
     y_title = kwargs.pop('y_title', 1.)
     vertical_title = kwargs.pop('vertical_title', None)
+    x_title_offset = kwargs.pop('x_title_offset', -0.18)
     title_color = kwargs.pop('title_color', 'black')
     # fw = kwargs.pop('title_fontweight', "normal")
     fw = kwargs.pop('title_fontweight', "bold")
-    fsize = kwargs.pop('title_fsize', pst.MEDIUM_SIZE)
+    fsize = kwargs.pop('title_fsize', pst.BIGGER_SIZE)
     if title is not None:
         if ax is not None:
             ax.set_title(title, color=title_color,
@@ -120,7 +121,7 @@ def set_title(title, ax=None, fig=None, **kwargs):
                          fontweight=fw,
                          fontsize=pst.BIGGER_SIZE)
     if vertical_title is not None:
-        x_title_offset = kwargs.pop('x_title_offset', -0.22)
+        fsize = kwargs.pop('vertical_title_fsize', pst.MEDIUM_SIZE)
         ax.text(x=x_title_offset, y=.5, s=vertical_title,
                 transform=ax.transAxes,
                 color=title_color, rotation='vertical',
@@ -146,22 +147,30 @@ def prepare_axis(ax, log=False, **kwargs):
     xticks = kwargs.pop('xticks', None)
     xticklabels = kwargs.pop('xticklabels', None)
     ylabel = kwargs.pop("ylabel", None)
+    ylabel_color = kwargs.pop("ylabel_color", "k")
     xlabel = kwargs.pop("xlabel", None)
+    x_label_color = kwargs.pop("x_label_color", "k")
     xpos = kwargs.pop("xlabel_pos", None)
     x_ints = kwargs.pop("x_ints", False)
     y_ints = kwargs.pop("y_ints", False)
     xtick_step = kwargs.pop("xtick_step", None)
+    set_twinx = kwargs.pop("set_twinx", False)
+    if set_twinx:
+        ax = ax.twinx()
     if plot_type != 'polar':
-        ax.spines["right"].set_visible(False)
+        if not set_twinx:
+            ax.spines["right"].set_visible(False)
         ax.spines["top"].set_visible(False)
 
         ax.grid(set_grid)
         ax.tick_params(
-            direction="out", length=pst.SMALL_SIZE / 2, width=1, colors="k", grid_alpha=0.5
+            direction="out",
+            length=pst.SMALL_SIZE / 2, width=1,
+            colors=ylabel_color, grid_alpha=0.5
         )
 
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+        ax.set_xlabel(xlabel, color=x_label_color)
+        ax.set_ylabel(ylabel, color=ylabel_color)
 
         if xpos is not None:
             if xpos == "right":
@@ -431,7 +440,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
     if set_cax:
         if orientation == "vertical":
             loc = "right"
-            pad = kwargs.pop('pad', -1)  # distance from right border
+            pad = kwargs.pop('pad', -5)  # distance from right border
             # divider = make_axes_locatable(ax)
             # cax = divider.append_axes(loc, "5%", pad=pad, axes_class=plt.Axes)
             cax = inset_axes(ax,
@@ -442,7 +451,8 @@ def make_colorbar(ax, im, fig=None, **kwargs):
 
         elif orientation == "horizontal":
             loc = "lower center"
-            pad = kwargs.pop('pad', -5)
+            # defines distance to lower y-range (different for maps and xy-plots) is passed to make_colorbar
+            pad = kwargs.pop('pad', -2.5)
             cax = inset_axes(ax,
                              width="100%",
                              height="5%",
