@@ -315,7 +315,7 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
 
 def get_mean_tps(da, tps, varname=None,
                  sig_test=True,
-                #  corr_type='dunn',
+                 #  corr_type='dunn',
                  corr_type=None,
                  first_dim='lev'):
     """Get mean of dataarray for specific time points."""
@@ -2536,6 +2536,11 @@ def equalize_time_points(ts1, ts2, verbose=True):
         ts2 = get_sel_tps_ds(ts2, tps=ts1.time)
 
     return ts1, ts2
+
+
+def get_intersect_tps(tps1, tps2):
+    tps, _ = equalize_time_points(ts1=tps1, ts2=tps2, verbose=False)
+    return tps.time
 
 
 def check_time_overlap(da1, da2, return_overlap=False):

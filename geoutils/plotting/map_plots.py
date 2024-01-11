@@ -77,14 +77,14 @@ def get_grid_steps(grid_step, min_value=-90, max_value=90):
     return np.array(steps)
 
 
-def get_grid_dist(ext_dict, min_dist_val=15):
+def get_grid_dist(ext_dict, min_dist_val_lon=10, min_dist_val_lat=5):
     min_lon = ext_dict['min_lon']
     max_lon = ext_dict['max_lon']
     min_lat = ext_dict['min_lat']
     max_lat = ext_dict['max_lat']
 
-    gs_lon = estimate_distance(min_lon, max_lon, min_dist_val=min_dist_val)
-    gs_lat = estimate_distance(min_lat, max_lat, min_dist_val=min_dist_val)
+    gs_lon = estimate_distance(min_lon, max_lon, min_dist_val=min_dist_val_lon)
+    gs_lat = estimate_distance(min_lat, max_lat, min_dist_val=min_dist_val_lat)
 
     return gs_lon, gs_lat
 
@@ -236,7 +236,7 @@ def create_map(
     projection="PlateCarree",
     central_longitude=None,
     alpha=1,
-    plt_grid=True,  # Because often this is already set from before!
+    plot_grid=False,  # Because often this is already set from before!
     lat_range=None,
     lon_range=None,
     dateline=False,
@@ -259,7 +259,7 @@ def create_map(
         fig, ax = plt.subplots(figsize=(figsize))
         ax = plt.axes(projection=proj)
         unset_grid = kwargs.pop('unset_grid', False)
-        plt_grid = True if not unset_grid else False
+        plot_grid = True if not unset_grid else False
     else:
         ax_central_longitude = ax.projection.proj4_params['lon_0']
         if ax_central_longitude == 180:
@@ -304,7 +304,7 @@ def create_map(
                 # Remove the frame around the map
                 ax.outline_patch.set_visible(False)
 
-    if plt_grid:
+    if plot_grid:
         ax, kwargs = set_grid(ax, alpha=alpha,
                               proj=projection,
                               ext_dict=ext_dict,
@@ -389,7 +389,6 @@ def plot_map(dmap: xr.DataArray,
     figsize = kwargs.pop("figsize", (9, 6))
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
-    plt_grid = kwargs.pop("plt_grid", True)
     dmap = sput.check_dimensions(dmap, verbose=False)
     put.check_plot_type(plot_type)
     if ax is not None and projection is not None:
@@ -408,7 +407,6 @@ def plot_map(dmap: xr.DataArray,
         ax=ax,
         projection=projection,
         central_longitude=central_longitude,
-        plt_grid=plt_grid,
         set_map=set_map,
         figsize=figsize,
         lat_range=lat_range,
@@ -745,7 +743,7 @@ def plot_2D(
         clabel = kwargs.pop('clabel', False)
 
         if color == 'solid_dashed':
-            colors = ['red', 'blue']
+            colors = kwargs.pop('color_contour', ['red', 'blue'])
             styles = ['solid', 'dashed']
             level_arr = [levels[levels > 0], levels[levels < 0]]
         else:
@@ -850,7 +848,7 @@ def plot_edges(
     **kwargs,
 ):
 
-    plt_grid = kwargs.pop("plt_grid", False)
+    plot_grid = kwargs.pop("plot_grid", False)
     set_map = kwargs.pop("set_map", False)
     if ax is None:
         map_dict = create_map(
@@ -858,7 +856,7 @@ def plot_edges(
             ax=ax,
             projection=projection,
             central_longitude=central_longitude,
-            plt_grid=plt_grid,
+            plot_grid=plot_grid,
             set_map=set_map,
             **kwargs
         )
@@ -1012,7 +1010,7 @@ def plot_wind_field(
 
 def create_multi_plot(nrows, ncols, projection=None,
                       lon_range=None, lat_range=None,
-                      plt_grid=False, **kwargs):
+                      plot_grid=True, **kwargs):
     reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
@@ -1024,11 +1022,9 @@ def create_multi_plot(nrows, ncols, projection=None,
     gs_cols = ncols
     fig = plt.figure(figsize=(figsize[0], figsize[1]))
 
-    hspace = kwargs.pop('hspace', 0.1)
-    wspace = kwargs.pop('wspace', 0.1)
-    space = kwargs.pop('space', 0)
-    if space != 0:
-        hspace = wspace = space
+    hspace = kwargs.pop('hspace', 0.4)
+    wspace = kwargs.pop('wspace', 0.)
+
     gs = fig.add_gridspec(gs_rows, gs_cols,
                           height_ratios=ratios_h,
                           width_ratios=ratios_w,
@@ -1068,7 +1064,7 @@ def create_multi_plot(nrows, ncols, projection=None,
                         ax=axs[run_idx],
                         projection=projection,
                         central_longitude=central_longitude,
-                        plt_grid=plt_grid,
+                        plot_grid=plot_grid,
                         lon_range=lon_range,
                         lat_range=lat_range,
                         dateline=dateline,
