@@ -71,7 +71,7 @@ def create_plot(nrows=1, ncols=1, **kwargs):
             ** kwargs,
         )
         axs = axs.flatten()
-        enumerate_subplots(axs, pos_x=-0.1, pos_y=1.07)
+        enumerate_subplots(axs)
     else:
         fig = plt.figure(
             figsize=figsize

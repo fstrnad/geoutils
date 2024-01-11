@@ -125,8 +125,9 @@ def null_model_lagged_synchronization(lag, times, es_array1, es_array2=None,
 
 def lagged_synchronization(lag, times, es_array1, es_array2=None,
                            return_xr=True,
-                           exclude_lag0=True,
-                           exclude_lags=0, verbose=True):
+                           exclude_lag0=False,
+                           exclude_lags=0,
+                           verbose=True):
     if es_array2 is None:
         gut.myprint(
             'No second event series given. Using first event series for both!',
@@ -156,6 +157,7 @@ def lagged_synchronization(lag, times, es_array1, es_array2=None,
                 e2lag0_compliment *= this_ts_exclude_compl_lag
     else:
         e2lag0_compliment = np.ones_like(es_array2)
+        print('here')
 
     if isinstance(lag, int):
         lag = [lag]
@@ -184,10 +186,12 @@ def lagged_synchronization(lag, times, es_array1, es_array2=None,
         return sync_ts
 
 
-def lagged_synchronization_exclude_ts(lag, es_array1,
-                                      es_array2=None,
-                                      ts_exclude=None,
-                                      exclude_lags=None):
+def lagged_synchronization_ts(lag, es_array1,
+                              times=None,
+                              es_array2=None,
+                              ts_exclude=None,
+                              ts_include=None,  # time points at target to inlcude
+                              exclude_lags=None):
     if es_array2 is None:
         gut.myprint(
             'No second event series given. Using first event series for both!')
@@ -195,40 +199,55 @@ def lagged_synchronization_exclude_ts(lag, es_array1,
     arr_eq = np.array_equal(es_array1, es_array2)
     if es_array1.shape[1] != es_array2.shape[1]:
         raise ValueError('Event series must have same length in time!')
-    if es_array1.shape[1] != len(ts_exclude):
-        raise ValueError(
-            'Event series and ts_exclude must have same length in time!')
-
-    times = ts_exclude.time.values
-    sync_ts = np.zeros(len(ts_exclude))
 
     if isinstance(lag, int):
         lag = [lag]
+    if ts_exclude is not None or ts_include is not None:
+        times = ts_exclude.time.values if ts_exclude is not None else ts_include.time.values
+    else:
+        if times is None:
+            raise ValueError('Either times or ts_exclude/ts_include must be given!')
 
-    if ts_exclude is None:
-        raise ValueError('No ts_exclude given. Please provide one!')
-
-    ts_excl_compl = tsa.complement_evs_series(ts_exclude).values
+    # Define input array for synchronization
+    sync_ts = np.zeros(len(times))
 
     for this_lag in lag:
-        if exclude_lags is not None and exclude_lags < this_lag and exclude_lags > 0:
-            gut.myprint(f'Excluding events until lag {exclude_lags} steps')
-            sign_excl_lags = np.sign(exclude_lags)
-            # Excludes all events until exclude_lags
-            for this_lag_excl in np.arange(1, abs(exclude_lags)+1, 1):
-                ts_excl_compl, ts_excl_compl_lag = tu.get_lagged_ts(
-                    ts_excl_compl,
-                    ts_excl_compl,
-                    lag=sign_excl_lags*1)
-                ts_excl_compl *= ts_excl_compl_lag
-        else:
-            exclude_lags = 0
+        # for ts_exclude given
+        if ts_exclude is not None:
+            ts_excl_compl = tsa.complement_evs_series(ts_exclude).values
+            if exclude_lags is not None and exclude_lags < this_lag and exclude_lags > 0:
+                gut.myprint(f'Excluding events until lag {exclude_lags} steps')
+                sign_excl_lags = np.sign(exclude_lags)
+                # Excludes all events until exclude_lags
+                for this_lag_excl in np.arange(1, abs(exclude_lags)+1, 1):
+                    ts_excl_compl, ts_excl_compl_lag = tu.get_lagged_ts(
+                        ts_excl_compl,
+                        ts_excl_compl,
+                        lag=sign_excl_lags*1)
+                    ts_excl_compl *= ts_excl_compl_lag
+            else:
+                exclude_lags = 0
 
-        # This is only to bring it to the same length as the other event series
-        this_ts_excl_compl, _ = tu.get_lagged_ts(
-            ts_excl_compl,
-            ts_excl_compl,
-            lag=this_lag - abs(exclude_lags))
+            # This is only to bring it to the same length as the other event series
+            this_ts_excl_compl, _ = tu.get_lagged_ts(
+                ts_excl_compl,
+                ts_excl_compl,
+                lag=this_lag - abs(exclude_lags))
+        else:
+            print('here')
+            this_ts_excl_compl = 1
+
+        # for ts_include given
+        if ts_include is not None:
+            ts_incl = ts_include.values  # these days have to be included
+            _, this_ts_incl = tu.get_lagged_ts(
+                ts_incl,
+                ts_incl,
+                lag=this_lag)
+        else:
+            print('include')
+            this_ts_incl = 1
+
         es_array, es_array_lag = tu.get_lagged_ts_arr(
             es_array1, es_array2, lag=this_lag)
 
@@ -238,7 +257,7 @@ def lagged_synchronization_exclude_ts(lag, es_array1,
                     continue
                 else:
                     # only if there is no 0 in ts_exclude the sync is counted
-                    sync_e1e2 = e1*e2*this_ts_excl_compl
+                    sync_e1e2 = e1*e2*this_ts_excl_compl*this_ts_incl
                     sync_evs = np.where(sync_e1e2 == 1)[0]
                     sync_ts[sync_evs] += 1
     # print(np.count_nonzero(sync_ts))

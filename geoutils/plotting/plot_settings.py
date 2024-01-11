@@ -5,6 +5,7 @@ MINI_SIZE = 10
 SMALL_SIZE = 12
 MEDIUM_SIZE = 14
 BIGGER_SIZE = 16
+MAX_ZORDER = 100
 plt.rcdefaults()
 
 plt.rc("font", size=SMALL_SIZE)  # controls default text sizes

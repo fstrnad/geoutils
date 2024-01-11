@@ -78,11 +78,12 @@ class MoistStaticEnergy(mp.MultiPressureLevelDataset):
 
             self.grid_step = ds_q.grid_step
 
-            print(
+            gut.myprint(
                 "Computed single components of wind dataset. Now compute moist_static_energy!")
-            moist_static_energy = metcalc.moist_static_energy(height=z,
-                                                              temperature=t,
-                                                              specific_humidity=q)
+            moist_static_energy = metcalc.moist_static_energy(
+                height=z,
+                temperature=t,
+                specific_humidity=q)
 
             moist_static_energy = moist_static_energy.rename('mse')
 

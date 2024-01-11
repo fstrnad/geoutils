@@ -803,8 +803,6 @@ def rename_var_era5(ds, verbose=True):
             "Rename vertical integral of northward water vapour flux to: ewvf!")
 
     if "z" in names:
-        import metpy.calc as metcalc
-        from metpy.units import units
         ds['z'].attrs.update({'units': 'm'})
         ds['z'].attrs.update({'long_name': 'Geopotential Height'})
         g = 9.80665

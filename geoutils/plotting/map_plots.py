@@ -565,6 +565,7 @@ def plot_2D(
     size = kwargs.pop("size", 1)
     marker = kwargs.pop("marker", "o")
     fillstyle = kwargs.pop("fillstyle", "full")
+    zorder = kwargs.pop("zorder", 1)
 
     if ax is None:
         figsize = kwargs.pop("figsize", (7, 5))
@@ -622,7 +623,7 @@ def plot_2D(
                 round_dec = 1 if vmax > 1 else 2  # because the range is between 0 and 10
             if levels is not None:
                 levels = np.around(
-                    levels, round_dec) if round_dec is not None else levels
+                    levels, round_dec+1) if round_dec is not None else levels  # TODO check if this is correct with round_dec+1
                 # print(sci, round_dec, levels)
             if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
                 # norm = mpl.colors.LogNorm(levels=levels)
@@ -667,6 +668,7 @@ def plot_2D(
             fillstyle=fillstyle,
             transform=projection,
             alpha=alpha,
+            zorder=zorder,
         )
     elif plot_type == "colormesh":
         im = ax.pcolor(
@@ -678,6 +680,7 @@ def plot_2D(
             vmax=vmax,
             shading="auto",
             norm=norm,
+            zorder=zorder,
         )
     elif plot_type == "colormesh_map":
         if levels is not None:
@@ -691,6 +694,7 @@ def plot_2D(
                 transform=projection,
                 shading="auto",
                 norm=norm,
+                zorder=zorder,
             )
         else:
             im = ax.pcolor(
@@ -702,6 +706,7 @@ def plot_2D(
                 vmax=vmax,
                 transform=projection,
                 shading="auto",
+                zorder=zorder,
             )
     elif plot_type == "contourf" or plot_type == "discrete":
         """
@@ -714,7 +719,6 @@ def plot_2D(
                 vmin, vmax, num_ticks=levels, shift_ticks=True)
             ticks = normticks[:-1] + 0.5
             levels = np.array(normticks[:], dtype=float)
-
         im = ax.contourf(
             x,
             y,
@@ -728,6 +732,7 @@ def plot_2D(
             transform=projection,
             alpha=alpha,
             extend=extend,
+            zorder=zorder,
         )
         if vmin is None:
             vmin = im.get_clim()[0]
@@ -760,6 +765,7 @@ def plot_2D(
                 linewidths=lw,  # maybe linewidth=
                 alpha=alpha,
                 linestyles=ls,
+                zorder=zorder,
             )
             if clabel:
                 ax.clabel(im, inline=True, fontsize=pst.MINI_SIZE)
@@ -999,6 +1005,7 @@ def plot_wind_field(
                 f"{key_length} {wind_unit}",
                 labelpos="W",
                 coordinates="axes",
+                zorder=pst.MAX_ZORDER,
             )
     return {'ax': ax}
 
@@ -1078,8 +1085,8 @@ def create_multi_plot(nrows, ncols, projection=None,
                 break
     fig.tight_layout()
     if nrows > 1 or ncols > 1:
-        pos_x = kwargs.pop('pos_x', -0.1)
-        pos_y = kwargs.pop('pos_y', 1.07)
+        pos_x = kwargs.pop('pos_x', -0.15)
+        pos_y = kwargs.pop('pos_y', 1.1)
         put.enumerate_subplots(axs, pos_x=pos_x, pos_y=pos_y)
     else:
         axs = axs[0]

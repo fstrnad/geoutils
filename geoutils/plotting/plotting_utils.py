@@ -104,7 +104,7 @@ def get_cmap(cmap, levels=None):
 def set_title(title, ax=None, fig=None, **kwargs):
     y_title = kwargs.pop('y_title', 1.)
     vertical_title = kwargs.pop('vertical_title', None)
-    x_title_offset = kwargs.pop('x_title_offset', -0.18)
+    x_title_offset = kwargs.pop('x_title_offset', -0.2)
     title_color = kwargs.pop('title_color', 'black')
     # fw = kwargs.pop('title_fontweight', "normal")
     fw = kwargs.pop('title_fontweight', "bold")
@@ -150,7 +150,8 @@ def prepare_axis(ax, log=False, **kwargs):
     ylabel_color = kwargs.pop("ylabel_color", "k")
     xlabel = kwargs.pop("xlabel", None)
     x_label_color = kwargs.pop("x_label_color", "k")
-    xpos = kwargs.pop("xlabel_pos", None)
+    xlabel_pos = kwargs.pop("xlabel_pos", None)
+    ylabel_pos = kwargs.pop("ylabel_pos", None)
     x_ints = kwargs.pop("x_ints", False)
     y_ints = kwargs.pop("y_ints", False)
     xtick_step = kwargs.pop("xtick_step", None)
@@ -172,11 +173,14 @@ def prepare_axis(ax, log=False, **kwargs):
         ax.set_xlabel(xlabel, color=x_label_color)
         ax.set_ylabel(ylabel, color=ylabel_color)
 
-        if xpos is not None:
-            if xpos == "right":
+        if xlabel_pos is not None:
+            if xlabel_pos == "right":
                 ax.xaxis.set_label_coords(1.0, -0.2)
             else:
-                raise ValueError(f"{xpos} does not exist.")
+                ax.xaxis.set_label_coords(xlabel_pos)
+        if ylabel_pos is not None:
+            ax.yaxis.set_label_coords(x=ylabel_pos[0],
+                                      y=ylabel_pos[1])
 
         if xlim is not None:
             ax.set_xlim(xlim)
@@ -184,7 +188,9 @@ def prepare_axis(ax, log=False, **kwargs):
             ax.set_ylim(ylim)
 
         rot = kwargs.pop("rot", 0)
-        ax.tick_params(axis="x", labelrotation=rot)
+        set_ticks = kwargs.pop("set_ticks", True)
+        top_ticks = kwargs.pop("top_ticks", False)
+        ax.tick_params(axis="x", labelrotation=rot, bottom=set_ticks, top=top_ticks)
         if xticks is not None:
             ax.set_xticks(xticks)
         if xticklabels is not None:
@@ -228,10 +234,9 @@ def prepare_axis(ax, log=False, **kwargs):
         ax.xaxis.set_minor_locator(x_minor)
         ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
 
-    unset_ticks = kwargs.pop("unset_ticks", False)
-    if unset_ticks:
+    if not set_ticks:
         ax.xaxis.set_ticklabels([])
-        ax.yaxis.set_ticklabels([])
+        # ax.yaxis.set_ticklabels([])
 
     yticks = kwargs.pop('yticks', True)
     if not yticks:
