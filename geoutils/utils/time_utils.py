@@ -990,6 +990,43 @@ def get_frequency(x):
         return 'none'
 
 
+def check_hour_equality(da1, da2):
+    """
+    Check whether the hour of the time dimension is equal in two xarray DataArrays.
+
+    Parameters:
+    - da1 (xarray.DataArray): First data array.
+    - da2 (xarray.DataArray): Second data array.
+
+    Returns:
+    - bool: True if the hour is equal, False otherwise.
+    """
+
+    # Ensure both DataArrays have a time dimension
+    if 'time' not in da1.dims or 'time' not in da2.dims:
+        raise ValueError("Both DataArrays must have a 'time' dimension.")
+
+    # Extract time coordinates
+    time1 = pd.Series(da1.time.values)
+    time2 = pd.Series(da2.time.values)
+
+    if len(time1) != len(time2):
+        if len(time1) < len(time2):
+            time2 = time2[0:len(time1)]
+        elif len(time2) < len(time1):
+            time1 = time1[0:len(time2)]
+    # Check if the length of time dimensions is the same
+    if len(time1) != len(time2):
+        raise ValueError(f'Length of time dimensions is not equal: {len(time1)} != {len(time2)}')
+
+    # Check hour equality for each timestamp
+    for t1, t2 in zip(time1, time2):
+        if t1.hour != t2.hour:
+            return False
+
+    # If all hours are equal, return True
+    return True
+
 def get_tm_name(timemean):
     if timemean == "day":
         tm = "1D"

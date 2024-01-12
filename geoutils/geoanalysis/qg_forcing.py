@@ -48,7 +48,7 @@ def get_qg_circulation(vortadvlow, vortadvhigh, dp=100):
     # First term of QG forcing
     sigma, f0, Rd = define_qg_constants()
     diff_avor = (vortadvhigh-vortadvlow)/(dp*mpy.units.units.hPa)
-    term1 = (-diff_avor*f0/sigma).metpy.convert_to_base_units()
+    term1 = (-f0/sigma * diff_avor).metpy.convert_to_base_units()
 
     return term1
 

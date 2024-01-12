@@ -194,6 +194,17 @@ def get_file_time_range(file_arr, verbose=True):
     return tr
 
 
+def check_file_time_equity(file_arr, verbose=True):
+    time_arr = []
+    for datafile in file_arr:
+        file = xr.open_dataset(datafile)
+        time_arr.append(file.time)
+    for timetest in time_arr[1:]:
+        if not tu.check_hour_equality(da1=time_arr[0],
+                                      da2=timetest):
+            raise ValueError('ERROR different hour timeing!')
+
+
 def save_np_dict(arr_dict, sp, verbose=True):
     gut.myprint(f'Store to {sp}', verbose=verbose)
     create_folders(filepath=sp)

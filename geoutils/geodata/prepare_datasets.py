@@ -39,7 +39,7 @@ if os.getenv("HOME") == '/home/goswami/fstrnad80' or os.getenv("HOME") == '/home
     dirname_sp = "/mnt/qb/goswami/data/era5/single_pressure_level/surface_pressure/"
     dirname_t2m = "/mnt/qb/goswami/data/era5/single_pressure_level/2m_temperature/"
     dirname_sst = "/mnt/qb/goswami/data/era5/single_pressure_level/sea_surface_temperature/"
-    output_dir = "/mnt/qb/goswami/processed_data/"
+    output_dir = "/mnt/qb/goswami/data/processed_data/"
     dirname_ttr = "/mnt/qb/goswami/data/era5/single_pressure_level/top_net_thermal_radiation/"
     dirname_tcrw = "/mnt/qb/goswami/data/era5/single_pressure_level/total_column_rain_water/"
     dirname_tcrw = "/mnt/qb/goswami/data/era5/single_pressure_level/total_column_rain_water/"
@@ -137,7 +137,7 @@ plevels = [800, 750, 100, 200, 300, 400,
            500, 600, 700, 800,
            850, 900, 1000]
 # plevels = [100, 200, 300, 400]
-plevels = [500, 700, 900]
+plevels = [500, 600, 700, 900, 850, 200]
 name = 'era5'
 grid_step = 1
 

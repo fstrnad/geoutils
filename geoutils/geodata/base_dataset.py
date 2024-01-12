@@ -45,6 +45,7 @@ class BaseDataset():
         decode_times=True,
         verbose=True,
         metpy_labels=False,  # labelling according to metpy convention
+        metpy_unit=None,
         **kwargs,
     ):
         """Initializes a BaseDataset object with an nc file provided.
@@ -101,11 +102,6 @@ class BaseDataset():
         # ds_arr.append(ds)
 
         self.set_var(var_name=var_name, ds=ds, verbose=verbose)
-        # if len(data_nc_arr) > 1:
-        #     multiple = kwargs.pop('multiple', 'max')
-        #     self.ds = sput.merge_datasets(datasets=ds_arr, multiple=multiple)
-        # else:
-        #     self.ds = ds_arr[0]
 
         self.ds = ds
 
@@ -113,6 +109,9 @@ class BaseDataset():
         if detrend is True:
             detrend_from = kwargs.pop('detrend_from', None)
             self.detrend(dim="time", startyear=detrend_from)
+
+        if metpy_unit is not None:
+            self.ds = self.set_metpy_units(metpy_unit)
 
         # Compute Anomalies if needed
         self.can = can
@@ -1307,7 +1306,7 @@ class BaseDataset():
         ds = dataset.interp(time=time_grid, method="nearest")
         return ds
 
-    def get_data_timerange(self, data, time_range=None):
+    def get_data_timerange(self, data, time_range=None, verbose=True):
         """Gets data in a certain time range.
         Checks as well if time range exists in file!
 
@@ -1339,6 +1338,9 @@ class BaseDataset():
             gut.myprint("Time steps selected!")
         else:
             da = data
+        tr = tu.get_time_range(ds=da)
+        gut.myprint(f'Load data from in time range {tr}!',
+                    verbose=verbose)
         return da
 
     def get_month_range_data(
@@ -1676,6 +1678,11 @@ class BaseDataset():
     def set_metpy_labels(self):
         self.rename_var(old_var_name='lon', new_var_name='longitude')
         self.rename_var(old_var_name='lat', new_var_name='latitude')
+
+    def set_metpy_units(self, unit):
+        from metpy.units import units
+        self.ds[self.var_name] = self.ds[self.var_name] * units(f'{unit}')
+        return self.ds
 
     #  #################### EVS time series ##############
 
