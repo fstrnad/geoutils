@@ -184,7 +184,7 @@ class BaseDataset():
             ds, ts_days=decode_times, verbose=verbose,
             **kwargs)
         self.dims = self.get_dims(ds=ds)
-        ds = gut.rename_var_era5(ds=ds, verbose=verbose)
+        ds = gut.rename_var_era5(ds=ds, verbose=verbose, **kwargs)
 
         if 'time' in self.dims:
             ds = self.get_data_timerange(ds, time_range)
@@ -1681,6 +1681,7 @@ class BaseDataset():
 
     def set_metpy_units(self, unit):
         from metpy.units import units
+        gut.myprint(f'Set units to {unit}')
         self.ds[self.var_name] = self.ds[self.var_name] * units(f'{unit}')
         return self.ds
 

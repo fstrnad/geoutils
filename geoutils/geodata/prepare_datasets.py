@@ -137,14 +137,14 @@ plevels = [800, 750, 100, 200, 300, 400,
            500, 600, 700, 800,
            850, 900, 1000]
 # plevels = [100, 200, 300, 400]
-plevels = [500, 600, 700, 900, 850, 200]
+plevels = [800, 400, 300, 200, 500, 600, 700, 900, 850]
 name = 'era5'
 grid_step = 1
 
 
 for plevel in plevels:
 
-    if os.getenv("HOME") == '/home/goswami/fstrnad80' or os.getenv("HOME") == '/home/goswami/jschloer46':
+    if os.getenv("HOME") == '/home/goswami/fstrnad80':
         dirname_uwind = f"/mnt/qb/goswami/data/era5/multi_pressure_level/u_component_of_wind/{plevel}/"
         dirname_vwind = f"/mnt/qb/goswami/data/era5/multi_pressure_level/v_component_of_wind/{plevel}/"
         dirname_w = f"/mnt/qb/goswami/data/era5/multi_pressure_level/vertical_velocity/{plevel}/"
@@ -154,6 +154,8 @@ for plevel in plevels:
         dirname_temp = f"/mnt/qb/goswami/data/era5/multi_pressure_level/temperature/{plevel}/"
         dirname_div = f"/mnt/qb/goswami/data/era5/multi_pressure_level/divergence/{plevel}/"
         dirname_vo = f"/mnt/qb/goswami/data/era5/multi_pressure_level/vorticity/{plevel}/"
+    else:
+        gut.myprint('The computing is not on the qb server!')
 
     fname_u = dirname_uwind + f'u_component_of_wind_{plevel}_1959_2021.nc'
     fname_v = dirname_vwind + f'v_component_of_wind_{plevel}_1959_2021.nc'

@@ -622,7 +622,7 @@ def cust_range(*args, rtol=1e-05, atol=1e-08,
 
 
 def crange(*args, **kwargs):
-    dtype = type(args[2]) if len (args) > 2 else type(args[1])
+    dtype = type(args[2]) if len(args) > 2 else type(args[1])
     return cust_range(*args, **kwargs, include=[True, True],
                       dtype=dtype)
 
@@ -760,7 +760,7 @@ def rename_da(da, name):
     return da
 
 
-def rename_var_era5(ds, verbose=True):
+def rename_var_era5(ds, verbose=True, **kwargs):
     names = get_vars(ds=ds)
 
     if "precipitation" in names:
@@ -803,13 +803,16 @@ def rename_var_era5(ds, verbose=True):
             "Rename vertical integral of northward water vapour flux to: ewvf!")
 
     if "z" in names:
-        ds['z'].attrs.update({'units': 'm'})
-        ds['z'].attrs.update({'long_name': 'Geopotential Height'})
-        g = 9.80665
-        ds['z'] = ds['z'] / g  # convert to m
-        myprint(
-            f'Compute geopotential height from z! \n Multiply by 1/{g}',
-            verbose=verbose)
+        pot2height = kwargs.pop('pot2height', False)
+        if pot2height:
+            ds['z'].attrs.update({'units': 'm'})
+            ds['z'].attrs.update({'long_name': 'Geopotential Height'})
+            ds.rename({'z': 'zh'})
+            g = 9.80665  # earth's accelaration at equator m/s2
+            ds['zh'] = ds['zh'] / g  # convert to m
+            myprint(
+                f'Compute geopotential height from z! \n Multiply by 1/{g}',
+                verbose=verbose)
 
     if "ttr" in names:
         ds = ds.rename({"ttr": "olr"})
@@ -1164,4 +1167,5 @@ def set_first_element(arr, item):
             arr = np.insert(arr, 0, item)
         return arr
     else:
-        raise ValueError("Unsupported array type. Please provide a list or numpy.ndarray.")
+        raise ValueError(
+            "Unsupported array type. Please provide a list or numpy.ndarray.")
