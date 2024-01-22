@@ -4,9 +4,13 @@ import metpy.constants as mpconstants
 import metpy.calc as mpcalc
 
 
-def n_point_smoother(data, p=9, n_reps=10):
+def smoother(data, stype='gaussian',
+             p=3, n_reps=50):
     # Apply the 9-point smoother to the data
-    data_s = mpcalc.smooth_n_point(data, p, n_reps)
+    if stype == 'gaussian':
+        data_s = mpcalc.smooth_gaussian(data, n=p)
+    elif stype == 'n-point':
+        data_s = mpcalc.smooth_n_point(data, p, n_reps)
     return data_s
 
 
@@ -96,7 +100,9 @@ def get_temperature_advection_term(tadv=None, zlev=None, Tlev=None,
     return term2
 
 
-def get_qg_forcing(zlow, zhigh, zlev, Tlev, dp, p, smoother=False):
+def get_qg_forcing(zlow, zhigh, zlev, Tlev, dp, p, smooth=False,
+                   n_reps=10, n=1,
+                   s_type='gaussian'):
     """Compute QG forcing based on geopotential height and temperature for a given level
 
     Args:
@@ -125,15 +131,15 @@ def get_qg_forcing(zlow, zhigh, zlev, Tlev, dp, p, smoother=False):
     u_geo_high, v_geo_high = get_geostrophic_winds(z=zhigh)
     u_geo_lev, v_geo_lev = get_geostrophic_winds(z=zlev)
     Tlev = Tlev.metpy.convert_units('degC')
-    if smoother:
-        gut.myprint("Apply 9-point smoother")
-        u_geo_low_s = n_point_smoother(u_geo_low)
-        v_geo_low_s = n_point_smoother(v_geo_low)
-        u_geo_high_s = n_point_smoother(u_geo_high)
-        v_geo_high_s = n_point_smoother(v_geo_high)
-        u_geo_lev_s = n_point_smoother(u_geo_lev)
-        v_geo_lev_s = n_point_smoother(v_geo_lev)
-        Tlev_s = n_point_smoother(Tlev)
+    if smooth:
+        gut.myprint(f"Apply {s_type} smoother")
+        u_geo_low_s = smoother(u_geo_low, n_reps=n_reps, p=n)
+        v_geo_low_s = smoother(v_geo_low, n_reps=n_reps, p=n)
+        u_geo_high_s = smoother(u_geo_high, n_reps=n_reps, p=n)
+        v_geo_high_s = smoother(v_geo_high, n_reps=n_reps, p=n)
+        u_geo_lev_s = smoother(u_geo_lev, n_reps=n_reps, p=n)
+        v_geo_lev_s = smoother(v_geo_lev, n_reps=n_reps, p=n)
+        Tlev_s = smoother(Tlev, n_reps=n_reps, p=n)
     else:
         u_geo_low_s = u_geo_low
         v_geo_low_s = v_geo_low

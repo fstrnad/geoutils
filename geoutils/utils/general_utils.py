@@ -813,11 +813,18 @@ def rename_var_era5(ds, verbose=True, **kwargs):
             myprint(
                 f'Compute geopotential height from z! \n Multiply by 1/{g}',
                 verbose=verbose)
+    if "w" in names:
+        myprint("Rename w to OMEGA!")
+        ds = ds.rename({"w": "OMEGA"})
+        reverse_w = kwargs.pop('reverse_w', True)
+        myprint(f'Multiply w by factor {-1}!', verbose=reverse_w)
+        ds['OMEGA'] = -1*ds['OMEGA'] if reverse_w else ds['OMEGA']
 
     if "ttr" in names:
         ds = ds.rename({"ttr": "olr"})
         myprint(
-            "Rename top net thermal radiation (ttr) to: olr!\n Multiply by -1/3600!")
+            "Rename top net thermal radiation (ttr) to: olr [W/m2]!\n"
+            "Multiply by -1/3600!")
         ds['olr'] *= -1./3600  # convert to W/m2
         ds['olr'].attrs.update({'units': 'W/m2'})
         ds.attrs.update({'long_name': 'Outgoing longwave radiation'})

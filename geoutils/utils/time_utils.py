@@ -317,7 +317,8 @@ def get_mean_tps(da, tps, varname=None,
                  sig_test=True,
                  #  corr_type='dunn',
                  corr_type=None,
-                 first_dim='lev'):
+                 first_dim='lev',
+                 alpha=0.05,):
     """Get mean of dataarray for specific time points."""
 
     this_comp = get_sel_tps_ds(ds=da, tps=tps)
@@ -332,7 +333,7 @@ def get_mean_tps(da, tps, varname=None,
         mean, pvalues_ttest = sut.ttest_field(
             this_comp, da, zdim=dims)
         mask = sut.field_significance_mask(
-            pvalues_ttest, alpha=0.05,
+            pvalues_ttest, alpha=alpha,
             corr_type=corr_type)
 
         if first_dim in dims:
@@ -2538,7 +2539,7 @@ def get_dates_later_as(times, date):
     return new_times
 
 
-def have_same_time_points(dataarray1, dataarray2):
+def are_same_time_points(dataarray1, dataarray2):
     """
     Check if two xarray DataArrays have exactly the same time points.
 
@@ -2563,20 +2564,29 @@ def equalize_time_points(ts1, ts2, verbose=True):
     Returns:
         tuple: tuple of two datasets with equal time points
     """
-    if have_same_time_points(ts1, ts2):
+    if are_same_time_points(ts1, ts2):
         return ts1, ts2
     else:
         assert_has_time_dimension(ts1)
         assert_has_time_dimension(ts2)
-        gut.myprint('Equalize time points of both datasets!', verbose=verbose)
-        ts1 = get_sel_tps_ds(ts1, tps=ts2.time)
-        ts2 = get_sel_tps_ds(ts2, tps=ts1.time)
+        time1 = ts1.time.values
+        time2 = ts2.time.values
+        common_times = np.intersect1d(time1, time2)
+        if len(common_times) == 0:
+            gut.myprint(f'No common time points between both datasets!')
+            return [], []
+        else:
+            gut.myprint('Equalize time points of both datasets!', verbose=verbose)
+            ts1 = get_sel_tps_ds(ts1, tps=ts2.time)
+            ts2 = get_sel_tps_ds(ts2, tps=ts1.time)
 
     return ts1, ts2
 
 
 def get_intersect_tps(tps1, tps2):
     tps, _ = equalize_time_points(ts1=tps1, ts2=tps2, verbose=False)
+    if len(tps) == 0:
+        return []
     return tps.time
 
 

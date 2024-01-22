@@ -621,7 +621,7 @@ def plot_2D(
                 round_dec = 1 if vmax > 1 else 2  # because the range is between 0 and 10
             if levels is not None:
                 levels = np.around(
-                    levels, round_dec+1) if round_dec is not None else levels  # TODO check if this is correct with round_dec+1
+                    levels, round_dec+1) if round_dec is not None else levels  # TODO check if this is better with round_dec+1
                 # print(sci, round_dec, levels)
             if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
                 # norm = mpl.colors.LogNorm(levels=levels)
@@ -916,7 +916,7 @@ def plot_wind_field(
     ax=None,
     x_vals=None,
     y_vals=None,
-    key_loc=(0.95, -0.08),
+    key_loc=(1., -.06),
     stream=False,
     transform=True,
     **kwargs,
@@ -1022,7 +1022,7 @@ def create_multi_plot(nrows, ncols, projection=None,
     gs_cols = ncols
     fig = plt.figure(figsize=(figsize[0], figsize[1]))
 
-    hspace = kwargs.pop('hspace', 0.4)
+    hspace = kwargs.pop('hspace', 0.)
     wspace = kwargs.pop('wspace', 0.)
 
     gs = fig.add_gridspec(gs_rows, gs_cols,
@@ -1079,9 +1079,9 @@ def create_multi_plot(nrows, ncols, projection=None,
             if run_idx > end_idx:
                 print(run_idx, end_idx)
                 break
-    fig.tight_layout()
+    # fig.tight_layout()
     if nrows > 1 or ncols > 1:
-        pos_x = kwargs.pop('pos_x', -0.15)
+        pos_x = kwargs.pop('pos_x', -0.1)
         pos_y = kwargs.pop('pos_y', 1.1)
         put.enumerate_subplots(axs, pos_x=pos_x, pos_y=pos_y)
     else:
