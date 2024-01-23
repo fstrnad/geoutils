@@ -151,7 +151,7 @@ class BaseDataset():
         plevels=None,
         time_range=None,
         grid_step=None,
-        large_ds=False,
+        large_ds=True,
         lon_range=[-180, 180],
         lat_range=[-90, 90],
         use_ds_grid=False,
@@ -161,24 +161,25 @@ class BaseDataset():
     ):
         reload(gut)
         gut.myprint("Start processing data!", verbose=verbose)
+        self.plevel_name = kwargs.pop('plevel_name', 'lev')
 
-        if large_ds:
-            gut.myprint('Chunk the data', verbose=verbose)
-            ds = xr.open_mfdataset(nc_files, chunks={"time": 1000})
-        else:
-            if plevels is None:
+        if plevels is None:
+            if large_ds:
+                gut.myprint('Chunk the data', verbose=verbose)
+                ds = xr.open_mfdataset(nc_files, chunks={"time": 1000},
+                                       decode_times=decode_times)
+            else:
                 ds = xr.open_mfdataset(nc_files,
                                        decode_times=decode_times,
                                        parallel=True)
-            else:
-                ds = xr.open_mfdataset(nc_files, decode_times=decode_times,
-                                       preprocess=self.add_dummy_dim,
-                                       chunks={"time": 1000}
-                                       )
-                self.plevel_name = kwargs.pop('plevel_name', 'lev')
+        else:
+            ds = xr.open_mfdataset(nc_files, decode_times=decode_times,
+                                   preprocess=self.add_dummy_dim,
+                                   chunks={"time": 1000}
+                                   )
 
-                ds = ds.rename({'dummy': self.plevel_name})
-                ds[self.plevel_name] = plevels
+            ds = ds.rename({'dummy': self.plevel_name})
+            ds[self.plevel_name] = plevels
 
         ds = self.check_dimensions(
             ds, ts_days=decode_times, verbose=verbose,
@@ -1323,8 +1324,8 @@ class BaseDataset():
 
         td = data.time.data
         if time_range is not None:
-            if (td[0] > np.datetime64(time_range[0])) or (
-                td[-1] < np.datetime64(time_range[1])
+            if (tu.is_larger_as(td[0], time_range[0])) or (
+                tu.is_larger_as(time_range[1], td[-1])
             ):
                 raise ValueError(
                     f"Chosen time {time_range} out of range. Please select times within {td[0]} - {td[-1]}!")

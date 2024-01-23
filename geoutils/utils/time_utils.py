@@ -504,7 +504,7 @@ def is_tp_smaller(date1, date2):
     return bool_date
 
 
-def find_common_time_range(time_series_array):
+def find_common_time_range(time_series_array, round_hour=True):
     """
     Find the earliest and latest time points that are within all the time series in an
     array.
@@ -532,7 +532,28 @@ def find_common_time_range(time_series_array):
         if latest_time is None or time_range[-1] < latest_time:
             latest_time = time_range[-1]
 
+    earliest_time = create_xr_tp(earliest_time)
+    latest_time = create_xr_tp(latest_time)
+
+    # Round the earliest and latest time points to the nearest hour
+    if round_hour:
+        earliest_time = set_hours_to_zero(x=earliest_time)
+        latest_time = set_hours_to_zero(x=latest_time)
+
     return earliest_time, latest_time
+
+
+def is_larger_as(t1, t2):
+    if isinstance(t1, xr.DataArray):
+        t1 = t1.time.values
+    if isinstance(t2, xr.DataArray):
+        t2 = t2.time.values
+    if isinstance(t1, str):
+        t1 = str2datetime(t1)
+    if isinstance(t2, str):
+        t2 = str2datetime(t2)
+
+    return t1 > t2
 
 
 def get_time_range_data(ds, time_range,
@@ -1018,7 +1039,8 @@ def check_hour_equality(da1, da2):
             time1 = time1[0:len(time2)]
     # Check if the length of time dimensions is the same
     if len(time1) != len(time2):
-        raise ValueError(f'Length of time dimensions is not equal: {len(time1)} != {len(time2)}')
+        raise ValueError(
+            f'Length of time dimensions is not equal: {len(time1)} != {len(time2)}')
 
     # Check hour equality for each timestamp
     for t1, t2 in zip(time1, time2):
@@ -1027,6 +1049,7 @@ def check_hour_equality(da1, da2):
 
     # If all hours are equal, return True
     return True
+
 
 def get_tm_name(timemean):
     if timemean == "day":
@@ -2145,10 +2168,14 @@ def find_idx_tp_in_array(times, tps):
     return np.array(idx_list).flatten()
 
 
-def create_xr_ts(data, times):
+def create_xr_tp(tp, name='time'):
+    return create_xr_ts(data=[tp], times=[tp], name=name)[0]
+
+
+def create_xr_ts(data, times, name='time'):
     return xr.DataArray(data=data,
-                        dims=["time"],
-                        coords={"time": times}
+                        dims=[name],
+                        coords={f"{name}": times}
                         )
 
 
@@ -2576,7 +2603,8 @@ def equalize_time_points(ts1, ts2, verbose=True):
             gut.myprint(f'No common time points between both datasets!')
             return [], []
         else:
-            gut.myprint('Equalize time points of both datasets!', verbose=verbose)
+            gut.myprint('Equalize time points of both datasets!',
+                        verbose=verbose)
             ts1 = get_sel_tps_ds(ts1, tps=ts2.time)
             ts2 = get_sel_tps_ds(ts2, tps=ts1.time)
 

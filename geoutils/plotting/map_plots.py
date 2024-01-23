@@ -558,6 +558,7 @@ def plot_2D(
 
     # plotting
     color = kwargs.pop("color", None)
+    cmap = None if color is not None else cmap
     alpha = kwargs.pop("alpha", 1.0)
     lw = kwargs.pop("lw", 2)
     size = kwargs.pop("size", 1)
@@ -717,6 +718,12 @@ def plot_2D(
                 vmin, vmax, num_ticks=levels, shift_ticks=True)
             ticks = normticks[:-1] + 0.5
             levels = np.array(normticks[:], dtype=float)
+        if cmap is None and color is None:
+            raise ValueError(
+                f'Please provide a cmap or color for plot_type {plot_type}!')
+        if cmap is not None and color is not None:
+            raise ValueError(
+                f'Please provide either a cmap or color for plot_type {plot_type}!')
         im = ax.contourf(
             x,
             y,

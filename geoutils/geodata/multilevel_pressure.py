@@ -55,6 +55,7 @@ class MultiPressureLevelDataset(bds.BaseDataset):
                          metpy_labels=False,
                          time_range=time_range,
                          **kwargs)
+        # self.plevel_name is set in super().__init__()
         gut.myprint(
             f'Loaded Pressure levels {plevels} as dimension {self.plevel_name}!')
 

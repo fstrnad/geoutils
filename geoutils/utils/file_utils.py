@@ -182,13 +182,13 @@ def print_file_location_and_size(filepath, verbose=True):
     return None
 
 
-def get_file_time_range(file_arr, verbose=True):
+def get_file_time_range(file_arr, round_hour=True, verbose=True):
     time_arr = []
     for datafile in file_arr:
         file = xr.open_dataset(datafile)
         time_arr.append(file.time)
 
-    tr = tu.find_common_time_range(time_arr)
+    tr = tu.find_common_time_range(time_arr, round_hour=round_hour)
     gut.myprint(f'Load time_range:{tr}', verbose=verbose)
 
     return tr
@@ -203,6 +203,7 @@ def check_file_time_equity(file_arr, verbose=True):
         if not tu.check_hour_equality(da1=time_arr[0],
                                       da2=timetest):
             raise ValueError('ERROR different hour timeing!')
+    return True
 
 
 def save_np_dict(arr_dict, sp, verbose=True):

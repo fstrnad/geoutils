@@ -114,12 +114,14 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                         plevels=plevels,
                                                         can=False,
                                                         **w_kwargs)
-                self.w_name = kwargs.pop('w_name', 'w')
-                w = ds_wwind.ds[self.w_name].rename('OMEGA')
-                reverse_w = kwargs.pop('reverse_w', True)
+                self.w_name = kwargs.pop('w_name', 'OMEGA')
+                if 'w' in ds_wwind.get_vars():
+                    w = ds_wwind.ds['w'].rename('OMEGA')
+                else:
+                    w = ds_wwind.ds['OMEGA']
+                reverse_w = kwargs.pop('reverse_w', False)
                 gut.myprint(f'Multiply w by factor {-1}!', verbose=reverse_w)
                 w = -1*w if reverse_w else w
-                self.w_name = 'OMEGA'
                 self.vert_velocity = True
 
             windspeed = None
