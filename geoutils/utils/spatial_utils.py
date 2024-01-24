@@ -139,6 +139,7 @@ def in_lon_lat_range(lon, lat, lon_range, lat_range, dateline=False):
 
     return lon_in_range & lat_in_range
 
+
 def compute_rm(da, rm_val, dim='time', sm='Jan', em='Dec'):
     """This function computes a rolling mean on an input
     xarray dataarray. The first and last rm_val elements
@@ -1116,7 +1117,8 @@ def remove_single_dim(ds):
                     ds = ds.mean(dim=dim)  # Removes the single variable axis
                     gut.myprint(f'Remove single value dimension {dim}!')
                 else:
-                    gut.myprint(f'WARNING: dimension {dim} contains only 1 value!')
+                    gut.myprint(
+                        f'WARNING: dimension {dim} contains only 1 value!')
     return ds
 
 
@@ -1157,18 +1159,28 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
     """
     reload(tu)
 
-    lon_lat_names = ['longitude', 'latitude',
-                     't', 'month', 'time_counter', 'AR_key',
-                     'plevel', 'dimx_lon', 'dimy_lon', 'dimz_lon']
-    xr_lon_lat_names = ['lon', 'lat',
-                        'time', 'time', 'time', 'time',
-                        'lev', 'x', 'y', 'z']
+    rename_dict = {
+        'longitude': 'lon',
+        'latitude': 'lat',
+        't': 'time',
+        'month': 'time',
+        'time_counter': 'time',
+        'AR_key': 'time',
+        'plevel': 'lev',
+        'dimx_lon': 'x',
+        'dimy_lon': 'y',
+        'dimz_lon': 'z',
+        'x': 'lon',
+        'y': 'lat',
+    }
+    lon_lat_names = list(rename_dict.keys())
+
     dims = list(ds.dims)
     for idx, lon_lat in enumerate(lon_lat_names):
         if lon_lat in dims:
             gut.myprint(
-                f'Rename:{lon_lat} : {xr_lon_lat_names[idx]}', verbose=verbose)
-            ds = ds.rename({lon_lat: xr_lon_lat_names[idx]})
+                f'Rename:{lon_lat} : {rename_dict[lon_lat]}', verbose=verbose)
+            ds = ds.rename({lon_lat: rename_dict[lon_lat]})
             dims = list(ds.dims)
             gut.myprint(dims, verbose=verbose)
     ds = remove_single_dim(ds=ds)

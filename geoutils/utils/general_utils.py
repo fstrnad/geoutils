@@ -753,6 +753,16 @@ def get_name_da(da):
     return name
 
 
+def rename_dim(da, dim, name):
+    dims = get_dims(da)
+    if dim not in dims:
+        raise ValueError(f'Dimension {dim} not in {dims}!')
+    if not isinstance(name, str):
+        raise ValueError(f'New name {name} has to be string!')
+    da = da.rename({dim: name})
+    return da
+
+
 def rename_da(da, name):
     old_name = get_name_da(da)
     myprint(f'Rename {old_name} to {name}!')
@@ -1176,3 +1186,35 @@ def set_first_element(arr, item):
     else:
         raise ValueError(
             "Unsupported array type. Please provide a list or numpy.ndarray.")
+
+
+def replicate_object(obj, n):
+    """
+    Replicates the given object 'n' times and returns an array.
+
+    Parameters:
+    obj: any
+        The object to be replicated.
+    n: int
+        The number of times the object should be replicated.
+
+    Returns:
+    list
+        An array containing 'n' copies of the object.
+    """
+    return [obj] * n
+
+
+def has_non_none_objects(arr):
+    """
+    Checks whether an array contains any objects other than None.
+
+    Parameters:
+    arr: list
+        The array to be checked.
+
+    Returns:
+    bool
+        True if the array contains objects other than None, False otherwise.
+    """
+    return any(item is not None for item in arr)

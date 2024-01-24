@@ -154,7 +154,6 @@ def prepare_axis(ax, log=False, **kwargs):
     ylabel_pos = kwargs.pop("ylabel_pos", None)
     x_ints = kwargs.pop("x_ints", False)
     y_ints = kwargs.pop("y_ints", False)
-    xtick_step = kwargs.pop("xtick_step", None)
     set_twinx = kwargs.pop("set_twinx", False)
     if set_twinx:
         ax = ax.twinx()
@@ -215,8 +214,13 @@ def prepare_axis(ax, log=False, **kwargs):
     set_title(title=title, ax=ax, **kwargs)
 
     ylog = kwargs.pop("ylog", False)
+    ysymlog = kwargs.pop("ysymlog", False)
+    if ylog and ysymlog:
+        raise ValueError('ylog and ysymlog cannot be True at the same time!')
     if ylog is True:
         ax.set_yscale("log")
+    if ysymlog is True:
+        ax.set_yscale("symlog")
 
     xlog = kwargs.pop("xlog", False)
     if xlog is True:
@@ -238,8 +242,15 @@ def prepare_axis(ax, log=False, **kwargs):
         ax.xaxis.set_ticklabels([])
         # ax.yaxis.set_ticklabels([])
 
-    yticks = kwargs.pop('yticks', True)
-    if not yticks:
+    yticks = kwargs.pop('yticks', None)
+    if yticks is not None:
+        ax.set_yticks(yticks)
+        yticklabels = kwargs.pop('yticklabels', None)
+        yticklabels = yticks if yticklabels is None else yticklabels
+        ax.set_yticklabels(yticklabels)
+
+    unset_yticks = kwargs.pop('unset_yticks', False)
+    if unset_yticks:
         ax.yaxis.set_ticklabels([])
 
     sci = kwargs.pop("sci", None)

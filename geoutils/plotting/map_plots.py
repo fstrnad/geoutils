@@ -335,6 +335,8 @@ def get_projection(projection, central_longitude=None, central_latitude=None,
     elif projection == "Nearside":
         proj = ccrs.NearsidePerspective(
             central_longitude=central_longitude, central_latitude=central_latitude)
+    elif projection == "LambertConformal":
+        proj = ccrs.LambertConformal(central_longitude=central_longitude)
     else:
         raise ValueError(f"This projection {projection} is not available yet!")
 
@@ -560,23 +562,22 @@ def plot_2D(
     color = kwargs.pop("color", None)
     cmap = None if color is not None else cmap
     alpha = kwargs.pop("alpha", 1.0)
-    lw = kwargs.pop("lw", 2)
+    lw = kwargs.pop("lw", 1)
     size = kwargs.pop("size", 1)
     marker = kwargs.pop("marker", "o")
     fillstyle = kwargs.pop("fillstyle", "full")
+    # such that setting to 1 will always be in the background
     zorder = kwargs.pop("zorder", 1)
-
+    sci_x = kwargs.pop('sci_x', None)
+    sci = kwargs.pop("sci", None)
     if ax is None:
         figsize = kwargs.pop("figsize", (7, 5))
         fig, ax = plt.subplots(figsize=(figsize))
-
-    sci_x = kwargs.pop('sci_x', None)
-    sci = kwargs.pop("sci", None)
-    if projection is None:
-        # This is the Sci for the x axis
-        ax, kwargs = put.prepare_axis(ax, sci=sci_x,
-                                      **kwargs)
-    else:
+        if projection is None:
+            # This is the Sci for the x axis
+            ax, kwargs = put.prepare_axis(ax, sci=sci_x,
+                                          **kwargs)
+    if projection is not None:
         if isinstance(projection, str):
             projection = get_projection(projection='PlateCarree')
 
@@ -773,7 +774,18 @@ def plot_2D(
                 zorder=zorder,
             )
             if clabel:
-                ax.clabel(im, inline=True, fontsize=pst.MINI_SIZE)
+                clabel_dict = dict(
+                    fontsize=kwargs.pop('clabel_fsize', pst.TINY_SIZE),
+                    fmt=kwargs.pop('clabel_fmt', None),
+                    colors=color,
+                    inline=True,
+                    inline_spacing=8,
+                    use_clabeltext=True,
+                    rightside_up=True,
+                )
+                if clabel_dict['fmt'] is None:
+                    del clabel_dict['fmt']
+                ax.clabel(im, **clabel_dict)
 
     if plot_type == 'hatch' or significance_mask is not None:
         if significance_mask is not None:
@@ -1023,8 +1035,16 @@ def create_multi_plot(nrows, ncols, projection=None,
     if figsize is None:
         figsize = (9*ncols, 5*nrows)
 
-    ratios_w = np.ones(ncols)
-    ratios_h = np.ones(nrows)
+    end_idx = kwargs.pop('end_idx', None)
+    end_idx = int(nrows*ncols) if end_idx is None else end_idx
+    map_axis = kwargs.pop('map_axis', [])
+    if len(map_axis) == 0:
+        map_axis = np.arange(nrows*ncols)
+    if nrows*ncols/end_idx >= nrows:
+        nrows = nrows - 1 if nrows > 1 else nrows
+
+    ratios_w = kwargs.pop('ratios_w', np.ones(ncols))
+    ratios_h = kwargs.pop('ratios_h', np.ones(nrows))
     gs_rows = nrows
     gs_cols = ncols
     fig = plt.figure(figsize=(figsize[0], figsize[1]))
@@ -1036,49 +1056,53 @@ def create_multi_plot(nrows, ncols, projection=None,
                           height_ratios=ratios_h,
                           width_ratios=ratios_w,
                           hspace=hspace, wspace=wspace)
-    if projection is not None:
+    proj_arr = kwargs.pop('proj_arr', None)
+
+    if projection is not None or proj_arr is not None:
         central_longitude = kwargs.pop("central_longitude", None)
         central_latitude = kwargs.pop("central_latitude", None)
         dateline = kwargs.pop('dateline', False)
         dateline_arr = kwargs.pop('dateline_arr', None)
+        if proj_arr is None:
+            proj_arr = gut.replicate_object(projection, nrows*ncols)
+        else:
+            if len(proj_arr) != end_idx:
+                raise ValueError(
+                    f'Length of projection array {len(proj_arr)} does not match number of pannels {end_idx}!')
     else:
         proj = None
     axs = []
 
-    run_idx = 0
-    end_idx = kwargs.pop('end_idx', None)
-    end_idx = int(nrows*ncols) if end_idx is None else end_idx
-    map_axis = kwargs.pop('map_axis', [])
-    if len(map_axis) == 0:
-        map_axis = np.arange(nrows*ncols)
-    if nrows*ncols/end_idx >= nrows:
-        nrows = nrows - 1 if nrows > 1 else nrows
     set_map = kwargs.pop('set_map', False)  # is set later
+    run_idx = 0
     for i in range(nrows):
         for j in range(ncols):
-            proj = None
-            if projection is not None:
+            if gut.has_non_none_objects(proj_arr):
                 if dateline_arr is not None:
                     dateline = dateline_arr[run_idx]
-                proj = get_projection(projection=projection,
-                                      central_longitude=central_longitude,
-                                      central_latitude=central_latitude,
-                                      dateline=dateline)
-                axs.append(fig.add_subplot(gs[i, j], projection=proj))
+                projection = proj_arr[run_idx]
+                if projection is not None:
+                    proj = get_projection(projection=projection,
+                                          central_longitude=central_longitude,
+                                          central_latitude=central_latitude,
+                                          dateline=dateline)
 
-                if run_idx in map_axis:
-                    map_dict = create_map(
-                        ax=axs[run_idx],
-                        projection=projection,
-                        central_longitude=central_longitude,
-                        plot_grid=plot_grid,
-                        lon_range=lon_range,
-                        lat_range=lat_range,
-                        dateline=dateline,
-                        set_map=set_map,
-                        **kwargs
-                    )
-                    kwargs = map_dict['kwargs']
+                    axs.append(fig.add_subplot(gs[i, j], projection=proj))
+                    if run_idx in map_axis:
+                        map_dict = create_map(
+                            ax=axs[run_idx],
+                            projection=projection,
+                            central_longitude=central_longitude,
+                            plot_grid=plot_grid,
+                            lon_range=lon_range,
+                            lat_range=lat_range,
+                            dateline=dateline,
+                            set_map=set_map,
+                            **kwargs
+                        )
+                        kwargs = map_dict['kwargs']
+                else:
+                    axs.append(fig.add_subplot(gs[i, j]))
             else:
                 axs.append(fig.add_subplot(gs[i, j]))
 

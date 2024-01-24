@@ -12,6 +12,7 @@ import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
+import geoutils.utils.met_utils as mut
 from datetime import datetime
 from importlib import reload
 import xarray as xr
@@ -46,6 +47,7 @@ class BaseDataset():
         verbose=True,
         metpy_labels=False,  # labelling according to metpy convention
         metpy_unit=None,
+        parse_cf=True,
         **kwargs,
     ):
         """Initializes a BaseDataset object with an nc file provided.
@@ -92,6 +94,7 @@ class BaseDataset():
             large_ds=large_ds,
             decode_times=decode_times,
             verbose=verbose,
+            parse_cf=parse_cf,
             **kwargs,
         )
         (
@@ -157,6 +160,7 @@ class BaseDataset():
         use_ds_grid=False,
         decode_times=True,
         verbose=True,
+        parse_cf=True,
         **kwargs,
     ):
         reload(gut)
@@ -236,6 +240,9 @@ class BaseDataset():
         timemax = kwargs.pop('timemax', None)
         if timemax is not None:
             ds = tu.compute_timemax(ds=ds, timemean=timemax, verbose=verbose)
+
+        if parse_cf:
+            ds = mut.parse_cf(ds=ds)
         return ds
 
     def add_dummy_dim(self, xda):
