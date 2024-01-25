@@ -7,7 +7,7 @@ import xarray as xr
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 from metpy.interpolate import cross_section
-
+reload(gut)
 
 def parse_cf(ds):
     """Parse the coordinates of a dataset.
@@ -24,7 +24,7 @@ def parse_cf(ds):
     """
     if not isinstance(ds, xr.Dataset):
         raise ValueError('ds must be an xarray.Dataset')
-    return ds.metpy.parse_cf()
+    return ds.metpy.parse_cf().squeeze()
 
 
 def kelvin_to_degC(temperature):
@@ -109,6 +109,18 @@ def potential_temperature(temperature, pressure):
         temperature=temperature * units.K)
 
 
-def vertical_cross_section(data, lon_range, lat_range):
+def vertical_cross_section(data, lon_range, lat_range,
+                           interp_steps=100,
+                           interp_type='linear',
+                           set_coords=True):
     # rename level to isobaric labelling for metpy
-    data = gut.rename_dim(data, dim='lev', name='isobaric')
+    # data = gut.rename_dim(data, dim='lev', name='isobaric')
+    # data = gut.rename_dim(data, dim='lat', name='latitude')
+    # data = gut.rename_dim(data, dim='lon', name='longitude')
+
+    cross = cross_section(data,
+                          (lon_range[0], lat_range[0]),
+                          (lon_range[1], lat_range[1]),
+                          interp_type=interp_type,
+                          steps=interp_steps)
+    return cross

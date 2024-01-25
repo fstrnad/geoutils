@@ -45,8 +45,8 @@ class MultiPressureLevelDataset(bds.BaseDataset):
             fut.print_file_location_and_size(filepath=file, verbose=False)
         gut.myprint(f'All files are available! Loading {data_nc}...',
                     lines=True)
-        time_range = kwargs.pop('time_range', None)
-        time_range = fut.get_file_time_range(data_nc, verbose=False) if time_range is None else time_range
+        time_range = kwargs.pop('time_range',
+                                fut.get_file_time_range(data_nc, verbose=False))
         fut.check_file_time_equity(file_arr=data_nc)
         set_metpy_labels = kwargs.pop('metpy_labels', False)
         super().__init__(data_nc=data_nc,

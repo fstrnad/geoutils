@@ -755,6 +755,9 @@ def get_name_da(da):
 
 def rename_dim(da, dim, name):
     dims = get_dims(da)
+    if name in dims:
+        myprint(f'Dimension {name} already in {dims}!')
+        return da
     if dim not in dims:
         raise ValueError(f'Dimension {dim} not in {dims}!')
     if not isinstance(name, str):
@@ -1050,6 +1053,22 @@ def split_array_by_half(arr, keyword):
         return arr[midpoint:] if len(arr) % 2 == 1 else arr[midpoint - 1:]
     else:
         raise ValueError("Keyword must be either 'first' or 'second'.")
+
+
+def delete_ds_attr(ds, attr):
+    """
+    Delete an attribute from a dataset.
+
+    Args:
+        ds (xarray.Dataset): The dataset from which the attribute will be deleted.
+        attr (str): The name of the attribute to be deleted.
+    """
+    all_attrs = list(ds.attrs.keys())
+    if attr not in all_attrs:
+        myprint(f'WARNING! {attr} not in {all_attrs}! No attribute deleted!')
+    else:
+        del ds.attrs[attr]
+    return ds
 
 
 def delete_element_at_index(arr, i, axis=0):

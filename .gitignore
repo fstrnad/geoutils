@@ -10,37 +10,19 @@ geoutils.egg-info/
 .mypy_chache/
 .vscode/
 .pytest_cache/
-__pycache__/*
 
 climnet/link_bundles/
 climnet/null_model/
 plots/*
-climnet.egg-info/
 outputs/*
-climnet/es_files/*
+
 *.sh
 *.npy
-null_model/
-link_bundles/
 
+tutorials/test_files/
 /data/
 /outputs/
 
-climnet/tsa/nino_aimri/*
 __pycache__
 
-climnet/link_bundles/
-climnet/null_model/
-plots/*
-climnet.egg-info/
-outputs/*
-climnet/es_files/*
-*.sh
-*.npy
-null_model/
-link_bundles/
 
-/data/
-/outputs/
-
-climnet/tsa/nino_aimri/*

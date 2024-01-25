@@ -77,11 +77,8 @@ class BaseDataset():
             raise ValueError(
                 f'Provide single or multiple files as strings but data_nc = {data_nc}!')
         # initialize dataset
-        # ds_arr = []
         for file in data_nc_arr:
             fut.print_file_location_and_size(filepath=file, verbose=verbose)
-        if len(data_nc_arr) > 1 and time_range is not None:
-            time_range = fut.get_file_time_range(file_arr=data_nc_arr)
 
         self.grid_step = grid_step
         ds = self.open_ds(
@@ -102,7 +99,6 @@ class BaseDataset():
             self.lon_range,
             self.lat_range,
         ) = self.get_spatio_temp_range(ds)
-        # ds_arr.append(ds)
 
         self.set_var(var_name=var_name, ds=ds, verbose=verbose)
 
@@ -243,6 +239,11 @@ class BaseDataset():
 
         if parse_cf:
             ds = mut.parse_cf(ds=ds)
+
+        delete_hist = kwargs.pop('delete_hist', True)
+        if delete_hist:
+            ds = gut.delete_ds_attr(ds=ds, attr='history')
+
         return ds
 
     def add_dummy_dim(self, xda):
@@ -1339,7 +1340,7 @@ class BaseDataset():
             else:
                 sd = tu.tp2str(time_range[0])
                 ed = tu.tp2str(time_range[-1])
-                gut.myprint(f"Time steps within {sd}-{ed} selected!")
+                gut.myprint(f"Time steps within {sd} to {ed} selected!")
             # da = data.interp(time=t, method='nearest')
             da = data.sel(time=slice(time_range[0], time_range[1]))
 
@@ -1853,3 +1854,5 @@ class BaseDataset():
                 self.ds[sf_an.name] = sf_an
 
         return grad_vbar
+
+

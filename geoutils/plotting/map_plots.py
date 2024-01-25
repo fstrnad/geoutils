@@ -573,10 +573,10 @@ def plot_2D(
     if ax is None:
         figsize = kwargs.pop("figsize", (7, 5))
         fig, ax = plt.subplots(figsize=(figsize))
-        if projection is None:
-            # This is the Sci for the x axis
-            ax, kwargs = put.prepare_axis(ax, sci=sci_x,
-                                          **kwargs)
+    if projection is None:
+        # This is the Sci for the x axis
+        ax, kwargs = put.prepare_axis(ax, sci=sci_x,
+                                      **kwargs)
     if projection is not None:
         if isinstance(projection, str):
             projection = get_projection(projection='PlateCarree')
@@ -1070,7 +1070,7 @@ def create_multi_plot(nrows, ncols, projection=None,
                 raise ValueError(
                     f'Length of projection array {len(proj_arr)} does not match number of pannels {end_idx}!')
     else:
-        proj = None
+        proj_arr = gut.replicate_object(None, nrows*ncols)
     axs = []
 
     set_map = kwargs.pop('set_map', False)  # is set later
