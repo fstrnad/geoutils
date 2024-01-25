@@ -9,6 +9,7 @@ import geoutils.utils.file_utils as fut
 from metpy.interpolate import cross_section
 reload(gut)
 
+
 def parse_cf(ds):
     """Parse the coordinates of a dataset.
 
@@ -79,14 +80,23 @@ def specific_humidity_to_relative_humidity(specific_humidity,
     xarray.DataArray
         relative humidity
     """
+    # check for units:
+    if temperature.metpy.units != units.K:
+        temperature = temperature * units.K
+    if pressure.metpy.units != units.hPa:
+        pressure = pressure * units.hPa
+    if specific_humidity.metpy.units != units('kg/kg'):
+        specific_humidity = specific_humidity * units('kg/kg')
+
     rh = metcalc.relative_humidity_from_specific_humidity(
-        pressure=pressure * units.hPa,
-        temperature=temperature*units.K,
+        pressure=pressure,
+        temperature=temperature,
         specific_humidity=specific_humidity)
     if percentage:
-        return rh.metpy.convert_units('percent')
-    else:
-        return rh
+        rh = rh.metpy.convert_units('percent')
+
+    rh = rh.to_dataset(name='rh')
+    return rh
 
 
 def potential_temperature(temperature, pressure):
@@ -104,23 +114,39 @@ def potential_temperature(temperature, pressure):
     xarray.DataArray
         potential temperature in Kelvin
     """
-    return metcalc.potential_temperature(
-        pressure=pressure * units.hPa,
-        temperature=temperature * units.K)
+    # check for units:
+    if temperature.metpy.units != units.K:
+        temperature = temperature * units.K
+    if pressure.metpy.units != units.hPa:
+        pressure = pressure * units.hPa
+
+    pt = metcalc.potential_temperature(
+        pressure=pressure,
+        temperature=temperature)
+    pt = pt.to_dataset(name='pt')
+
+    return pt
 
 
 def vertical_cross_section(data, lon_range, lat_range,
                            interp_steps=100,
                            interp_type='linear',
-                           set_coords=True):
+                           ):
     # rename level to isobaric labelling for metpy
-    # data = gut.rename_dim(data, dim='lev', name='isobaric')
+    data = gut.rename_dim(data, dim='lev', name='isobaric')
     # data = gut.rename_dim(data, dim='lat', name='latitude')
     # data = gut.rename_dim(data, dim='lon', name='longitude')
 
+    # ATTENTION: metpy expects start as LAT, LON Pairs! (not LON, LAT)
     cross = cross_section(data,
-                          (lon_range[0], lat_range[0]),
-                          (lon_range[1], lat_range[1]),
+                          (lat_range[0], lon_range[0]),
+                          (lat_range[1], lon_range[1]),
                           interp_type=interp_type,
                           steps=interp_steps)
+    if isinstance(data, xr.Dataset):
+        cross = cross.set_coords(('lat', 'lon'))
+
+    # Bring in the order to plot as (lon/lat) - isobaric plot
+    cross = cross.transpose('isobaric', 'index').compute()
+
     return cross

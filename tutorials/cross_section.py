@@ -1,8 +1,5 @@
 # %%
 # Based on https://unidata.github.io/MetPy/latest/examples/cross_section.html#sphx-glr-examples-cross-section-py
-# Copyright (c) 2018 MetPy Developers.
-# Distributed under the terms of the BSD 3-Clause License.
-# SPDX-License-Identifier: BSD-3-Clause
 """
 ======================
 Cross Section Analysis
@@ -12,6 +9,7 @@ The MetPy function `metpy.interpolate.cross_section` can obtain a cross-sectiona
 gridded data.
 """
 
+import geoutils.utils.general_utils as gut
 from importlib import reload
 import geoutils.plotting.plots as cplt
 import cartopy.crs as ccrs
@@ -37,13 +35,18 @@ lon_range_cut = [-180, 180]
 # **Getting the data**
 # ERA 5 data
 reload(mp)
-plevels = [200, 600, 1000]
+plevels = np.arange(100, 1050, 100)
 
 nc_files_q = []
+nc_files_t = []
 for plevel in plevels:
     dataset_file_q = data_dir + \
         f"/climate_data/2.5/era5_q_{2.5}_{plevel}_ds.nc"
     nc_files_q.append(dataset_file_q)
+    dataset_file_t = data_dir + \
+        f"/climate_data/2.5/era5_t_{2.5}_{plevel}_ds.nc"
+    nc_files_t.append(dataset_file_t)
+
 time_range = ['1980-01-01', '2000-12-31']
 ds_q = mp.MultiPressureLevelDataset(data_nc=nc_files_q,
                                     can=True,
@@ -53,61 +56,59 @@ ds_q = mp.MultiPressureLevelDataset(data_nc=nc_files_q,
                                     plevels=plevels,
                                     time_range=time_range,
                                     )
+ds_t = mp.MultiPressureLevelDataset(data_nc=nc_files_t,
+                                    can=True,
+                                    an_types=['month', 'JJAS'],
+                                    lon_range=lon_range_cut,
+                                    lat_range=lat_range_cut,
+                                    plevels=plevels,
+                                    metpy_unit='K',
+                                    time_range=time_range,
+                                    )
+# %%
+# Compute relative humidity
+reload(mut)
+rh = mut.specific_humidity_to_relative_humidity(
+    pressure=ds_q.ds['lev'],
+    temperature=ds_t.ds['t'],
+    specific_humidity=ds_q.ds['q'],
+    percentage=False
+)
+# %%
+# Compute potential temperature
+reload(mut)
+pt = mut.potential_temperature(
+    pressure=ds_t.ds['t'].lev,
+    temperature=ds_t.ds['t']
+)
 
-
-# This example uses [NARR reanalysis data](
-# https://www.ncei.noaa.gov/products/weather-climate-models/north-american-regional)
-# for 18 UTC 04 April 1987 from NCEI.
+# %%
+# This example uses 18 UTC 04 April 1987 from NCEI.
 date = tu.str2datetime('1987-04-04')
 
-# We use MetPy's CF parsing to get the data ready for use, and squeeze down the size-one time
-# dimension.
-
-data = xr.open_dataset(get_test_data('narr_example.nc', False))
-filepath = './test_files/narr_example.nc'
-fut.save_ds(data, filepath=filepath)
-
-data = data.metpy.parse_cf().squeeze()
-# data = data.set_coords(('lat', 'lon'))
-##############################
 # %% Define start and end points:
 
 start = (37.0, -105.0)
 end = (35.5, -65.0)
+lon_range = [start[1], end[1]]
+lat_range = [start[0], end[0]]
 
 ##############################
 # %% Get the cross section, and convert lat/lon to supplementary coordinates:
 reload(mut)
-cross_q = cross_section(ds_q.ds['q'].sel(time=date,),
-                        start, end).set_coords(('lat', 'lon'))
-# %%
-cross = cross_section(data, start, end).set_coords(('lat', 'lon'))
-cross['Potential_temperature'] = mut.potential_temperature(
-    pressure=cross['isobaric'],
-    temperature=cross['Temperature']
-)
-cross['Relative_humidity'] = mut.specific_humidity_to_relative_humidity(
-    pressure=cross['isobaric'],
-    temperature=cross['Temperature'],
-    specific_humidity=cross['Specific_humidity'],
-    percentage=False
-)
-
-cross['t_wind'], cross['n_wind'] = mpcalc.cross_section_components(
-    cross['u_wind'],
-    cross['v_wind']
-)
-
-
-##############################
-# %% For this example, we will be plotting potential temperature, relative humidity, and tangential/normal winds.
-
 reload(cplt)
-
+test_data = ds_q.ds.sel(time=date,)
+data_cross_section = gut.merge_datasets(rh,
+                                        pt)
+test_data = data_cross_section.sel(time=date,)
+cross_q = mut.vertical_cross_section(test_data,
+                                     lon_range=lon_range,
+                                     lat_range=lat_range)
 yticks = np.arange(1000, 50, -100)
-im = cplt.plot_2D(x=cross['lon'],
-                  y=cross['isobaric'],
-                  z=cross['Relative_humidity'],
+im = cplt.plot_2D(x=cross_q['lon'],
+                  y=cross_q['isobaric'],
+                  z=cross_q['rh'],
+                  plot_type='contourf',
                   levels=20,
                   cmap='YlGnBu',
                   label='Relative Humidity (dimensionless)',
@@ -118,12 +119,11 @@ im = cplt.plot_2D(x=cross['lon'],
                   flip_y=True,
                   ysymlog=True,
                   yticks=yticks,
-                  title=f'NARR Cross-Section \u2013 {start} to {end} \u2013 '
+                  title=f'ERA5 - Cross Section lon:{lon_range} lat:{lat_range}'
                   )
-
-im = cplt.plot_2D(x=cross['lon'],
-                  y=cross['isobaric'],
-                  z=cross['Potential_temperature'],
+im = cplt.plot_2D(x=cross_q['lon'],
+                  y=cross_q['isobaric'],
+                  z=cross_q['pt'],
                   ax=im['ax'],
                   plot_type='contour',
                   color='k',
@@ -133,35 +133,5 @@ im = cplt.plot_2D(x=cross['lon'],
                   clabel=True,
                   clabel_fmt='%i',
                   )
-im = cplt.plot_wind_field(
-    ax=im['ax'],
-    transform=False,
-    steps=2,
-    u=cross['t_wind'],
-    v=cross['n_wind'],
-    x_vals=cross['lon'],
-    y_vals=cross['isobaric'],
-    key_loc=(1, 1.05),
-    key_length=20,
-)
-
 
 # %%
-fig = plt.figure(1, figsize=(16., 9.))
-data_crs = cplt.get_projection(projection='LambertConformal')
-data_crs = data['Geopotential_height'].metpy.cartopy_crs()
-ax_inset = plt.axes(projection=data_crs)
-
-
-# Plot geopotential height at 500 hPa using xarray's contour wrapper
-ax_inset.contour(data['x'], data['y'],
-                 data['Geopotential_height'].sel(isobaric=500.),
-                 levels=np.arange(5100, 6000, 60), cmap='inferno')
-# Plot the path of the cross section
-endpoints = data_crs.transform_points(ccrs.Geodetic(),
-                                      *np.vstack([start, end]).transpose()[::-1])
-ax_inset.scatter(endpoints[:, 0], endpoints[:, 1], c='k', zorder=2)
-ax_inset.plot(cross['x'], cross['y'], c='k', zorder=2)
-
-# Add geographic features
-ax_inset.coastlines()

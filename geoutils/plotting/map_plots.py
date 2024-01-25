@@ -553,6 +553,7 @@ def plot_2D(
     label=None,
     title=None,
     significance_mask=None,
+    set_axis=False,
     **kwargs,
 ):
     reload(put)
@@ -573,7 +574,8 @@ def plot_2D(
     if ax is None:
         figsize = kwargs.pop("figsize", (7, 5))
         fig, ax = plt.subplots(figsize=(figsize))
-    if projection is None:
+        set_axis = True
+    if projection is None and set_axis:
         # This is the Sci for the x axis
         ax, kwargs = put.prepare_axis(ax, sci=sci_x,
                                       **kwargs)
