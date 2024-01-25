@@ -31,20 +31,20 @@ class MultiPressureLevelDataset(bds.BaseDataset):
     def __init__(self, data_nc=None,
                  plevels=None,
                  can=True,
+                 verbose=True,
                  **kwargs):
 
         if plevels is None:
             gut.myprint(
                 'No Plevel provided! Assuming variable is vertically integrated!')
             plevels = [0]
-
         if len(plevels) != len(data_nc):
             raise ValueError("The length of plevels must be the same as the length of data_nc.")
 
         for file in data_nc:
             fut.print_file_location_and_size(filepath=file, verbose=False)
         gut.myprint(f'All files are available! Loading {data_nc}...',
-                    lines=True)
+                    lines=True, verbose=verbose)
         time_range = kwargs.pop('time_range',
                                 fut.get_file_time_range(data_nc, verbose=False))
         fut.check_file_time_equity(file_arr=data_nc)
@@ -54,6 +54,7 @@ class MultiPressureLevelDataset(bds.BaseDataset):
                          can=can,
                          metpy_labels=False,
                          time_range=time_range,
+                         verbose=verbose,
                          **kwargs)
         # self.plevel_name is set in super().__init__()
         gut.myprint(

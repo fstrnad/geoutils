@@ -240,7 +240,7 @@ class BaseDataset():
         if parse_cf:
             ds = mut.parse_cf(ds=ds)
 
-        delete_hist = kwargs.pop('delete_hist', True)
+        delete_hist = kwargs.pop('delete_hist', False)
         if delete_hist:
             ds = gut.delete_ds_attr(ds=ds, attr='history')
 
