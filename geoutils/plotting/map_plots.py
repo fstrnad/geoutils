@@ -1,5 +1,6 @@
 """Basic plotting functions for maps"""
 # import matplotlib.cm as cm
+import copy
 import geoutils.utils.spatial_utils as sput
 import matplotlib.patches as mpatches
 import geoutils.utils.general_utils as gut
@@ -256,7 +257,7 @@ def create_map(
     figsize = kwargs.pop("figsize", (9, 6))
     # create figure
     if ax is None:
-        fig, ax = plt.subplots(figsize=(figsize))
+        fig = plt.figure(figsize=figsize)  # better working in cartopy and matplotlib=3.8.2
         ax = plt.axes(projection=proj)
         unset_grid = kwargs.pop('unset_grid', False)
         plot_grid = True if not unset_grid else False
@@ -553,7 +554,7 @@ def plot_2D(
     label=None,
     title=None,
     significance_mask=None,
-    set_axis=False,
+    set_axis=True,
     **kwargs,
 ):
     reload(put)
@@ -622,10 +623,17 @@ def plot_2D(
                 elif sci > 0:
                     round_dec = -1*(sci-2)
             else:
-                round_dec = 1 if vmax > 1 else 2  # because the range is between 0 and 10
+                if round_dec is None:
+                    round_dec = 1 if vmax > 1 else 2  # because the range is between 0 and 10
             if levels is not None:
                 levels = np.around(
-                    levels, round_dec+1) if round_dec is not None else levels  # TODO check if this is better with round_dec+1
+                    levels, round_dec) if round_dec is not None else levels
+                i = 1
+                this_levels = copy.deepcopy(levels)
+                while gut.has_duplicate(levels):
+                    levels = np.around(
+                        this_levels, round_dec+i)
+                    i += 1
                 # print(sci, round_dec, levels)
             if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
                 # norm = mpl.colors.LogNorm(levels=levels)
@@ -1049,6 +1057,12 @@ def create_multi_plot(nrows, ncols, projection=None,
     ratios_h = kwargs.pop('ratios_h', np.ones(nrows))
     gs_rows = nrows
     gs_cols = ncols
+    if len(ratios_w) != ncols:
+        raise ValueError(
+            f'Length of ratios_w {len(ratios_w)} does not match number of columns {ncols}!')
+    if len(ratios_h) != nrows:
+        raise ValueError(
+            f'Length of ratios_h {len(ratios_h)} does not match number of rows {nrows}!')
     fig = plt.figure(figsize=(figsize[0], figsize[1]))
 
     hspace = kwargs.pop('hspace', 0.)

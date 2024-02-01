@@ -1,3 +1,4 @@
+import geoutils.utils.spatial_utils as sput
 import geoutils.geodata.multilevel_pressure as mp
 import metpy.calc as metcalc
 from metpy.units import units
@@ -147,6 +148,31 @@ def vertical_cross_section(data, lon_range, lat_range,
         cross = cross.set_coords(('lat', 'lon'))
 
     # Bring in the order to plot as (lon/lat) - isobaric plot
-    cross = cross.transpose('isobaric', 'index').compute()
+    if 'time' in gut.get_dims(cross):
+        cross = cross.transpose('time', 'isobaric', 'index').compute()
+    else:
+        cross = cross.transpose('isobaric', 'index').compute()
 
     return cross
+
+
+def geopotential_to_heigth(geopotential):
+    """Convert geopotential to heigth.
+
+    Args:
+    ----------
+    geopotential: xarray.Dataset
+        dataset with geopotential
+
+    Returns:
+    ----------
+    xarray.Dataset
+        dataset with heigth
+    """
+    if not isinstance(geopotential, xr.DataArray):
+        raise ValueError('geopotential must be an xarray.Dataset')
+
+    if geopotential.metpy.units != units('m^2/s^2'):
+        geopotential = geopotential * units('m^2/s^2')
+    height = metcalc.geopotential_to_height(geopotential)
+    return height

@@ -322,7 +322,7 @@ def get_mean_tps(da, tps, varname=None,
     """Get mean of dataarray for specific time points."""
 
     this_comp = get_sel_tps_ds(ds=da, tps=tps)
-    dims = list(this_comp.dims)
+    dims = gut.get_dims(this_comp)
 
     if sig_test:
         if varname is None and isinstance(this_comp, xr.Dataset):
@@ -415,24 +415,49 @@ def get_sel_years_dates(years,
     return sel_dates
 
 
-def remove_consecutive_tps(tps, steps=1, remove_last=True):
+def remove_consecutive_tps(tps, steps=1,
+                           start=1,
+                           remove_last=True):
     """Removes consecutive steps in a set of time points until steps after.
 
     Args:
         tps (xr.DataArray): time points steps (int): number of steps to have no
         consecutive time points.
+        remove_last (bool, optional): remove last time point. Otherwise remove first time points. Defaults to True.
     """
+    if start < 1:
+        raise ValueError(f'Start has to be at least 1 but is {start}!')
+    if start > steps:
+        raise ValueError(
+            f'Start has to be smaller than steps {steps} but is {start}!')
     num_init_tps = len(tps)
     rem_tps = copy.deepcopy(tps)
-    for step in range(1, steps + 1):
+    common_tps = []
+    for step in range(start, steps + 1):
         tps_step = add_time_step_tps(tps=rem_tps, time_step=step)
-        common_tps = get_common_tps(tps1=rem_tps, tps2=tps_step)
-        if len(common_tps) > 0:
-            if remove_last:
-                rem_tps = rem_tps.drop_sel(time=common_tps)
-            else:
-                first_tps = add_time_step_tps(common_tps, time_step=-step)
-                rem_tps = rem_tps.drop_sel(time=first_tps)
+        this_common_tps = get_common_tps(tps1=rem_tps, tps2=tps_step)
+        common_tps.append(this_common_tps)
+    # common_tps are potential time points that are consecutive
+    if len(common_tps) > 1:
+        common_tps = merge_time_arrays(common_tps, verbose=False)
+    else:
+        common_tps = common_tps[0]
+    # Consecutive to consecutive time points are not deleted!
+    for this_step in range(1, steps+1):
+        cons_common_tps = get_common_tps(
+            tps1=common_tps,
+            tps2=add_time_step_tps(tps=common_tps,
+                                   time_step=this_step))
+        if len(cons_common_tps) > 0:
+            common_tps = common_tps.drop_sel(time=cons_common_tps)
+
+    if len(common_tps) > 0:
+        if remove_last:
+            rem_tps = rem_tps.drop_sel(time=common_tps)
+
+        else:
+            first_tps = add_time_step_tps(common_tps, time_step=-step)
+            rem_tps = rem_tps.drop_sel(time=first_tps)
     gut.myprint(f'Removed {num_init_tps - len(rem_tps)} time points!')
 
     return rem_tps
@@ -1297,6 +1322,23 @@ def compute_anomalies(dataarray, climatology_array=None,
     return anomalies
 
 
+def compute_anomalies_ds(ds, var_name=None,
+                         an_types=['month', 'JJAS'],
+                        #  an_types=['dayofyear', 'month', 'JJAS'],
+                         verbose=True):
+    vars = gut.get_vars(ds=ds)
+    an_vars = [var_name] if var_name in vars else vars
+    for var_name in an_vars:
+        for an_type in an_types:
+            if not gut.check_contains_substring(var_name, an_type):
+                da_an = compute_anomalies(
+                    ds[var_name], group=an_type,
+                    verbose=verbose
+                )
+                ds[da_an.name] = da_an
+    return ds
+
+
 def get_ee_ds(dataarray, q=0.95, min_threshold=1, th_eev=15):
     # Remove days without rain
     data_above_th = dataarray.where(dataarray > min_threshold)
@@ -1683,13 +1725,14 @@ def add_time_step_tps_old(tps, time_step=1, freq="D", ):
     return xr.DataArray(ntps, dims=["time"], coords={"time": ntps})
 
 
-def merge_time_arrays(time_arrays, multiple='max'):
+def merge_time_arrays(time_arrays, multiple='max', verbose=False):
     # Combine the time arrays into a single DataArray with a new "time" dimension
     combined_data = xr.concat(time_arrays, dim="time")
 
     if multiple is not None:
         gut.myprint(
-            f'Group multiple files by {multiple} if time points occur twice!')
+            f'Group multiple files by {multiple} if time points occur twice!',
+            verbose=verbose)
     if multiple == 'max':
         # Group the data by time and take the maximum value for each group
         combined_data = combined_data.groupby('time').max()
@@ -1771,7 +1814,8 @@ def get_periods_tps(tps, start=0, end=1,
         return all_time_periods
 
 
-def get_dates_of_time_range(time_range, freq='D'):
+def get_dates_of_time_range(time_range, freq='D',
+                            start_month='Jan', end_month='Dec'):
     dtype = f"datetime64[{freq}]"
     if type(time_range[0]) is str:
         gut.myprint('Convert String', verbose=False)
@@ -1801,6 +1845,11 @@ def get_dates_of_time_range(time_range, freq='D'):
     date_arr = gut.create_xr_ds(data=date_arr,
                                 dims=['time'],
                                 coords={'time': date_arr})
+
+    if start_month != 'Jan' or end_month != 'Dec':
+        date_arr = get_month_range_data(dataset=date_arr,
+                                        start_month=start_month,
+                                        end_month=end_month)
 
     return date_arr
 

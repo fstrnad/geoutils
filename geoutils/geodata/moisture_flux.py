@@ -30,31 +30,47 @@ class MoistureFlux(wds.Wind_Dataset):
                  data_nc_v=None,
                  data_nc_w=None,
                  data_nc_q=None,
+                 ds_wind=None,
+                 ds_q=None,
                  can=True,
                  plevels=None,
-                 grad_q=True,
+                 grad_q=False,
                  **kwargs):
-        if data_nc_q is None:
-            gut.myprint(f'ERROR! Please provide specific humidity file')
-            raise ValueError('ERROR! Please provide specific humidity file!')
+
         self.can = can
-        ds_ivt = wds.Wind_Dataset(data_nc_u=data_nc_u,
-                                  data_nc_v=data_nc_v,
-                                  data_nc_w=data_nc_w,
-                                  data_nc_fac=data_nc_q,
-                                  plevels=plevels,
-                                  fac_name='q',
-                                  grad_fac=grad_q,  # Compute horizontal gradient of q
-                                  can=False,  # anoamlies are computed later
-                                  **kwargs)
-        self.ds = ds_ivt.ds
+        init_mask = kwargs.pop('init_mask', False)
+        if ds_wind is None or ds_q is None:
+            if data_nc_q is None:
+                gut.myprint(f'ERROR! Please provide specific humidity file')
+                raise ValueError('ERROR! Please provide specific humidity file!')
+            ds_ivt = wds.Wind_Dataset(data_nc_u=data_nc_u,
+                                      data_nc_v=data_nc_v,
+                                      data_nc_w=data_nc_w,
+                                      data_nc_fac=data_nc_q,
+                                      plevels=plevels,
+                                      fac_name='q',
+                                      grad_fac=grad_q,  # Compute horizontal gradient of q
+                                      can=False,  # anoamlies are computed later
+                                      **kwargs)
+            self.load_dataset_attributes(base_ds=ds_ivt, init_mask=init_mask)
+            self.ds = ds_ivt.ds
+            self.u_name = ds_ivt.u_name
+            self.v_name = ds_ivt.v_name
+        else:
+            gut.myprint(f'Load wind and q from given datasets')
+            plevels_wind = ds_wind.ds.lev.values
+            plevels_q = ds_q.ds.lev.values
+            if not np.array_equal(plevels_wind, plevels_q):
+                raise ValueError('ERROR! Pressure levels of wind and q do not match!')
+            ds_ivt = (ds_wind.ds['U'] * ds_q.ds['q']).to_dataset(name='U')
+            gut.myprint(f'Compute V * q')
+            ds_ivt['V'] = ds_wind.ds['V'] * ds_q.ds['q']
+            self.load_dataset_attributes(base_ds=ds_wind, init_mask=init_mask)
+            self.ds = ds_ivt
+            self.u_name = ds_wind.u_name
+            self.v_name = ds_wind.v_name
 
-        init_mask = kwargs.pop('init_mask', True)
-        self.load_dataset_attributes(base_ds=ds_ivt, init_mask=init_mask)
-        self.u_name = ds_ivt.u_name
-        self.v_name = ds_ivt.v_name
-
-        vi = kwargs.pop('vi', False)
+        vi = kwargs.pop('vi', True)
         if vi:
             self.compute_ivt()
         self.compute_all_anomalies(**kwargs)

@@ -47,7 +47,7 @@ for plevel in plevels:
         f"/climate_data/2.5/era5_t_{2.5}_{plevel}_ds.nc"
     nc_files_t.append(dataset_file_t)
 
-time_range = ['1980-01-01', '2000-12-31']
+time_range = ['1988-01-01', '1990-12-31']
 ds_q = mp.MultiPressureLevelDataset(data_nc=nc_files_q,
                                     can=True,
                                     an_types=['month', 'JJAS'],
@@ -83,27 +83,28 @@ pt = mut.potential_temperature(
 )
 
 # %%
-# This example uses 18 UTC 04 April 1987 from NCEI.
+# This example uses 04 April 1987 from NCEI.
 date = tu.str2datetime('1987-04-04')
+reload(mut)
+reload(cplt)
+# This example uses 04-07 April 1987 from NCEI.
+dates = tu.get_dates_in_range(start_date='1987-04-04',
+                              end_date='1987-04-07',)
 
-# %% Define start and end points:
-
+# Define start and end points:
 start = (37.0, -105.0)
 end = (35.5, -65.0)
 lon_range = [start[1], end[1]]
 lat_range = [start[0], end[0]]
 
-##############################
-# %% Get the cross section, and convert lat/lon to supplementary coordinates:
+# Get the cross section, and convert lat/lon to supplementary coordinates:
 reload(mut)
 reload(cplt)
-test_data = ds_q.ds.sel(time=date,)
-data_cross_section = gut.merge_datasets(rh,
-                                        pt)
-test_data = data_cross_section.sel(time=date,)
-cross_q = mut.vertical_cross_section(test_data,
+data_cross_section = gut.merge_datasets(rh, pt)
+cross_q = mut.vertical_cross_section(data_cross_section,
                                      lon_range=lon_range,
                                      lat_range=lat_range)
+# %%
 yticks = np.arange(1000, 50, -100)
 im = cplt.plot_2D(x=cross_q['lon'],
                   y=cross_q['isobaric'],

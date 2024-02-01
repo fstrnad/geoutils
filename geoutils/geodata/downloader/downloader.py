@@ -16,13 +16,3 @@ d5.download_era5(variable='pr',
                  run=True,
                  )
 
-# %%
-reload(d5)
-d5.download_era5(variable='olr',
-                 starty=2023,
-                 endy=2023,
-                 start_month='May',
-                 end_month='Sep',
-                 folder='/home/strnad/data/era5/',  # full path
-                 run=True,
-                 )

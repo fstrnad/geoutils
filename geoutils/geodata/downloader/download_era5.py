@@ -30,6 +30,7 @@ dict_era5 = {'t2m': '2m_temperature',
              'sst': 'sea_surface_temperature',
              'ttr': 'top_net_thermal_radiation',
              'olr': 'top_net_thermal_radiation',
+             'z': 'geopotential',
              }
 
 
@@ -97,6 +98,7 @@ def download_era5(variable, plevels=None,
     gut.myprint(f'Download pressure levels {plevels}...')
     gut.myprint(f"Download years {years}...")
     gut.myprint(f"Download months {months}...")
+    gut.myprint(f"Download days {days}...")
 
     cdo = Cdo()    # Parameters
 

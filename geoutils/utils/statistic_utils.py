@@ -523,10 +523,11 @@ def ttest_field(X, Y, serial_data=False,
         nobs_x = len(X['time'])
         nobs_y = len(Y['time'])
 
-    statistic, pvalues = st.ttest_ind_from_stats(mean_x.data, std_x.data, nobs_x,
-                                                 mean_y.data, std_y.data, nobs_y,
-                                                 equal_var=False,
-                                                 alternative='two-sided')
+    statistic, pvalues = st.ttest_ind_from_stats(
+        mean_x.data, std_x.data, nobs_x,
+        mean_y.data, std_y.data, nobs_y,
+        equal_var=False,
+        alternative='two-sided')
     # Convert to xarray
     pvalues = xr.DataArray(data=pvalues, coords=mean_x.coords)
 

@@ -1294,7 +1294,8 @@ class BaseDataset():
                 )
 
     def compute_all_anomalies(self, **kwargs):
-        self.an_types = kwargs.pop('an_types', [])
+        self.an_types = kwargs.pop('an_types',
+                                   ['dayofyear', 'month','JJAS'])
         self.vars = self.get_vars()
         if self.can:
             for vname in self.vars:

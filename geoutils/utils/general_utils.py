@@ -748,6 +748,30 @@ def remove_duplicates_arr(x):
     return np.unique(x)
 
 
+def has_duplicate(arr):
+    """
+    Checks if any item occurs more than once in the array.
+
+    Args:
+    arr (list or numpy.ndarray): The input array.
+
+    Returns:
+    bool: True if any item occurs more than once, False otherwise.
+
+    Example:
+    >>> has_duplicate([1, 2, 3, 4, 1])
+    True
+    >>> has_duplicate([1, 2, 3, 4, 5])
+    False
+    """
+    seen = set()
+    for item in arr:
+        if item in seen:
+            return True
+        seen.add(item)
+    return False
+
+
 def get_name_da(da):
     name = da.name
     return name
