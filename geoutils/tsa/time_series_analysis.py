@@ -300,13 +300,19 @@ def get_ee_ts(evs, rcevs=False, norm=False):
 
 
 def get_most_sync_days_evs(ts, q=0.95):
-
     times = ts.time
     num_tp = len(times)
-    sync_days_ts = np.zeros(num_tp)
-    # _, indices = gut.get_quantile_of_ts(ts, q=q, return_indices=True)
-    indices = gut.get_locmax_composite_tps(ts=ts, q=q)['peak_idx']
-    sync_days_ts[indices] = 1
+    if q > 0:
+        sync_days_ts = np.zeros(num_tp)
+        _, indices = gut.get_quantile_of_ts(ts, q=q,
+                                            max_quantile=True,
+                                            return_indices=True)
+        # indices = gut.get_locmax_composite_tps(ts=ts, q=q)['peak_idx']
+        sync_days_ts[indices] = 1
+    elif q == 0:
+        sync_days_ts = np.ones(num_tp)
+    else:
+        raise ValueError(f'Quantile {q} not defined')
     sync_days_ts = tu.create_xr_ts(data=sync_days_ts, times=times)
 
     return sync_days_ts
@@ -627,8 +633,12 @@ def get_expt_ees(evs, tps, timemean='year'):
 
 def get_cond_occ(tps, cond, counter,
                  small_sample_corection=True,
-                 min_num_samples=5):
+                 min_num_samples=20):
 
+    if isinstance(cond, list):
+        if len(cond) < 1:
+            gut.myprint('WARNING: Condition empty, return 0')
+            return np.zeros(len(counter))
     # Joint count, eg. sync, active, phase
     phase_sync_act = tu.get_sel_tps_ds(ds=cond, tps=tps)
     # Get Counts of conditional intersection, eg. Sync + Active/Break
@@ -637,7 +647,8 @@ def get_cond_occ(tps, cond, counter,
                                              count_arr=counter,
                                              rel_freq=False)
     else:
-        count_phase_act_sync = np.zeros(len(counter))
+        gut.myprint(f'WARNNING: No events in intersection, return 0')
+        return np.zeros(len(counter))
 
     # Determine time points counts for denominator
     # Tps active/break of phase = joint probabilites (P(p,a))
@@ -649,9 +660,8 @@ def get_cond_occ(tps, cond, counter,
 
     # print(count_phase_act)
     if small_sample_corection:
-        gut.myprint('Small sample correction is applied!')
         count_phase_act = np.where(count_phase_act <= min_num_samples,
-                                   count_phase_act*4.22,
+                                   count_phase_act*2.22,
                                    count_phase_act)
     # correct for 0 counts
     count_phase_act = np.where(count_phase_act == 0, np.inf, count_phase_act)

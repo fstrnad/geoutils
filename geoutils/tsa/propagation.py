@@ -32,6 +32,8 @@ def get_day_progression_arr(data, tps, start,
     Returns:
         dict: dictionary that contains xr.Dataarrays of the means
     """
+    if not tu.check_timepoints_in_dataarray(dataarray=data, timepoints=tps, verbose=verbose):
+        return None
     composite_arrs = dict()
     s_step = 1
     e_step = -1
@@ -59,7 +61,8 @@ def get_day_progression_arr(data, tps, start,
         if average_ts:
             # the sign is because average is for the preceeding periode
             # signum of thisstep
-            av_step = step * -1 * math.copysign(1, thisstep) if thisstep != 0 else -1
+            av_step = step * -1 * \
+                math.copysign(1, thisstep) if thisstep != 0 else -1
             this_tps = tu.get_periods_tps(tps=this_tps, start=0,
                                           end=av_step)
 
@@ -80,9 +83,11 @@ def get_day_progression_arr(data, tps, start,
                                                      dim='time')
         else:
             if apply_sum:
-                mean_ts = this_comp_ts if gut.is_single_tp(this_tps) else this_comp_ts.sum(dim='time')
+                mean_ts = this_comp_ts if gut.is_single_tp(
+                    this_tps) else this_comp_ts.sum(dim='time')
             else:
-                mean_ts = this_comp_ts if gut.is_single_tp(this_tps) else this_comp_ts.mean(dim='time')
+                mean_ts = this_comp_ts if gut.is_single_tp(
+                    this_tps) else this_comp_ts.mean(dim='time')
         mean_ts = gut.remove_non_dim_coords(mean_ts)
         mean_ts = mean_ts.expand_dims(
             {'day': 1}).assign_coords({'day': [thisstep]})
@@ -137,12 +142,15 @@ def get_hovmoeller(ds, tps, sps=None, eps=None, num_days=0,
     #                               lon_range=lon_range,
     #                               lat_range=lat_range,
     #                               dateline=dateline)
-    if zonal:
-        hov_means = sput.compute_zonal_mean(ds=composite_arrs)
-    else:
-        hov_means = sput.compute_meridional_mean(ds=composite_arrs)
+    if composite_arrs is not None:
+        if zonal:
+            hov_means = sput.compute_zonal_mean(ds=composite_arrs)
+        else:
+            hov_means = sput.compute_meridional_mean(ds=composite_arrs)
 
-    return hov_means
+        return hov_means
+    else:
+        return None
 
 
 def get_hovmoeller_single_tps(ds, tps, num_days,
@@ -166,16 +174,41 @@ def get_hovmoeller_single_tps(ds, tps, num_days,
                                        lon_range=lon_range,
                                        zonal=zonal,
                                        dateline=dateline)
-        if gf[0] != 0 or gf[1] != 0:
-            tmp_data = sp.ndimage.filters.gaussian_filter(
-                this_hov_data.data, sigma, mode='constant')
-            this_hov_data = xr.DataArray(data=tmp_data,
-                                         dims=this_hov_data.dims,
-                                         coords=this_hov_data.coords)
-        hov_data.append(this_hov_data)
-    single_hov_dates = xr.concat(hov_data, tps)
+        if this_hov_data is not None:
+            if gf[0] != 0 or gf[1] != 0:
+                tmp_data = sp.ndimage.filters.gaussian_filter(
+                    this_hov_data.data, sigma, mode='constant')
+                this_hov_data = xr.DataArray(data=tmp_data,
+                                             dims=this_hov_data.dims,
+                                             coords=this_hov_data.coords)
+            hov_data.append(this_hov_data)
+        else:
+            tps = tps.drop_sel(time=tp.time.data)
+    if len(hov_data) == 0:
+        gut.myprint(f'No data for {var} found!', verbose=True)
+        return None
+    else:
+        single_hov_dates = xr.concat(hov_data, tps.time)
+        return single_hov_dates
 
-    return single_hov_dates
+
+def get_day_progression_tps(data, tps, start,
+                            end=None,  step=1,
+                            var=None):
+    prog_arr = []
+    for tp in tqdm(tps):
+        this_prop = get_day_progression_arr(data=data, tps=tp,
+                                            start=start,
+                                            end=end, step=step,
+                                            var=var)
+        if this_prop is not None:
+            prog_arr.append(this_prop)
+        else:
+            tps = tps.drop_sel(time=tp.time.data)
+
+    single_prop_dates = xr.concat(prog_arr, tps.time)
+
+    return single_prop_dates
 
 
 def get_box_propagation(ds, loc_dict, tps,

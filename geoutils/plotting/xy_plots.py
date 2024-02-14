@@ -1,5 +1,6 @@
 """Basic plotting functions for maps"""
 # import matplotlib.cm as cm
+import xarray as xr
 import pandas as pd
 import geoutils.utils.time_utils as tu
 import seaborn as sns
@@ -77,8 +78,8 @@ def set_legend(ax,
 
 
 def plot_xy(
-    x_arr,
     y_arr,
+    x_arr=None,
     z_arr=[],
     x_err_arr=[],
     y_err_arr=[],
@@ -89,7 +90,6 @@ def plot_xy(
     mk_arr=[""],
     ls_arr=['-'],
     color_arr=None,
-    color_arr_ci=None,
     color=None,
     lcmap=None,
     ax=None,
@@ -104,6 +104,8 @@ def plot_xy(
 ):
     reload(sut)
     reload(gut)
+    if not isinstance(y_arr[0], (list, np.ndarray, xr.DataArray)):
+        y_arr = [y_arr]
     if ax is None:
         figsize = kwargs.pop("figsize", (8, 5))
         set_axis = True

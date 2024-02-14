@@ -261,6 +261,10 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
                    timemean='day',
                    sig_test=False,
                    varname=None):
+    if not isinstance(ds, xr.DataArray) and not isinstance(ds, xr.Dataset):
+        raise ValueError(
+            f'Data has to be of xarray type but is type {type(ds)}')
+
     if isinstance(tps, xr.DataArray):
         tps = tps.time
     else:
@@ -400,6 +404,10 @@ def get_sel_years_dates(years,
                         end_month=None,
                         freq='D',
                         include_last=True):
+    if isinstance(years[0], str):
+        years = str2datetime(years)
+    if isinstance(years, list) and isinstance(years[0], xr.DataArray):
+        years = merge_time_arrays(years)
     sd, ed = get_start_end_date(data=years)
     if include_last:
         ed = add_time_window(ed, time_step=1, freq='Y')
@@ -415,9 +423,10 @@ def get_sel_years_dates(years,
     return sel_dates
 
 
-def remove_consecutive_tps(tps, steps=1,
+def remove_consecutive_tps(tps, steps=0,
                            start=1,
-                           remove_last=True):
+                           remove_last=True,
+                           nneighbours=False):
     """Removes consecutive steps in a set of time points until steps after.
 
     Args:
@@ -425,8 +434,10 @@ def remove_consecutive_tps(tps, steps=1,
         consecutive time points.
         remove_last (bool, optional): remove last time point. Otherwise remove first time points. Defaults to True.
     """
-    if start < 1:
-        raise ValueError(f'Start has to be at least 1 but is {start}!')
+    if start < 1 or steps < 1:
+        gut.myprint(
+            f'WARNING! Start/Steps has to be at least 1 but is {start}/{steps}! Nothing removed!')
+        return tps
     if start > steps:
         raise ValueError(
             f'Start has to be smaller than steps {steps} but is {start}!')
@@ -442,14 +453,16 @@ def remove_consecutive_tps(tps, steps=1,
         common_tps = merge_time_arrays(common_tps, verbose=False)
     else:
         common_tps = common_tps[0]
+
     # Consecutive to consecutive time points are not deleted!
-    for this_step in range(1, steps+1):
-        cons_common_tps = get_common_tps(
-            tps1=common_tps,
-            tps2=add_time_step_tps(tps=common_tps,
-                                   time_step=this_step))
-        if len(cons_common_tps) > 0:
-            common_tps = common_tps.drop_sel(time=cons_common_tps)
+    if nneighbours:
+        for this_step in range(1, steps+1):
+            cons_common_tps = get_common_tps(
+                tps1=common_tps,
+                tps2=add_time_step_tps(tps=common_tps,
+                                       time_step=this_step))
+            if len(cons_common_tps) > 0:
+                common_tps = common_tps.drop_sel(time=cons_common_tps)
 
     if len(common_tps) > 0:
         if remove_last:
@@ -1093,6 +1106,8 @@ def get_tm_name(timemean):
         tm = "3D"
     elif timemean == '2D' or timemean == '2d':
         tm = "2D"
+    elif timemean in ["1D", "1W", "1MS", "Q-FEB", "1Y", "5D", "3D", "2D"]:
+        tm = timemean
     else:
         raise ValueError(
             f"This time mean {timemean} does not exist! Please choose week, month, season or year!"
@@ -1324,7 +1339,7 @@ def compute_anomalies(dataarray, climatology_array=None,
 
 def compute_anomalies_ds(ds, var_name=None,
                          an_types=['month', 'JJAS'],
-                        #  an_types=['dayofyear', 'month', 'JJAS'],
+                         #  an_types=['dayofyear', 'month', 'JJAS'],
                          verbose=True):
     vars = gut.get_vars(ds=ds)
     an_vars = [var_name] if var_name in vars else vars
@@ -1508,10 +1523,10 @@ def tps2str(tps, m=True, d=True):
     if gut.is_single_tp(tps=tps):
         return tp2str(tp=tps, m=m, d=d)
     else:
-        stps, etps = get_start_end_date(tps)
-        sstr = tp2str(tp=stps, m=m, d=d)
-        estr = tp2str(tp=etps, m=m, d=d)
-        return f'{sstr} - {estr}'
+        tps_str = []
+        for tp in tps:
+            tps_str.append(tp2str(tp=tp, m=m, d=d))
+        return tps_str
 
 
 def get_ymdh_date(date):
@@ -1727,7 +1742,8 @@ def add_time_step_tps_old(tps, time_step=1, freq="D", ):
 
 def merge_time_arrays(time_arrays, multiple='max', verbose=False):
     # Combine the time arrays into a single DataArray with a new "time" dimension
-    combined_data = xr.concat(time_arrays, dim="time")
+    # combined_data = xr.concat(time_arrays, dim="time")
+    combined_data = xr.concat(time_arrays, dim="t")
 
     if multiple is not None:
         gut.myprint(
@@ -2356,7 +2372,10 @@ def get_values_by_year(dataarray, years):
     return data_selected
 
 
-def count_time_points(time_points, freq='Y'):
+def count_time_points(time_points,
+                      freq='Y',
+                      start_year=None,
+                      end_year=None,):
     """
     Returns a time series that gives per year (or per month in the year) the number of
     time points.
@@ -2379,7 +2398,11 @@ def count_time_points(time_points, freq='Y'):
     assert_has_time_dimension(time_points)
 
     # Get start and end time points
-    start_time, end_time = get_start_end_date(data=time_points)
+    if start_year is not None and end_year is not None:
+        start_time = str2datetime(f'{start_year}-01-01')
+        end_time = str2datetime(f'{end_year}-12-31')
+    else:
+        start_time, end_time = get_start_end_date(data=time_points)
 
     # Compute the number of years or months between start and end time points
     if freq == 'Y':

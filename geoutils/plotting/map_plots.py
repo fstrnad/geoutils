@@ -241,6 +241,7 @@ def create_map(
     lat_range=None,
     lon_range=None,
     dateline=False,
+    verbose=False,
     **kwargs,
 ):
     projection = 'PlateCarree' if lon_range is not None else projection
@@ -266,7 +267,7 @@ def create_map(
         if ax_central_longitude == 180:
             dateline = True
 
-            gut.myprint('Dateline set to true!')
+            gut.myprint('Dateline set to true!', verbose=verbose)
 
         if central_longitude is not None:
             if central_longitude != ax_central_longitude:
@@ -392,7 +393,8 @@ def plot_map(dmap: xr.DataArray,
     figsize = kwargs.pop("figsize", (9, 6))
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
-    dmap = sput.check_dimensions(dmap, verbose=False)
+    if plot_type != 'points':
+        dmap = sput.check_dimensions(dmap, verbose=False)
     put.check_plot_type(plot_type)
     if ax is not None and projection is not None:
         raise ValueError(
@@ -1123,8 +1125,7 @@ def create_multi_plot(nrows, ncols, projection=None,
                 axs.append(fig.add_subplot(gs[i, j]))
 
             run_idx += 1
-            if run_idx > end_idx:
-                print(run_idx, end_idx)
+            if run_idx >= end_idx:
                 break
     # fig.tight_layout()
     if nrows > 1 or ncols > 1:

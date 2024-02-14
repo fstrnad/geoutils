@@ -326,7 +326,8 @@ def get_locmax_of_ts(ts, q=0.95):
     return peak_ts
 
 
-def get_locmax_composite_tps(ts, q=0.95, distance=3):
+def get_locmax_composite_tps(ts, q=0.95, distance=3,
+                             return_neighbors=False):
     """Gets the maximum timepoints of xr.Dataarray time series for given quantile.
 
     Args:
@@ -337,63 +338,67 @@ def get_locmax_composite_tps(ts, q=0.95, distance=3):
         xr.Dataarray: returns the time points as np.datetime64
     """
     q_value = np.quantile(ts, q)
+    if np.isnan(q_value):
+        raise ValueError(f'Quantile {q} is NaN!')
     peak_idx, _ = find_peaks(ts, height=q_value,
                              # Minimum distance of peaks (to avoid problems in composites)
                              distance=distance,
                              #  prominence=1
                              )
-    roots_idx = find_roots(y=ts.data, x=None, y_0=q_value)
-    # Get Peaks that are as well roots
-    rp_idx = np.intersect1d(peak_idx, roots_idx)
-    idx_sp = np.array([], dtype=int)
-    idx_ep = np.array([], dtype=int)
-    for rp in rp_idx:
-        if ts[rp-1] < q_value:
-            idx_sp = np.append(idx_sp, int(rp-1))
-        else:
-            idx_sp = np.append(idx_sp, int(
-                find_nearest(roots_idx, rp, min=True)))
-        if ts[rp+1] < q_value:
-            idx_ep = np.append(idx_ep, int(rp+1))
-        else:
-            idx_ep = np.append(idx_ep, int(
-                find_nearest(roots_idx, rp, max=True)))
-
-    # Get Peaks that are not roots
-    idx_peak_not_root = np.setxor1d(peak_idx, rp_idx)
-    idx_root_not_peak = np.unique(np.setxor1d(roots_idx, rp_idx))
-    # roots_idx_not_peak = np.unique(np.setxor1d(roots_idx, rp_idx))  # sort as well
-    for pidx in idx_peak_not_root:
-        rp_left = find_nearest(idx_root_not_peak, pidx, min=True)
-        rp_right = find_nearest(idx_root_not_peak, pidx, max=True)
-        idx_sp = np.append(idx_sp, rp_left)
-        idx_ep = np.append(idx_ep, rp_right)
-
-    idx_sp = np.unique(idx_sp)  # sorts as well!
-    idx_ep = np.unique(idx_ep)
-
-    # Account for roots being below the threshold
-    for idx, rp in enumerate(idx_sp):
-        this_rp = rp - 1 if ts[rp] > q_value else rp
-        this_rp = rp if ts[this_rp] > ts[rp] else this_rp
-        idx_sp[idx] = this_rp
-    for idx, rp in enumerate(idx_ep):
-        this_rp = rp + 1 if ts[rp] > q_value else rp
-        this_rp = rp if ts[this_rp] > ts[rp] else this_rp
-        idx_ep[idx] = this_rp
-
     peak_ts = ts[peak_idx]
-    sp_ts = ts[idx_sp]
-    ep_ts = ts[idx_ep]
-    # print(roots_idx)
-    # print(idx_sp)
-    # print(peak_idx)
-    # print(idx_ep)
+
+    if return_neighbors:
+        roots_idx = find_roots(y=ts.data, x=None, y_0=q_value)
+        # Get Peaks that are as well roots
+        rp_idx = np.intersect1d(peak_idx, roots_idx)
+        idx_sp = np.array([], dtype=int)
+        idx_ep = np.array([], dtype=int)
+        for rp in rp_idx:
+            if ts[rp-1] < q_value:
+                idx_sp = np.append(idx_sp, int(rp-1))
+            else:
+                idx_sp = np.append(idx_sp, int(
+                    find_nearest(roots_idx, rp, min=True)))
+            if ts[rp+1] < q_value:
+                idx_ep = np.append(idx_ep, int(rp+1))
+            else:
+                idx_ep = np.append(idx_ep, int(
+                    find_nearest(roots_idx, rp, max=True)))
+
+        # Get Peaks that are not roots
+        idx_peak_not_root = np.setxor1d(peak_idx, rp_idx)
+        idx_root_not_peak = np.unique(np.setxor1d(roots_idx, rp_idx))
+        # roots_idx_not_peak = np.unique(np.setxor1d(roots_idx, rp_idx))  # sort as well
+        for pidx in idx_peak_not_root:
+            rp_left = find_nearest(idx_root_not_peak, pidx, min=True)
+            rp_right = find_nearest(idx_root_not_peak, pidx, max=True)
+            idx_sp = np.append(idx_sp, rp_left)
+            idx_ep = np.append(idx_ep, rp_right)
+
+        idx_sp = np.unique(idx_sp)  # sorts as well!
+        idx_ep = np.unique(idx_ep)
+
+        # Account for roots being below the threshold
+        for idx, rp in enumerate(idx_sp):
+            this_rp = rp - 1 if ts[rp] > q_value else rp
+            this_rp = rp if ts[this_rp] > ts[rp] else this_rp
+            idx_sp[idx] = this_rp
+        for idx, rp in enumerate(idx_ep):
+            this_rp = rp + 1 if ts[rp] > q_value else rp
+            this_rp = rp if ts[this_rp] > ts[rp] else this_rp
+            idx_ep[idx] = this_rp
+
+        sp_ts = ts[idx_sp]
+        ep_ts = ts[idx_ep]
+    else:
+        sp_ts = None
+        ep_ts = None
 
     return {'peaks': peak_ts,
+            'peak_idx': peak_idx,
             'sps': sp_ts,
             'eps': ep_ts,
-            'peak_idx': peak_idx, }
+            }
 
 
 def invert_array(arr):
@@ -504,10 +509,11 @@ def get_exponent10(x, verbose=False):
 
 
 def get_quantile_of_ts(ts, q=0.9,
+                       max_quantile=False,
                        return_indices=False,
                        verbose=False):
     q_value = np.quantile(ts, q)
-    if q >= 0.5:
+    if q >= 0.5 or max_quantile:
         indices = np.where(ts >= q_value)[0]
     else:
         indices = np.where(ts < q_value)[0]
@@ -1201,7 +1207,18 @@ def check_contains_substring(main_string, sub_string):
     Returns:
         bool: True if the sub string is found in the main string, False otherwise.
     """
-    return sub_string in main_string
+    if not isinstance(sub_string, list):
+        sub_string = [sub_string]
+
+    if not isinstance(main_string, str):
+        raise ValueError("Main string must be a string. But is {main_string}!")
+
+    for sub in sub_string:
+        if not isinstance(sub, str):
+            raise ValueError("Sub string must be a string. But is {sub}!")
+        if sub in main_string:
+            return True
+    return False
 
 
 def set_first_element(arr, item):
@@ -1261,3 +1278,55 @@ def has_non_none_objects(arr):
         True if the array contains objects other than None, False otherwise.
     """
     return any(item is not None for item in arr)
+
+
+def move_item_to_first(arr, item):
+    """
+    Moves the specified item to the first position of the array if it exists.
+
+    Args:
+    arr (list or numpy.ndarray): The input array.
+    item: The item to be moved to the first position.
+
+    Returns:
+    list or numpy.ndarray: The modified array with the specified item at the first position,
+    or the original array if the item is not present.
+
+    Example:
+    >>> move_item_to_first([1, 2, 3, 4], 3)
+    [3, 1, 2, 4]
+    >>> move_item_to_first(np.array(['apple', 'banana', 'orange']), 'banana')
+    array(['banana', 'apple', 'orange'], dtype='<U6')
+    >>> move_item_to_first([1, 2, 3, 4], 5)
+    [1, 2, 3, 4]
+    """
+    if item in arr:
+        if isinstance(arr, list):
+            arr.remove(item)
+            arr.insert(0, item)
+        elif isinstance(arr, np.ndarray):
+            arr = np.concatenate(([item], np.setdiff1d(arr, [item])))
+    return arr
+
+
+def round2int(x, round=None):
+    """
+    Rounds a number to the nearest integer.
+
+    Parameters:
+        x (float): The number to be rounded.
+        round (str, optional): The rounding method to be used. Defaults to None.
+
+    Returns:
+        int: The rounded integer value of x.
+    """
+    if round is None:
+        x = int(np.round(x))
+    elif round == 'up':
+        x = int(np.ceil(x))
+    elif round == 'down':
+        x = int(np.floor(x))
+    else:
+        raise ValueError(f"Unsupported rounding method: {round}")
+
+    return x

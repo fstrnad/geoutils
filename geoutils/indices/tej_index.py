@@ -3,6 +3,7 @@
 @Author  :   Felix Strnad
 '''
 # %%
+import numpy as np
 import geoutils.utils.statistic_utils as sut
 import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
@@ -24,7 +25,9 @@ reload(tut)
 def get_tej_index(u200,
                   lon_range=[-0, 30],
                   lat_range=[5, 15],
-                  northward_extension=True):
+                  northward_extension=True,
+                  start_month='Jan',
+                  end_month='Dec',):
     """Returns the tej index based on the 200hPa U-wind dataset.
 
     Args:
@@ -57,23 +60,37 @@ def get_tej_index(u200,
     box_sum.name = 'tej'
 
     tej_idx = box_sum.to_dataset()
+    tej_idx = tu.get_month_range_data(tej_idx,
+                                      start_month=start_month,
+                                      end_month=end_month,
+                                      verbose=False)
 
     return tej_idx
 
 
 def get_tej_strength(u200, tej_val=0,
                      northward_extension=True,
-                     definition='std'):
-    tej = get_tej_index(u200=u200, northward_extension=northward_extension)
+                     definition='std',
+                     start_month='Jan',
+                     end_month='Dec'):
+    tej = get_tej_index(u200=u200, northward_extension=northward_extension,
+                        start_month=start_month,
+                        end_month=end_month)
+
     if definition == 'std':
-        std = tej.std()
-        pos_tej = tej.where(tej < -std, drop=True)
-        neg_tej = tej.where(tej > std, drop=True)
+        std = float(tej.std()['tej'])
+        mean = float(tej.mean()['tej'])
+        gut.myprint(f'mean {mean}, std: {std}')
+        pos_tej = tej.where(tej < mean-0.5*np.sqrt(std), drop=True)
+        neg_tej = tej.where(tej > mean+0.5*np.sqrt(std), drop=True)
     elif definition == 'thresh':
         pos_tej = tej.where(tej < -tej_val, drop=True)
         neg_tej = tej.where(tej > tej_val, drop=True)
     else:
         raise ValueError('Invalid definition for tej strength')
+
+    gut.myprint(f'# anomalous enhanced TEJ times: {len(pos_tej.time)}')
+    gut.myprint(f'# anomalous reduced TEJ times: {len(neg_tej.time)}')
 
     return dict(pos=pos_tej.time,
                 neg=neg_tej.time)
@@ -120,8 +137,10 @@ if __name__ == '__main__':
                               can=True,
                               an_types=['dayofyear', 'month'],
                               )
+    # %%
+    grid_step_z = 2.5
     dataset_file = data_dir + \
-        f"climate_data/{grid_step}/era5_z_{grid_step}_{lev}_ds.nc"
+        f"climate_data/{grid_step_z}/era5_z_{grid_step_z}_{lev}_ds.nc"
     ds_z200 = bds.BaseDataset(data_nc=dataset_file,
                               can=True,
                               an_types=['dayofyear', 'month'],

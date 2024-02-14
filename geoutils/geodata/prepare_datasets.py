@@ -141,40 +141,12 @@ grid_step = 2.5
 for plevel in plevels:
 
     if os.getenv("HOME") == '/home/goswami/fstrnad80':
-        dirname_uwind = f"/mnt/qb/goswami/data/era5/multi_pressure_level/u_component_of_wind/{plevel}/"
-        dirname_vwind = f"/mnt/qb/goswami/data/era5/multi_pressure_level/v_component_of_wind/{plevel}/"
-        dirname_w = f"/mnt/qb/goswami/data/era5/multi_pressure_level/vertical_velocity/{plevel}/"
-        dirname_z = f"/mnt/qb/goswami/data/era5/multi_pressure_level/geopotential/{plevel}/"
-        dirname_pv = f"/mnt/qb/goswami/data/era5/multi_pressure_level/potential_vorticity/{plevel}/"
-        dirname_sh = f"/mnt/qb/goswami/data/era5/multi_pressure_level/specific_humidity/{plevel}/"
-        dirname_temp = f"/mnt/qb/goswami/data/era5/multi_pressure_level/temperature/{plevel}/"
-        dirname_div = f"/mnt/qb/goswami/data/era5/multi_pressure_level/divergence/{plevel}/"
-        dirname_vo = f"/mnt/qb/goswami/data/era5/multi_pressure_level/vorticity/{plevel}/"
+        dirname_file = "/mnt/ceph/goswamicd/datasets"
     else:
         gut.myprint('The computing is not on the qb server!')
 
-    fname_u = dirname_uwind + f'u_component_of_wind_{plevel}_1959_2021.nc'
-    fname_v = dirname_vwind + f'v_component_of_wind_{plevel}_1959_2021.nc'
-    fname_w = dirname_w + f'vertical_velocity_{plevel}_1959_2021.nc'
-    fname_z = dirname_z + f'geopotential_{plevel}_1959_2021.nc'
-
-    fname_pv = dirname_pv + f'potential_vorticity_{plevel}_1959_2021.nc'
-    fname_pv = dirname_pv + f'potential_vorticity_{plevel}_1979_2020.nc'
-    fname_div = dirname_div + f'divergence_{plevel}_1959_2022.nc'
-    fname_sh = dirname_sh + f'specific_humidity_{plevel}_1959_2021.nc'
-    fname_temp = dirname_temp + f'temperature_{plevel}_1959_2021.nc'
-    fname_vo = dirname_vo + f'vorticity_{plevel}_1959_2022.nc'
-    fnames_dict = dict(
-        u=fname_u,
-        v=fname_v,
-        w=fname_w,
-        pv=fname_pv,
-        q=fname_sh,
-        t=fname_temp,
-        z=fname_z,
-        d=fname_div,
-        vo=fname_vo,
-    )
+    # This file contains all the variables on all pressure levels
+    fname = f'{dirname_file}/1959-2023_01_10-wb13-6h-1440x721_with_derived_variables.zarr'
 
     var_names = ['u', 'v', 'w', 'pv', 'z', 'q']
     var_names = ['u', 'v', 'z', 'pv']
@@ -182,7 +154,7 @@ for plevel in plevels:
     var_names = ['z', 'q', 't']
 
     for idx, var_name in enumerate(var_names):
-        fname = fnames_dict[var_name]
+
         if fut.exist_file(fname):
             dataset_file = output_dir + \
                 f"/{output_folder}/{grid_step}/{name}_{var_name}_{grid_step}_{plevel}_ds.nc"
@@ -190,8 +162,10 @@ for plevel in plevels:
             if not fut.exist_file(dataset_file):
                 gut.myprint(f'Create Dataset {dataset_file}')
                 ds = BaseDataset(data_nc=fname,
+                                 var_name=var_name,
                                  grid_step=grid_step,
                                  large_ds=True,
+                                 timemean='day',
                                  #  time_range=time_range,
                                  )
                 ds.save(dataset_file)

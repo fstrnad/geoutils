@@ -1,3 +1,4 @@
+import pandas as pd
 import hdbscan
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.cluster import AffinityPropagation
@@ -16,6 +17,7 @@ from kneed import KneeLocator
 import sklearn.metrics as skm
 from importlib import reload
 import geoutils.utils.general_utils as gut
+import geoutils.utils.time_utils as tu
 import geoutils.plotting.plots as cplt
 from tqdm import tqdm
 reload(gut)
@@ -23,20 +25,59 @@ reload(cplt)
 reload(sput)
 
 
+def plot_statistics(data, sc_th, Z):
+    sample_sc = skm.silhouette_samples(data, Z)
+    im = cplt.plot_xy(x_arr=[np.arange(len(Z))],
+                      y_arr=[sample_sc],
+                      ls_arr=['None'],
+                      mk_arr=['.'],
+                      ylabel="Shilhouette Score",
+                      ylim=(0., .5)
+                      )
+    if sc_th is not None:
+        cplt.plot_hline(
+            y=sc_th, ls='--', color='k',
+            ax=im['ax'])
+    return im
+
+
+def remove_outlayers(data, sc_th, Z):
+    """
+    Remove outlayers from the data based on the silhouette coefficient threshold.
+
+    Parameters:
+    data (numpy.ndarray): The input data.
+    sc_th (float): The silhouette coefficient threshold.
+    Z (numpy.ndarray): The cluster labels.
+
+    Returns:
+    numpy.ndarray: The indices of the data points that are not considered as outlayers.
+    """
+    gut.myprint('Remove Outlayers...')
+    sample_sc = skm.silhouette_samples(data, Z)
+    sign_Z = np.where(sample_sc >= sc_th)[0]
+    gut.myprint(
+        f'Removed {1 - np.count_nonzero(sign_Z)/len(Z)} of all inputs!')
+
+    return sign_Z
+
+
 def k_means_clustering(data,
+                       verbose=True,
                        **kmeans_kwargs):
 
     k_method = kmeans_kwargs.pop('k_method', 'silhouette')
     max_iter = kmeans_kwargs.pop('max_iter', 1000)
     n_init = kmeans_kwargs.pop('n_init', 100)
-    plot_statistics = kmeans_kwargs.pop('plot_statistics', False)
+    plot_stats = kmeans_kwargs.pop('plot_statistics', False)
     rem_outlayers = kmeans_kwargs.pop('rm_ol', False)
     sc_th = kmeans_kwargs.pop('sc_th', 0.05)
     minibatch = kmeans_kwargs.pop('minibatch', True)
     k = kmeans_kwargs.pop('n_clusters', None)
     if k is not None:
         if minibatch:
-            gut.myprint(f'Using MiniBatchKMeans with {k} clusters')
+            gut.myprint(
+                f'Using MiniBatchKMeans with {k} clusters', verbose=verbose)
             kmeans = MiniBatchKMeans(n_clusters=k,
                                      max_iter=max_iter,
                                      n_init=n_init,
@@ -48,6 +89,8 @@ def k_means_clustering(data,
                             n_init=n_init,
                             **kmeans_kwargs)
         kmeans.fit(data)
+        score = skm.silhouette_score(data, kmeans.labels_)
+        gut.myprint(f'Silhouette Score: {score}', verbose=verbose)
 
     else:
         gut.myprint(f'Select number of clusters using the {k_method} method')
@@ -56,14 +99,14 @@ def k_means_clustering(data,
         krange = np.arange(2, 11)
         for ki in tqdm(krange):
             kmeans = KMeans(n_clusters=ki,
-                            init="k-means++",
+                            # init="k-means++",
                             max_iter=max_iter,
                             **kmeans_kwargs)
             kmeans.fit(data)
             score = skm.silhouette_score(data, kmeans.labels_)
             sse.append(kmeans.inertia_)
             sscore.append(score)
-        if plot_statistics:
+        if plot_stats:
             cplt.plot_xy(x_arr=[krange], y_arr=[sscore],
                          xlabel="Number of Clusters",
                          ylabel="Shilhouette Score",
@@ -90,37 +133,53 @@ def k_means_clustering(data,
 
     Z = kmeans.predict(data)
 
-    if plot_statistics:
-        sample_sc = skm.silhouette_samples(data, Z)
-        im = cplt.plot_xy(x_arr=[np.arange(len(Z))],
-                          y_arr=[sample_sc],
-                          ls_arr=['None'],
-                          mk_arr=['.'],
-                          ylabel="Shilhouette Score",
-                          ylim=(0., .5)
-                          )
-        if sc_th is not None:
-            cplt.plot_hline(
-                y=sc_th, ls='--', color='k',
-                ax=im['ax'])
+    if plot_stats:
+        im = plot_statistics(data, sc_th, Z)
     else:
         im = None
 
     if rem_outlayers or sc_th != 0.05:
-        gut.myprint('Remove Outlayers...')
-        sample_sc = skm.silhouette_samples(data, Z)
-        sign_Z = np.where(sample_sc >= sc_th)[0]
-        gut.myprint(
-            f'Removed {1 - np.count_nonzero(sign_Z)/len(Z)} of all inputs!')
-        return {'cluster': Z,
-                'significance': sign_Z,
-                'fit': skm,
-                'im': im}
+        rem_outlayers = True
+        sign_Z = remove_outlayers(data, sc_th, Z)
 
     return {'cluster': Z,
-            'significance': None,
+            'significance': sign_Z if rem_outlayers else None,
             'fit': skm,
-            'im': im}
+            'im': im,
+            'model': kmeans,
+            }
+
+
+def gm_clustering(data,
+                  **kwargs):
+
+    max_iter = kwargs.pop('max_iter', 1000)
+    n_init = kwargs.pop('n_init', 10)
+    k = kwargs.pop('n_clusters', 2)
+    plot_stats = kwargs.pop('plot_statistics', False)
+    sc_th = kwargs.pop('sc_th', 0.05)
+    rm_outlayers = kwargs.pop('rm_ol', False)
+
+    gm = GaussianMixture(n_components=k,
+                         #  init_params="k-means++",
+                         max_iter=max_iter,
+                         n_init=n_init,
+                         covariance_type='full',
+                         #  **kwargs
+                         ).fit(data)
+
+    Z = gm.predict(data)
+
+    if plot_stats:
+        plot_statistics(data, sc_th, Z)
+    if rm_outlayers or sc_th != 0.05:
+        rm_outlayers = True
+        sign_Z = remove_outlayers(data, sc_th, Z)
+
+    return {'cluster': Z,
+            'significance': sign_Z if rm_outlayers else None,
+            'fit': gm,
+            'model': gm}
 
 
 def agglomerative_clustering(data, **kwargs):
@@ -138,7 +197,7 @@ def agglomerative_clustering(data, **kwargs):
     compute_full_tree = kwargs.pop('compute_full_tree', 'auto')
     if n_clusters is None:
         compute_full_tree = True
-    plot_statistics = kwargs.pop('plot_statistics', False)
+    plot_stats = kwargs.pop('plot_statistics', False)
     rem_outlayers = kwargs.pop('rm_ol', False)
     sc_th = kwargs.pop('sc_th', 0.05)
     # The metric to use when calculating distance between instances in a feature array
@@ -157,7 +216,7 @@ def agglomerative_clustering(data, **kwargs):
                                          distance_threshold=distance_threshold,
                                          compute_full_tree=compute_full_tree).fit(data)
 
-    if plot_statistics:
+    if plot_stats:
         # plot the top three levels of the dendrogram
         None
 
@@ -166,7 +225,8 @@ def agglomerative_clustering(data, **kwargs):
 
     return {'cluster': Z,
             'significance': None,
-            'fit': skm}
+            'fit': skm,
+            'model': clustering}
 
 
 def birch_clustering(data,
@@ -174,16 +234,23 @@ def birch_clustering(data,
 
     threshold = kwargs.pop('threshold', 0.01)
     k = kwargs.pop('n_clusters', 2)
-
+    plot_stats = kwargs.pop('plot_statistics', False)
+    rm_ol = kwargs.pop('rm_ol', False)
+    sc_th = kwargs.pop('sc_th', 0.05)
     gut.myprint(f'Get {k} clusters!')
 
     br = Birch(threshold=threshold,
                n_clusters=k).fit(data)
 
     Z = br.predict(data)
+    if plot_stats:
+        plot_statistics(data=data, sc_th=sc_th, Z=Z)
+    if rm_ol:
+        sign_Z = remove_outlayers(data, sc_th, Z)
     return {'cluster': Z,
-            'significance': None,
-            'fit': skm}
+            'significance': sign_Z if rm_ol else None,
+            'fit': skm,
+            'model': br}
 
 
 def affinity_clustering(data,
@@ -196,7 +263,8 @@ def affinity_clustering(data,
     Z = br.predict(data)
     return {'cluster': Z,
             'significance': None,
-            'fit': skm}
+            'fit': skm,
+            'model': br}
 
 
 def spectral_clustering(data,
@@ -223,28 +291,6 @@ def mean_shift_clustering(data,
     return {'cluster': Z,
             'significance': None,
             'fit': skm}
-
-
-def gm_clustering(data,
-                  **kwargs):
-
-    max_iter = kwargs.pop('max_iter', 1000)
-    n_init = kwargs.pop('n_init', 10)
-    k = kwargs.pop('n_clusters', 2)
-
-    gut.myprint(f'Get {k} clusters!')
-
-    gm = GaussianMixture(n_components=k,
-                         init_params="k-means++",
-                         max_iter=max_iter,
-                         n_init=n_init,
-                         #  **kwargs
-                         ).fit(data)
-
-    Z = gm.predict(data)
-    return {'cluster': Z,
-            'significance': None,
-            'fit': gm}
 
 
 def hdbscan_clustering(data, **kwargs):
@@ -285,7 +331,8 @@ def dbscan_clustering(data, **kwargs):
 
     return {'cluster': Z,
             'significance': None,
-            'fit': skm}
+            'fit': skm,
+            'model': clustering}
 
 
 def optics_clustering(data, **kwargs):
@@ -314,7 +361,8 @@ def optics_clustering(data, **kwargs):
 
     return {'cluster': Z,
             'significance': None,
-            'fit': clustering}
+            'fit': clustering,
+            'model': clustering}
 
 
 def tps_cluster_2d_data(data_arr, tps,
@@ -339,43 +387,19 @@ def tps_cluster_2d_data(data_arr, tps,
     # We always check if data is 3d (x,y,time)
 
     cluster_names = kwargs.pop('cluster_names', None)
-    rm_ol = kwargs.pop('rm_ol', False)
-
     data_input = create_2d_clustering_data(data_arr, tps, gf)
 
-    if method == 'kmeans':
-        cluster_dict = k_means_clustering(data=data_input,
-                                          rm_ol=rm_ol, **kwargs)
-    elif method == 'gm':
-        cluster_dict = gm_clustering(data=data_input, **kwargs)
-    elif method == 'dbscan':
-        cluster_dict = dbscan_clustering(data=data_input, **kwargs)
-    elif method == 'optics':
-        cluster_dict = optics_clustering(data=data_input, **kwargs)
-    elif method == 'agglomerative':
-        cluster_dict = agglomerative_clustering(data=data_input, **kwargs)
-    elif method == 'birch':
-        cluster_dict = birch_clustering(data=data_input, **kwargs)
-    elif method == 'spectral':
-        cluster_dict = spectral_clustering(data=data_input, **kwargs)
-    elif method == 'affinity':
-        cluster_dict = affinity_clustering(data=data_input, **kwargs)
-    elif method == 'mean_shift':
-        cluster_dict = mean_shift_clustering(data=data_input, **kwargs)
-    else:
-        raise ValueError(f'Method {method} not implemented yet!')
+    grp_tps_dict = apply_cluster_data(data=data_input,
+                                      objects=tps,
+                                      method=method,
+                                      cluster_names=cluster_names,
+                                      return_model=False,
+                                      **kwargs)
 
-    Z = cluster_dict['cluster']
-    if rm_ol and method == 'kmeans':
-        sign_Z = cluster_dict['significance']
-        Z = Z[sign_Z]
-        tps = tps[sign_Z]
+    grp_tps_dict['keys'] = list(grp_tps_dict.keys())
+    # grp_tps_dict['Z'] = cluster_dict['cluster']
+    # grp_tps_dict['im'] = cluster_dict['im']
 
-    grp_tps_dict = get_cluster_dict(Z=Z, cluster_x=tps,
-                                    cluster_names=cluster_names)
-
-    grp_tps_dict['Z'] = cluster_dict['cluster']
-    grp_tps_dict['im'] = cluster_dict['im']
     return grp_tps_dict
 
 
@@ -383,17 +407,24 @@ def create_2d_clustering_data(data_arr, tps, gf=(0, 0)):
     coll_data = []
     for data in data_arr:
         if isinstance(data, xr.DataArray):
-            if gut.compare_lists(list(data.dims), ['time', 'lon', 'lat']):
+            if len(tps) != len(data.time):
+                tps, data = tu.equalize_time_points(tps, data)
+            dims = gut.get_dims(data)
+            if len(dims) == 3 and 'time' in dims:
+                new_dims = gut.move_item_to_first(dims, 'time')
                 data = sput.transpose_3D_data(
-                    data, dims=['time', 'lon', 'lat'])
+                    data, dims=new_dims)
             elif gut.compare_lists(list(data.dims), ['time', 'ids']):
                 data = sput.transpose_2D_data(data, dims=['time', 'ids'])
+            elif 'time' not in dims:
+                gut.myprint(f'WARNING! No time dimension in data!')
         if len(data.shape) > 3:
-            raise ValueError('Data needs to be of max shape 3 (time, x, y)')
+            gut.myprint(
+                f'Data shape {data.shape} larger dimension than (time, x, y)!')
 
         if len(tps) != data.shape[0]:
             raise ValueError(
-                f'Number of tps and time points in data are not equal!'
+                f'Number of tps {len(tps)} and time points {data.shape[0]} in data are not equal!'
             )
 
         if isinstance(data, xr.DataArray):
@@ -417,7 +448,7 @@ def create_2d_clustering_data(data_arr, tps, gf=(0, 0)):
     return data_input
 
 
-def get_cluster_dict(Z, cluster_x, cluster_names=None):
+def get_cluster_dict(Z, cluster_x, cluster_names=None, verbose=True):
     grp_ids = gut.sort_by_frequency(arr=Z)
 
     grp_tps_dict = dict()
@@ -427,10 +458,12 @@ def get_cluster_dict(Z, cluster_x, cluster_names=None):
             if len(cluster_names) != len(grp_ids):
                 raise ValueError(f'Not same number of key names as groups!')
             keyname = cluster_names[idx]
-            gut.myprint(f'Cluster {keyname} : {len(idx_grp)} objects')
+            gut.myprint(f'Cluster {keyname} : {len(idx_grp)} objects',
+                        verbose=verbose)
             grp_tps_dict[keyname] = cluster_x[idx_grp]
         else:
-            gut.myprint(f'Cluster {idx} : {len(idx_grp)} objects')
+            gut.myprint(f'Cluster {idx} : {len(idx_grp)} objects',
+                        verbose=verbose)
             grp_tps_dict[idx] = cluster_x[idx_grp]
     return grp_tps_dict
 
@@ -440,25 +473,52 @@ def apply_cluster_data(data,
                        method='kmeans',
                        cluster_names=None,
                        standardize=True,
+                       return_model=False,
+                       verbose=True,
                        **kwargs):
+    """
+    Apply clustering algorithm to the input data.
+
+    Parameters:
+        data (array-like): The input data to be clustered.
+        objects (array-like, optional): The objects associated with the data. Default is None.
+        method (str, optional): The clustering method to be used. Default is 'kmeans'.
+        cluster_names (array-like, optional): The names of the clusters. Default is None.
+        standardize (bool, optional): Whether to standardize the data before clustering. Default is True.
+        return_model (bool, optional): Whether to return the clustering model. Default is False.
+        **kwargs: Additional keyword arguments specific to the chosen clustering method.
+
+    Returns:
+        dict or tuple: A dictionary containing the clustered data and associated information.
+                      If return_model is True, a tuple is returned with the dictionary and the clustering model.
+
+    Raises:
+        ValueError: If the input data is not in the correct 2D format.
+
+    """
+    if isinstance(data, list):
+        data = np.array(data)
 
     if len(data.shape) != 2:
         raise ValueError(
             f'Data not in correct input 2D-format. Shape is {data.shape}!')
 
     if standardize:
-        gut.myprint(f'Standardize data!')
+        gut.myprint(f'Standardize data!', verbose=verbose)
         data = sut.standardize(dataset=data, axis=0)
         if gut.count_nans(data) != 0:
-            gut.myprint(f'Data contains Nans: {gut.count_nans(data)}!')
+            gut.myprint(
+                f'Data contains Nans: {gut.count_nans(data)}!', verbose=verbose)
     rm_ol = kwargs.pop('rm_ol', False)
-
-    gut.myprint(f'Shape of input data_input: {data.shape}')
+    gut.myprint(f'Shape of input data_input: {data.shape}', verbose=verbose)
     if method == 'kmeans':
         cluster_dict = k_means_clustering(data=data,
-                                          rm_ol=rm_ol, **kwargs)
+                                          rm_ol=rm_ol,
+                                          verbose=verbose,
+                                          **kwargs)
     elif method == 'gm':
-        cluster_dict = gm_clustering(data=data, **kwargs)
+        cluster_dict = gm_clustering(data=data,
+                                     rm_ol=rm_ol, **kwargs)
     elif method == 'dbscan':
         cluster_dict = dbscan_clustering(data=data, **kwargs)
     elif method == 'optics':
@@ -466,7 +526,8 @@ def apply_cluster_data(data,
     elif method == 'agglomerative':
         cluster_dict = agglomerative_clustering(data=data, **kwargs)
     elif method == 'birch':
-        cluster_dict = birch_clustering(data=data, **kwargs)
+        cluster_dict = birch_clustering(data=data,
+                                        rm_ol=rm_ol, **kwargs)
     elif method == 'spectral':
         cluster_dict = spectral_clustering(data=data, **kwargs)
     elif method == 'affinity':
@@ -480,12 +541,38 @@ def apply_cluster_data(data,
         objects = np.arange(len(data))
 
     Z = cluster_dict['cluster']
-    if rm_ol and method == 'kmeans':
+    if rm_ol:
         sign_Z = cluster_dict['significance']
-        Z = Z[sign_Z]
-        objects = objects[sign_Z]
+        if sign_Z is not None:
+            Z = Z[sign_Z]
+            objects = objects[sign_Z]
 
     grp_cluster_dict = get_cluster_dict(Z=Z, cluster_x=objects,
-                                        cluster_names=cluster_names)
+                                        cluster_names=cluster_names,
+                                        verbose=verbose)
 
-    return grp_cluster_dict
+    if return_model:
+        return cluster_dict['model']
+    else:
+        return grp_cluster_dict
+
+
+def apply_bic(z_events, num_classes=10, n_runs=10):
+    n_classes = np.arange(1, num_classes, 1)
+    n_runs = 10
+    result = []
+    method = 'gm'
+    for k in tqdm(n_classes):
+        for r in range(n_runs):
+            model = apply_cluster_data(data=z_events.data,
+                                       n_clusters=k,
+                                       method=method,
+                                       return_model=True,
+                                       verbose=False,
+                                       standardize=False,
+                                       )
+            result.append(
+                {'k': k, 'bic': model.bic(z_events.data), 'gmm': model}
+            )
+    result = pd.DataFrame(result)
+    return result

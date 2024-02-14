@@ -17,8 +17,8 @@ dependencies:
   - pip
   - scipy
   - joblib
-  - cartopy=0.20.2
-  - matplotlib=3.3.4
+  - cartopy=0.22.0
+  - matplotlib=3.8.2
   - ipywidgets
   - scikit-learn
   - windspharm

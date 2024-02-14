@@ -83,7 +83,7 @@ class BaseDataset():
         self.grid_step = grid_step
         ds = self.open_ds(
             nc_files=data_nc_arr,
-            var_name=var_name,
+            var_name=var_name,  # if var_name given only this variable is read
             lat_range=lat_range,
             lon_range=lon_range,
             time_range=time_range,
@@ -157,6 +157,7 @@ class BaseDataset():
         decode_times=True,
         verbose=True,
         parse_cf=True,
+        var_name=None,
         **kwargs,
     ):
         reload(gut)
@@ -180,7 +181,8 @@ class BaseDataset():
 
             ds = ds.rename({'dummy': self.plevel_name})
             ds[self.plevel_name] = plevels
-
+        if var_name is not None:
+            ds = ds[var_name]
         ds = self.check_dimensions(
             ds, ts_days=decode_times, verbose=verbose,
             **kwargs)
@@ -199,11 +201,13 @@ class BaseDataset():
 
             if grid_step_lat is not None and grid_step_lon is None:
                 gut.myprint(
-                    f'Grid_step_lon not specified, but grid_step_lat is!', verbose=verbose)
+                    f'Grid_step_lon not specified, but grid_step_lat is!',
+                    verbose=verbose)
                 grid_step_lon = grid_step_lat
             if grid_step_lon is not None and grid_step_lat is None:
                 gut.myprint(
-                    f'Grid_step_lat not specified, but grid_step_lon is!', verbose=verbose)
+                    f'Grid_step_lat not specified, but grid_step_lon is!',
+                    verbose=verbose)
                 grid_step_lat = grid_step_lon
 
             if grid_step_lat is not None or grid_step_lon is not None:
@@ -578,7 +582,7 @@ class BaseDataset():
                 gut.myprint('WARNING! Index dictionaries not initialized!')
                 self.indices_flat = self.idx_map = None
         else:
-            gut.myprint('WARNING! No mask initialized!')
+            gut.myprint('No mask initialized!', verbose=verbose)
             self.mask = None
         return self.mask
 

@@ -1,3 +1,4 @@
+import geoutils.utils.statistic_utils as sut
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
@@ -92,6 +93,7 @@ def create_video_map(
         verbose=False,
         time_dim='time',
         plot_sig=False,
+        ds_wind=None,
         **kwargs):
     """ Creates a video from a sequence of frames of a DataArray."""
 
@@ -114,8 +116,15 @@ def create_video_map(
     lon_range = kwargs.pop("lon_range", None)
     dateline = kwargs.pop("dateline", False)
     dpi = kwargs.pop("dpi", 'figure')
-
+    an_type = kwargs.pop("an_type", 'JJAS')
+    var_type_u = kwargs.pop("uvar", f'U_an_{an_type}')
+    var_type_v = kwargs.pop("vvar", f'V_an_{an_type}')
+    lev = kwargs.pop("lev", 200)
     steps = gut.crange(start, end, step)
+    wind_scale = kwargs.pop("wind_scale", 100)
+    key_length = kwargs.pop("key_length", 1)
+    wind_unit = kwargs.pop("wind_unit", rf'm$s^{{-1}}$ ({lev}hPa)')
+    wsteps = kwargs.pop("wsteps", 2)
     for d, step in enumerate(steps):
         tmp_file_name = fut.create_random_filename(folder_path=tmp_folder,
                                                    extension=extension,
@@ -131,7 +140,8 @@ def create_video_map(
 
         if plot_sig:
             mean_data = mean_data*sig_data
-            
+            mean_data = xr.where(sig_data, mean_data, np.nan)
+
         title = f'Day {step}' if title_top is None else title_top
         im = cplt.plot_map(mean_data,
                            ds=ds,
@@ -149,6 +159,27 @@ def create_video_map(
                            central_longitude=central_longitude,
                            **kwargs
                            )
+        if ds_wind is not None:
+            mean_data_u, sig_data_u = tu.get_mean_tps(
+                ds_wind.ds[var_type_u].sel(lev=lev),
+                tps=sel_tps)
+            mean_data_v, sig_data_v = tu.get_mean_tps(
+                ds_wind.ds[var_type_v].sel(lev=lev),
+                tps=sel_tps)
+
+            if plot_sig:
+                sig_data_uv = sut.sig_multiple_field(sig_mask_x=sig_data_u,
+                                                     sig_mask_y=sig_data_v)
+            else:
+                sig_data_uv = 1
+            cplt.plot_wind_field(ax=im['ax'],
+                                 u=mean_data_u*sig_data_uv,
+                                 v=mean_data_v*sig_data_uv,
+                                 scale=wind_scale,
+                                 steps=wsteps,
+                                 key_length=key_length,
+                                 wind_unit=wind_unit,
+                                 )
 
         cplt.save_fig(savepath=tmp_file_name,
                       fig=im['fig'],

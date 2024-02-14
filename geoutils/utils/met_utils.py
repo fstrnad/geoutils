@@ -176,3 +176,19 @@ def geopotential_to_heigth(geopotential):
         geopotential = geopotential * units('m^2/s^2')
     height = metcalc.geopotential_to_height(geopotential)
     return height
+
+
+def remove_units(data):
+    """Remove units from an array.
+
+    Args:
+    ----------
+    data: xarray.DataArray
+        data array with units
+
+    Returns:
+    ----------
+    xarray.DataArray
+        data array without units
+    """
+    return data.metpy.dequantify()

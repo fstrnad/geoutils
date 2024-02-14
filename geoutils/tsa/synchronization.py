@@ -211,7 +211,7 @@ def lagged_synchronization_ts(lag, es_array1,
     # Define input array for synchronization
     sync_ts = np.zeros(len(times))
 
-    for this_lag in lag:
+    for this_lag in tqdm(lag):
         # for ts_exclude given
         if ts_exclude is not None:
             ts_excl_compl = tsa.complement_evs_series(ts_exclude).values
@@ -234,7 +234,6 @@ def lagged_synchronization_ts(lag, es_array1,
                 ts_excl_compl,
                 lag=this_lag - abs(exclude_lags))
         else:
-            print('here')
             this_ts_excl_compl = 1
 
         # for ts_include given
@@ -245,7 +244,6 @@ def lagged_synchronization_ts(lag, es_array1,
                 ts_incl,
                 lag=this_lag)
         else:
-            print('include')
             this_ts_incl = 1
 
         es_array, es_array_lag = tu.get_lagged_ts_arr(

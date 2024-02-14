@@ -43,7 +43,7 @@ def save_fig(savepath, fig=None,
 
     if not gut.check_contains_substring(
         main_string=savepath,
-        sub_string=extension
+        sub_string=['png', 'pdf', 'jpg', 'jpeg', 'svg']
     ):
         savepath += f".{extension}"
     if fig is None:
