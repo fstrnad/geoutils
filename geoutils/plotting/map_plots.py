@@ -103,6 +103,7 @@ def set_grid(ax, alpha=0.5,
     Returns:
         _type_: _description_
     """
+
     # Set grid steps for longitude and latitude
     if ext_dict is not None:
         gs_lon = kwargs.pop('gs_lon', None)
@@ -118,6 +119,7 @@ def set_grid(ax, alpha=0.5,
     else:
         gs_lon = 30
         gs_lat = 20
+
     # Generate the grid
     gl = ax.gridlines(
         draw_labels=True,
@@ -140,6 +142,7 @@ def set_grid(ax, alpha=0.5,
     gl.xlabel_style = {'rotation': -0,
                        'color': 'black', 'size': pst.MEDIUM_SIZE}
     gl.top_labels = True
+
     return ax, kwargs
 
 
@@ -237,7 +240,7 @@ def create_map(
     projection="PlateCarree",
     central_longitude=None,
     alpha=1,
-    plot_grid=False,  # Because often this is already set from before!
+    plot_grid=False,  # Check if this is already set from before!
     lat_range=None,
     lon_range=None,
     dateline=False,
@@ -258,7 +261,8 @@ def create_map(
     figsize = kwargs.pop("figsize", (9, 6))
     # create figure
     if ax is None:
-        fig = plt.figure(figsize=figsize)  # better working in cartopy and matplotlib=3.8.2
+        # better working in cartopy and matplotlib=3.8.2
+        fig = plt.figure(figsize=figsize)
         ax = plt.axes(projection=proj)
         unset_grid = kwargs.pop('unset_grid', False)
         plot_grid = True if not unset_grid else False
@@ -688,8 +692,8 @@ def plot_2D(
             y,
             z,
             cmap=cmap,
-            vmin=vmin,
-            vmax=vmax,
+            # vmin=vmin,
+            # vmax=vmax,
             shading="auto",
             norm=norm,
             zorder=zorder,

@@ -1,3 +1,4 @@
+from latgmm.utils import eof
 import pandas as pd
 import hdbscan
 from sklearn.cluster import MiniBatchKMeans
@@ -89,9 +90,6 @@ def k_means_clustering(data,
                             n_init=n_init,
                             **kmeans_kwargs)
         kmeans.fit(data)
-        score = skm.silhouette_score(data, kmeans.labels_)
-        gut.myprint(f'Silhouette Score: {score}', verbose=verbose)
-
     else:
         gut.myprint(f'Select number of clusters using the {k_method} method')
         sse = []
@@ -132,8 +130,9 @@ def k_means_clustering(data,
         kmeans.fit(data)
 
     Z = kmeans.predict(data)
-
     if plot_stats:
+        score = skm.silhouette_score(data, Z)
+        gut.myprint(f'Silhouette Score: {score}', verbose=verbose)
         im = plot_statistics(data, sc_th, Z)
     else:
         im = None
@@ -151,6 +150,7 @@ def k_means_clustering(data,
 
 
 def gm_clustering(data,
+                  verbose=True,
                   **kwargs):
 
     max_iter = kwargs.pop('max_iter', 1000)
@@ -169,6 +169,8 @@ def gm_clustering(data,
                          ).fit(data)
 
     Z = gm.predict(data)
+    score = skm.silhouette_score(data, Z)
+    gut.myprint(f'Silhouette Score: {score}', verbose=verbose)
 
     if plot_stats:
         plot_statistics(data, sc_th, Z)
@@ -518,7 +520,9 @@ def apply_cluster_data(data,
                                           **kwargs)
     elif method == 'gm':
         cluster_dict = gm_clustering(data=data,
-                                     rm_ol=rm_ol, **kwargs)
+                                     rm_ol=rm_ol,
+                                     verbose=verbose,
+                                     **kwargs)
     elif method == 'dbscan':
         cluster_dict = dbscan_clustering(data=data, **kwargs)
     elif method == 'optics':
@@ -576,3 +580,53 @@ def apply_bic(z_events, num_classes=10, n_runs=10):
             )
     result = pd.DataFrame(result)
     return result
+
+
+def apply_sscore(z_events, num_classes=10, n_runs=10, method='kmeans'):
+    if num_classes < 2:
+        raise ValueError('Number of classes must be at least 2!')
+    n_classes = np.arange(2, num_classes+2, 1)
+    result = {}
+    for k in tqdm(n_classes):
+        this_scores = []
+        for r in range(n_runs):
+            model = apply_cluster_data(data=z_events.data,
+                                       n_clusters=k,
+                                       method=method,
+                                       return_model=True,
+                                       verbose=False,
+                                       standardize=False,
+                                       )
+            Z = model.predict(z_events.data)
+            this_scores.append(skm.silhouette_score(z_events.data, Z))
+        result[k] = this_scores
+    return result
+
+
+def grid_search(data_input, tps, num_classes=10, num_eofs=None, steps=15,
+                ts=None, min_corr=0,
+                n_runs=5, method='kmeans'):
+
+    grid = np.zeros((num_eofs, num_classes))
+    for i, n_components in enumerate(np.arange(2, num_eofs+2, 1)):
+        sppca = eof.SpatioTemporalPCA(data_input, n_components=n_components)
+        gut.myprint(
+            f"Explained variance by {n_components} EOFs: {np.sum(sppca.explained_variance())}")
+
+        # Get latent encoding
+        z_events = eof.spatio_temporal_latent_volume(sppca, data_input,
+                                                     tps=tps,
+                                                     ts=ts,
+                                                     min_corr=min_corr,
+                                                     num_eofs=num_eofs,
+                                                     steps=steps)
+
+        n_results = apply_sscore(z_events=z_events,
+                                 num_classes=num_classes,
+                                 n_runs=n_runs,
+                                 method=method
+                                 )
+        for j, k in enumerate(n_results):
+            grid[i, j] = np.mean(n_results[k])
+
+    return grid

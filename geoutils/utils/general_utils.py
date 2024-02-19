@@ -432,6 +432,19 @@ def invert_array(arr):
     return inverted_arr
 
 
+def reverse_array(input_array):
+    """
+    Reverses the order of elements in the input array.
+
+    Args:
+        input_array (list): The array to be reversed.
+
+    Returns:
+        list: The reversed array.
+    """
+    return input_array[::-1]
+
+
 def set_neighbors_to_1(arr):
     """
     Sets the items to the left and right of each 1 in the input array to 1.

@@ -304,6 +304,29 @@ def get_corr_function(corr_method):
         raise ValueError("Choosen correlation method does not exist!")
 
 
+def corr_function(corr_type='pearson'):
+    """
+    Returns the correlation function based on the specified correlation type.
+
+    Parameters:
+        corr_type (str): The type of correlation. Default is 'pearson'.
+
+    Returns:
+        function: The correlation function.
+
+    Raises:
+        ValueError: If the specified correlation type is not implemented.
+    """
+    if corr_type == 'spearman':
+        corr_func = st.stats.spearmanr
+    elif corr_type == 'pearson':
+        corr_func = st.stats.pearsonr
+    else:
+        raise ValueError(f'Correlation type {corr_type} not implemented!')
+    return corr_func
+
+
+
 def onesided_test(corr):
     """P-values of one sided t-test of spearman correlation.
     Following: https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient
