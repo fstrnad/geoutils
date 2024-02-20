@@ -42,6 +42,27 @@ def plot_statistics(data, sc_th, Z):
     return im
 
 
+def get_silhouette_scores(data, Z):
+    """Gets the silhouette scores for the input data of all samples
+    """
+    return skm.silhouette_samples(data, Z)
+
+
+def get_silhouette_score(data, Z):
+    """
+    Returns the silhouette score for the input data as a float.
+
+    Parameters:
+    data (array-like): The input data.
+    Z (array-like): The cluster labels.
+
+    Returns:
+    float: The silhouette score.
+    """
+    sscore = float(skm.silhouette_score(data, Z))
+    return np.around(sscore, 3)
+
+
 def remove_outlayers(data, sc_th, Z):
     """
     Remove outlayers from the data based on the silhouette coefficient threshold.
@@ -55,7 +76,7 @@ def remove_outlayers(data, sc_th, Z):
     numpy.ndarray: The indices of the data points that are not considered as outlayers.
     """
     gut.myprint('Remove Outlayers...')
-    sample_sc = skm.silhouette_samples(data, Z)
+    sample_sc = get_silhouette_scores(data, Z)
     sign_Z = np.where(sample_sc >= sc_th)[0]
     gut.myprint(
         f'Removed {1 - np.count_nonzero(sign_Z)/len(Z)} of all inputs!')
@@ -71,8 +92,6 @@ def k_means_clustering(data,
     max_iter = kmeans_kwargs.pop('max_iter', 1000)
     n_init = kmeans_kwargs.pop('n_init', 100)
     plot_stats = kmeans_kwargs.pop('plot_statistics', False)
-    rem_outlayers = kmeans_kwargs.pop('rm_ol', False)
-    sc_th = kmeans_kwargs.pop('sc_th', 0.05)
     minibatch = kmeans_kwargs.pop('minibatch', True)
     k = kmeans_kwargs.pop('n_clusters', None)
     if k is not None:
@@ -130,21 +149,9 @@ def k_means_clustering(data,
         kmeans.fit(data)
 
     Z = kmeans.predict(data)
-    if plot_stats:
-        score = skm.silhouette_score(data, Z)
-        gut.myprint(f'Silhouette Score: {score}', verbose=verbose)
-        im = plot_statistics(data, sc_th, Z)
-    else:
-        im = None
-
-    if rem_outlayers or sc_th != 0.05:
-        rem_outlayers = True
-        sign_Z = remove_outlayers(data, sc_th, Z)
 
     return {'cluster': Z,
-            'significance': sign_Z if rem_outlayers else None,
             'fit': skm,
-            'im': im,
             'model': kmeans,
             }
 
@@ -169,9 +176,6 @@ def gm_clustering(data,
                          ).fit(data)
 
     Z = gm.predict(data)
-    score = skm.silhouette_score(data, Z)
-    gut.myprint(f'Silhouette Score: {score}', verbose=verbose)
-
     if plot_stats:
         plot_statistics(data, sc_th, Z)
     if rm_outlayers or sc_th != 0.05:
@@ -200,7 +204,6 @@ def agglomerative_clustering(data, **kwargs):
     if n_clusters is None:
         compute_full_tree = True
     plot_stats = kwargs.pop('plot_statistics', False)
-    rem_outlayers = kwargs.pop('rm_ol', False)
     sc_th = kwargs.pop('sc_th', 0.05)
     # The metric to use when calculating distance between instances in a feature array
     metric = kwargs.pop('metric', 'l2')
@@ -398,10 +401,6 @@ def tps_cluster_2d_data(data_arr, tps,
                                       return_model=False,
                                       **kwargs)
 
-    grp_tps_dict['keys'] = list(grp_tps_dict.keys())
-    # grp_tps_dict['Z'] = cluster_dict['cluster']
-    # grp_tps_dict['im'] = cluster_dict['im']
-
     return grp_tps_dict
 
 
@@ -498,6 +497,9 @@ def apply_cluster_data(data,
         ValueError: If the input data is not in the correct 2D format.
 
     """
+    plot_stats = kwargs.pop('plot_statistics', False)
+    rm_ol = kwargs.pop('rm_ol', False)
+    sc_th = kwargs.pop('sc_th', 0.05)
     if isinstance(data, list):
         data = np.array(data)
 
@@ -515,12 +517,10 @@ def apply_cluster_data(data,
     gut.myprint(f'Shape of input data_input: {data.shape}', verbose=verbose)
     if method == 'kmeans':
         cluster_dict = k_means_clustering(data=data,
-                                          rm_ol=rm_ol,
                                           verbose=verbose,
                                           **kwargs)
     elif method == 'gm':
         cluster_dict = gm_clustering(data=data,
-                                     rm_ol=rm_ol,
                                      verbose=verbose,
                                      **kwargs)
     elif method == 'dbscan':
@@ -531,7 +531,7 @@ def apply_cluster_data(data,
         cluster_dict = agglomerative_clustering(data=data, **kwargs)
     elif method == 'birch':
         cluster_dict = birch_clustering(data=data,
-                                        rm_ol=rm_ol, **kwargs)
+                                        **kwargs)
     elif method == 'spectral':
         cluster_dict = spectral_clustering(data=data, **kwargs)
     elif method == 'affinity':
@@ -545,8 +545,16 @@ def apply_cluster_data(data,
         objects = np.arange(len(data))
 
     Z = cluster_dict['cluster']
-    if rm_ol:
-        sign_Z = cluster_dict['significance']
+    score = get_silhouette_score(data, Z)
+    gut.myprint(f'Silhouette Score: {score}', verbose=verbose, bold=True, color='green')
+    sscores = get_silhouette_scores(data, Z)
+
+    if plot_stats:
+        plot_statistics(data, sc_th, Z)
+
+    if rm_ol or sc_th != 0.05:
+        rm_ol = True
+        sign_Z = remove_outlayers(data, sc_th, Z)
         if sign_Z is not None:
             Z = Z[sign_Z]
             objects = objects[sign_Z]
@@ -555,10 +563,16 @@ def apply_cluster_data(data,
                                         cluster_names=cluster_names,
                                         verbose=verbose)
 
+    grp_cluster_dict['keys'] = list(grp_cluster_dict.keys())
+    grp_cluster_dict['Z'] = cluster_dict['cluster']
+    grp_cluster_dict['sscores'] = sscores
+
     if return_model:
         return cluster_dict['model']
     else:
-        return grp_cluster_dict
+        grp_cluster_dict['model'] = cluster_dict['model']
+
+    return grp_cluster_dict
 
 
 def apply_bic(z_events, num_classes=10, n_runs=10):
@@ -603,22 +617,30 @@ def apply_sscore(z_events, num_classes=10, n_runs=10, method='kmeans'):
     return result
 
 
-def grid_search(data_input, tps, num_classes=10, num_eofs=None, steps=15,
-                ts=None, min_corr=0,
+def grid_search(data_input, tps, num_classes=10, num_eofs=5, steps=15,
+                ts=None, min_corr=0, max_num_eofs=None,
                 n_runs=5, method='kmeans'):
 
+    if max_num_eofs is None:
+        max_num_eofs = num_eofs
+    else:
+        if max_num_eofs < num_eofs:
+            raise ValueError(
+                'Maximum number of EOFs must be larger than number of EOFs!')
+
     grid = np.zeros((num_eofs, num_classes))
+    sppca = eof.SpatioTemporalPCA(data_input, n_components=max_num_eofs)
+    gut.myprint(
+        f"Explained variance by {max_num_eofs} EOFs: {np.sum(sppca.explained_variance())}")
     for i, n_components in enumerate(np.arange(2, num_eofs+2, 1)):
-        sppca = eof.SpatioTemporalPCA(data_input, n_components=n_components)
-        gut.myprint(
-            f"Explained variance by {n_components} EOFs: {np.sum(sppca.explained_variance())}")
+        gut.myprint(f"Get {n_components} EOFs!")
 
         # Get latent encoding
         z_events = eof.spatio_temporal_latent_volume(sppca, data_input,
                                                      tps=tps,
                                                      ts=ts,
                                                      min_corr=min_corr,
-                                                     num_eofs=num_eofs,
+                                                     num_eofs=n_components,
                                                      steps=steps)
 
         n_results = apply_sscore(z_events=z_events,
