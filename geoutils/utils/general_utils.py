@@ -12,9 +12,10 @@ import xarray as xr
 SEED = 42
 
 
-def myprint(str, verbose=True, lines=False, bold=False, color=None):
+def myprint(str, verbose=True, lines=False, bold=False, italic=False, color=None):
     # ANSI escape codes for styling text
     style = "\033[1m" if bold else ""
+    italic_code = "\033[3m" if italic else ""
     reset_style = "\033[0m"
 
     # ANSI escape codes for colors
@@ -34,7 +35,7 @@ def myprint(str, verbose=True, lines=False, bold=False, color=None):
         color_code = colors.get(color.lower(), "")  # Default to empty string if color not found
 
     if verbose:
-        styled_text = f"{style}{color_code}{str}{reset_style}"
+        styled_text = f"{style}{italic_code}{color_code}{str}{reset_style}"
         if lines:
             pprint(styled_text)
         else:
