@@ -1,6 +1,5 @@
 """General Util functions."""
 from collections import Counter
-import pickle
 from pprint import pprint
 import cftime
 from itertools import combinations_with_replacement

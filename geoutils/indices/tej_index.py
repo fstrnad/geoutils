@@ -23,9 +23,11 @@ reload(tut)
 
 
 def get_tej_index(u200,
-                  lon_range=[-0, 30],
-                  lat_range=[5, 15],
-                  northward_extension=True,
+                  #   lon_range=[-0, 30],
+                  #   lat_range=[5, 15],
+                  lon_range=[0, 70],  # definition by Huang et al. 2019
+                  lat_range=[0, 15],
+                  northward_extension=False,
                   start_month='Jan',
                   end_month='Dec',):
     """Returns the tej index based on the 200hPa U-wind dataset.
@@ -81,19 +83,19 @@ def get_tej_strength(u200, tej_val=0,
         std = float(tej.std()['tej'])
         mean = float(tej.mean()['tej'])
         gut.myprint(f'mean {mean}, std: {std}')
-        pos_tej = tej.where(tej < mean-0.5*np.sqrt(std), drop=True)
-        neg_tej = tej.where(tej > mean+0.5*np.sqrt(std), drop=True)
+        enhanced_tej = tej.where(tej < mean-np.sqrt(std), drop=True)
+        reduced_tej = tej.where(tej > mean+np.sqrt(std), drop=True)
     elif definition == 'thresh':
-        pos_tej = tej.where(tej < -tej_val, drop=True)
-        neg_tej = tej.where(tej > tej_val, drop=True)
+        enhanced_tej = tej.where(tej < -tej_val, drop=True)
+        reduced_tej = tej.where(tej > tej_val, drop=True)
     else:
         raise ValueError('Invalid definition for tej strength')
 
-    gut.myprint(f'# anomalous enhanced TEJ times: {len(pos_tej.time)}')
-    gut.myprint(f'# anomalous reduced TEJ times: {len(neg_tej.time)}')
+    gut.myprint(f'# anomalous enhanced TEJ times: {len(enhanced_tej.time)}')
+    gut.myprint(f'# anomalous reduced TEJ times: {len(reduced_tej.time)}')
 
-    return dict(pos=pos_tej.time,
-                neg=neg_tej.time)
+    return dict(enhanced=enhanced_tej.time,
+                reduced=reduced_tej.time)
 
 
 def tej_eofs(u200_ds):
@@ -122,9 +124,19 @@ def tej_pattern(u200):
 if __name__ == '__main__':
     reload(cplt)
     data_dir = "/home/strnad/data/"
+    plot_dir = "/home/strnad/data/plots/tej/"
+
     lev = 200
     grid_step = 1
+    dataset_file = data_dir + \
+        f"climate_data/{grid_step}/era5_u_{grid_step}_{lev}_ds.nc"
 
+    u_def = bds.BaseDataset(data_nc=dataset_file,
+                            can=True,
+                            an_types=['dayofyear', 'month'],
+                            )
+
+    grid_step = 2.5
     dataset_file = data_dir + \
         f"climate_data/{grid_step}/era5_v_{grid_step}_{lev}_ds.nc"
     ds_v200 = bds.BaseDataset(data_nc=dataset_file,
@@ -137,7 +149,7 @@ if __name__ == '__main__':
                               can=True,
                               an_types=['dayofyear', 'month'],
                               )
-    # %%
+
     grid_step_z = 2.5
     dataset_file = data_dir + \
         f"climate_data/{grid_step_z}/era5_z_{grid_step_z}_{lev}_ds.nc"
@@ -146,132 +158,140 @@ if __name__ == '__main__':
                               an_types=['dayofyear', 'month'],
                               )
     # %%
+    dataset_file = data_dir + \
+        f"/climate_data/2.5/era5_sst_{2.5}_ds.nc"
+
+    ds_sst = bds.BaseDataset(data_nc=dataset_file,
+                             can=True,
+                             an_types=['JJAS', 'month'],
+                             month_range=['Jun', 'Sep'],
+                             #  lon_range=lon_range_cut,
+                             #  lat_range=lat_range_cut,
+                             )
+    # %%
     reload(cplt)
     an_type = 'month'
     var_type = f'an_{an_type}'
-    ctype = 'pos'
-    u200_normal = tu.get_month_range_data(ds_u200.ds['u'], 'Jun',
-                                          'Sep')
-    v200_normal = tu.get_month_range_data(ds_v200.ds['v'], 'Jun',
-                                          'Sep')
-    u200 = tu.get_month_range_data(ds_u200.ds[var_type], 'Jun',
-                                   'Sep')
-    v200 = tu.get_month_range_data(ds_v200.ds[var_type], 'Jun',
-                                   'Sep')
-    z200 = tu.get_month_range_data(ds_z200.ds[var_type], 'Jun',
-                                   'Sep')
 
-    tej_tps = get_tej_strength(u200=u200,
-                               northward_extension=False,)
+    tej_tps = get_tej_strength(u200=u_def.ds[var_type],
+                               definition='thresh',
+                               tej_val=3,  # or 3 for clearer results
+                               start_month='Jun',
+                               end_month='Sep',
+                               northward_extension=False,
+                               )
+    tej_dict = dict(
+        enhanced=tej_tps['enhanced'],
+        reduced=tej_tps['reduced'],
+    )
 
-    im = cplt.create_multi_plot(nrows=2, ncols=2,
-                                title=f'Phases of the Tropical Easterly Jet  ({ctype}, {200}hPa)',
+    nrows = len(tej_dict)
+    ncols = 3
+    im = cplt.create_multi_plot(nrows=nrows, ncols=ncols,
                                 projection='PlateCarree',
-                                lon_range=[-20, 160],
-                                lat_range=[-30, 60],
-                                wspace=0.13,
-                                hspace=0.5,)
+                                lon_range=[-20, 180],
+                                lat_range=[-20, 70],
+                                wspace=0.1,
+                                hspace=0.8,
+                                dateline=False)
+    for idx, (tej_type, this_tps) in enumerate(tej_dict.items()):
+        gut.myprint(f'Plotting {tej_type} {len(this_tps)} time steps')
+        mean_tps_u, sig_u = tu.get_mean_tps(ds_u200.ds[f'an_{an_type}'],
+                                            this_tps.time)
+        vmax = 6
+        vmin = -vmax
 
-    mean_tps_u = tu.get_sel_tps_ds(u200_normal,
-                                   tej_tps[ctype].time).median('time')
-    mean_tps_v = tu.get_sel_tps_ds(v200_normal,
-                                   tej_tps[ctype].time).median('time')
-    vmax = 30
-    vmin = -vmax
+        im_comp = cplt.plot_map(mean_tps_u,
+                                ax=im['ax'][idx*ncols + 0],
+                                plot_type='contourf',
+                                cmap='PuOr',
+                                centercolor='white',
+                                levels=12,
+                                vmin=vmin, vmax=vmax,
+                                title=f"U200 Anomalies",
+                                label=rf'U-wind Anomalies {lev} hPa (wrt {an_type}) [m/s]',
+                                vertical_title=f'{tej_type} TEJ',
+                                )
 
-    im_comp = cplt.plot_map(mean_tps_u,
-                            ax=im['ax'][0],
-                            plot_type='contourf',
-                            centercolor='white',
-                            cmap='RdBu',
-                            levels=10,
-                            vmin=vmin, vmax=vmax,
-                            title=f"Mean U200",
-                            label=rf'U-winds {lev} hPa [m/s]',
-                            )
+        mean_tps_v, sig_v = tu.get_mean_tps(ds_v200.ds[f'an_{an_type}'],
+                                            this_tps.time)
+        vmax = 5
+        vmin = -vmax
 
-    dict_w = cplt.plot_wind_field(ax=im['ax'][0],
-                                  u=mean_tps_u,
-                                  v=mean_tps_v,
-                                  #   u=mean_u,
-                                  #   v=mean_v,
-                                  scale=300,
-                                  steps=7,
-                                  key_length=5,
-                                  )
-    lon_range = [-0, 30]
-    lat_range = [5, 15]
-    cplt.plot_rectangle(ax=im['ax'][0],
-                        lon_range=lon_range,
-                        lat_range=lat_range,
-                        lw=5,
-                        color='magenta')
-    lon_range = [70, 80]
-    lat_range = [10, 30]
-    cplt.plot_rectangle(ax=im['ax'][0],
-                        lon_range=lon_range,
-                        lat_range=lat_range,
-                        lw=5,
-                        color='magenta')
+        im_comp = cplt.plot_map(mean_tps_v,
+                                ax=im['ax'][idx*ncols + 1],
+                                plot_type='contourf',
+                                cmap='PuOr',
+                                centercolor='white',
+                                levels=12,
+                                vmin=vmin, vmax=vmax,
+                                title=f"V200 Anomalies",
+                                label=rf'V-wind Anomalies {lev} hPa (wrt {an_type}) [m/s]',
+                                )
 
-    mean_tps_u = tu.get_sel_tps_ds(u200,
-                                   tej_tps[ctype].time).mean('time')
-    vmax = 8
-    vmin = -vmax
+        mean_tps, sig_z = tu.get_mean_tps(ds_z200.ds[f'an_{an_type}'],
+                                          this_tps.time)
+        vmax = 5.e2
+        vmin = -vmax
+        im_comp = cplt.plot_map(mean_tps,
+                                ax=im['ax'][idx*ncols + 2],
+                                plot_type='contourf',
+                                cmap='RdYlBu_r',
+                                centercolor='white',
+                                levels=12,
+                                vmin=vmin, vmax=vmax,
+                                title=f"z200 Anomalies",
+                                label=rf'Anomalies GP (wrt {an_type}) [$m^2/s^2$]',
+                                )
+        dict_w = cplt.plot_wind_field(ax=im_comp['ax'],
+                                      u=mean_tps_u,
+                                      v=mean_tps_v,
+                                      #   u=mean_u,
+                                      #   v=mean_v,
+                                      scale=50,
+                                      steps=2,
+                                      key_length=2,
+                                      )
 
-    im_comp = cplt.plot_map(mean_tps_u,
-                            ax=im['ax'][1],
-                            plot_type='contourf',
-                            cmap='PuOr',
-                            centercolor='white',
-                            levels=12,
-                            vmin=vmin, vmax=vmax,
-                            title=f"U200 Anomalies",
-                            label=rf'U-wind Anomalies {lev} hPa (wrt {an_type}) [m/s]',
-                            )
-
-    mean_tps_v = tu.get_sel_tps_ds(v200,
-                                   tej_tps[ctype].time).mean('time')
-    vmax = 5
-    vmin = -vmax
-
-    im_comp = cplt.plot_map(mean_tps_v,
-                            ax=im['ax'][2],
-                            plot_type='contourf',
-                            cmap='PuOr',
-                            centercolor='white',
-                            levels=12,
-                            vmin=vmin, vmax=vmax,
-                            title=f"V200 Anomalies",
-                            label=rf'V-wind Anomalies {lev} hPa (wrt {an_type}) [m/s]',
-                            )
-
-    mean_tps = tu.get_sel_tps_ds(z200,
-                                 tej_tps[ctype].time).mean('time')
-    vmax = .7e2
-    vmin = -vmax
-    im_comp = cplt.plot_map(mean_tps,
-                            ax=im['ax'][3],
-                            plot_type='contourf',
-                            cmap='RdYlBu_r',
-                            centercolor='white',
-                            levels=12,
-                            vmin=vmin, vmax=vmax,
-                            title=f"z200 Anomalies",
-                            label=rf'Anomalies GPH (wrt {an_type}) [m]',
-                            )
-    dict_w = cplt.plot_wind_field(ax=im['ax'][3],
-                                  u=mean_tps_u,
-                                  v=mean_tps_v,
-                                  #   u=mean_u,
-                                  #   v=mean_v,
-                                  scale=100,
-                                  steps=6,
-                                  key_length=5,
-                                  )
-
-    plot_dir = "/home/strnad/data/plots/tej/"
-    savepath = plot_dir + \
-        f"definitions/u200_uv200_{an_type}_tej_{ctype}.png"
-    cplt.save_fig(savepath=savepath, fig=im['fig'])
+        plot_dir = "/home/strnad/data/plots/tej/"
+        savepath = plot_dir + \
+            f"definitions/u200_uv200_{an_type}_tej_types.png"
+        cplt.save_fig(savepath=savepath, fig=im['fig'])
     # %%
+    im = cplt.create_multi_plot(nrows=1,
+                                ncols=2,
+                                orientation='horizontal',
+                                # hspace=0.7,
+                                wspace=0.2,
+                                projection='PlateCarree',
+                                lat_range=[-50, 70],
+                                lon_range=[0, -60],
+                                dateline=True,
+                                )
+    vmin_sst = -1
+    vmax_sst = -vmin_sst
+    an_type = 'month'
+    var_type = f'an_{an_type}'
+    label_sst = f'SST Anomalies (wrt {an_type}) [°C]'
+    for idx, (group, sel_tps) in enumerate(tej_dict.items()):
+
+        mean, mask = tu.get_mean_tps(ds_sst.ds[var_type], tps=sel_tps)
+
+        im_sst = cplt.plot_map(mean,
+                               ax=im['ax'][idx],
+                               title=f'{group} TEJ',
+                               cmap='RdBu_r',
+                               plot_type='contourf',
+                               levels=14,
+                               centercolor='white',
+                               vmin=vmin_sst, vmax=vmax_sst,
+                               extend='both',
+                               orientation='horizontal',
+                               significance_mask=mask,
+                               hatch_type='..',
+                               label=label_sst,
+                               )
+
+    savepath = plot_dir + \
+        f"definitions/sst_{an_type}_tej_types.png"
+    cplt.save_fig(savepath=savepath, fig=im['fig'])

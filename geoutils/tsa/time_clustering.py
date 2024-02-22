@@ -163,9 +163,6 @@ def gm_clustering(data,
     max_iter = kwargs.pop('max_iter', 1000)
     n_init = kwargs.pop('n_init', 10)
     k = kwargs.pop('n_clusters', 2)
-    plot_stats = kwargs.pop('plot_statistics', False)
-    sc_th = kwargs.pop('sc_th', 0.05)
-    rm_outlayers = kwargs.pop('rm_ol', False)
 
     gm = GaussianMixture(n_components=k,
                          #  init_params="k-means++",
@@ -176,14 +173,8 @@ def gm_clustering(data,
                          ).fit(data)
 
     Z = gm.predict(data)
-    if plot_stats:
-        plot_statistics(data, sc_th, Z)
-    if rm_outlayers or sc_th != 0.05:
-        rm_outlayers = True
-        sign_Z = remove_outlayers(data, sc_th, Z)
 
     return {'cluster': Z,
-            'significance': sign_Z if rm_outlayers else None,
             'fit': gm,
             'model': gm}
 
@@ -474,6 +465,7 @@ def apply_cluster_data(data,
                        method='kmeans',
                        cluster_names=None,
                        standardize=True,
+                       rm_ol=False,
                        return_model=False,
                        verbose=True,
                        **kwargs):
@@ -498,7 +490,6 @@ def apply_cluster_data(data,
 
     """
     plot_stats = kwargs.pop('plot_statistics', False)
-    rm_ol = kwargs.pop('rm_ol', False)
     sc_th = kwargs.pop('sc_th', 0.05)
     if isinstance(data, list):
         data = np.array(data)
@@ -512,8 +503,8 @@ def apply_cluster_data(data,
         data = sut.standardize(dataset=data, axis=0)
         if gut.count_nans(data) != 0:
             gut.myprint(
-                f'Data contains Nans: {gut.count_nans(data)}!', verbose=verbose)
-    rm_ol = kwargs.pop('rm_ol', False)
+                f'Data contains Nans: {gut.count_nans(data)}!',
+                verbose=verbose)
     gut.myprint(f'Shape of input data_input: {data.shape}', verbose=verbose)
     if method == 'kmeans':
         cluster_dict = k_means_clustering(data=data,

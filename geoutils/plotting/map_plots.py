@@ -393,6 +393,7 @@ def plot_map(dmap: xr.DataArray,
     plt.rcParams["pcolor.shading"] = "nearest"  # For pcolormesh
 
     hatch_type = kwargs.pop('hatch_type', '..')
+    inverse_mask = kwargs.pop('inverse_mask', False)
     set_map = kwargs.pop('set_map', True)
     figsize = kwargs.pop("figsize", (9, 6))
     alpha = kwargs.pop("alpha", 1.0)
@@ -502,12 +503,14 @@ def plot_map(dmap: xr.DataArray,
             if significance_mask is False:
                 raise ValueError(
                     'Significance mask has to be None, not False!')
-            if ds is not None:
+            if ds is not None or inverse_mask is True:
+                if ds is not None:
+                    this_mask = ds.mask
+                else:
+                    this_mask = significance_mask
                 significance_mask = xr.where(
-                    ds.mask, False, True)  # Turn around the mask
+                    this_mask==1, False, True)  # Turn around the mask
                 hatch_type = '///'
-                gut.myprint(f'WARNING! So far the dataset mask is only plotted as significnance mask!',
-                            verbose=False)
             if sig_plot_type == 'hatch':
                 significance_mask = xr.where(significance_mask == 1, 1, np.nan)
             elif sig_plot_type == 'contour':
