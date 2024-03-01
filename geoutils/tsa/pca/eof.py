@@ -1,11 +1,17 @@
-"""PCA for spatio-temporal data."""
+"""PCA for spatio-temporal data.
+Parts adopted from: https://github.com/jakob-schloer/LatentGMM/tree/main"""
+import geoutils.utils.general_utils as gut
+import geoutils.utils.statistic_utils as sut
+import geoutils.utils.time_utils as tu
+import geoutils.tsa.pca.pca_utils as pca_utils
 import numpy as np
 import xarray as xr
-import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
-from climnet import preproc
-from sklearn.preprocessing import normalize
+from importlib import reload
+reload(sut)
+reload(tu)
+reload(pca_utils)
 
 
 class SpatioTemporalPCA:
@@ -17,130 +23,149 @@ class SpatioTemporalPCA:
         ds (xr.DataArray or xr.Dataset): Input dataarray to perform PCA on.
             Array dimensions (time, 'lat', 'lon')
         n_components (int): Number of components for PCA
-        weighting: None or 'coslat' or 1-dim weight array containing weight for each grid point
     """
-    def __init__(self, ds, n_components,weighting='uniform',covestim=None, orienteofs=None, **kwargs):
-        self.ds = ds
-        self.n_components = n_components
-        self.X, self.ids_notNaN = preproc.map2flatten(self.ds)
-        if weighting is None:
-            self.weights = None
-        else:
-            # in SpatioTemporalPCA implement weighting from North (1982):
-            # A = sum_i w_i
-            # instead of C_ij use sqrt(w_i) C_ij sqrt(w_j)/A
-            # compute eigenvecs and eigenvals, transform eigenvecs to the grid-invariant EOFs via: eigenvecs_i * sqrt(A)/sqrt(w_i)
-            if weighting == 'coslat':
-                self.weights = np.cos(self.X['lat'].data*np.pi/180)
-            elif weighting == 'uniform':
-                self.weights = np.ones_like(self.X['lat'].data)
-            else:
-                assert len(weighting) == self.X.data.shape[1]
-                self.weights = weighting
-            if np.any(self.weights<0):
-                raise ValueError('Area weights should always be >=0.')
-            self.totalweight=np.sum(self.weights)
-            # downweigh data does the same as downweighting C_ij. not true!!!
-            #self.X_weighted = self.X.data * np.tile(np.sqrt(self.weights),(self.X.shape[0],1))
-            
-        if self.weights is None:
-            if covestim is not None:
-                raise ValueError('covestim without weights is not implemented.')
-            self.pca = PCA(n_components=n_components)
-            self.pca.fit(self.X.data)
-        else:
-            Wsqrt=np.diag(np.sqrt(self.weights))
-            if covestim is None:
-                eigvals, eigvecs = np.linalg.eigh((Wsqrt @ self.X.data.T @ self.X.data @ Wsqrt)/np.sum(self.weights))
-            else:
-                assert covestim.shape == (len(self.weights),len(self.weights))
-                eigvals, eigvecs = np.linalg.eigh((Wsqrt @ covestim @ Wsqrt)/np.sum(self.weights))
-            eigvals = eigvals[::-1]
-            eigvecs = eigvecs[:,::-1]
-            eofs = eigvecs * np.sqrt(np.sum(self.weights)) / np.tile(np.sqrt(self.weights).reshape((len(self.weights),1)),(1,eigvecs.shape[1]))
-            #normalize matrix by columns
-            self.eofs = normalize(eofs, axis=0, norm='l2')
-            self.eigvals = eigvals
-            if orienteofs is not None:
-                for idx in range(n_components):
-                    if np.linalg.norm(self.eofs.T[idx,:]-orienteofs[idx,:])>np.linalg.norm(-self.eofs.T[idx,:]-orienteofs[idx,:]):
-                        self.eofs[:,idx] = -self.eofs[:,idx]
 
+    def __init__(self, ds, n_components, **kwargs):
+        self.ds = ds
+
+        self.X, self.ids_notNaN = pca_utils.map2flatten(self.ds)
+
+        # PCA
+        self.pca = self.apply_pca(X=self.X, n_components=n_components,
+                                  **kwargs)
+
+        self.n_components = self.pca.n_components
+        self.eof_nums = None
+
+    def apply_pca(self, X: np.ndarray, n_components: int, **kwargs):
+        """Apply PCA to a dataset.
+
+        Args:
+        -----
+        ds (xr.Dataset): Dataset to apply PCA on.
+        n_components (int): Number of components for PCA.
+        """
+        # PCA
+        pca = PCA(n_components=n_components, whiten=True)
+        pca.fit(X.data)
+
+        return pca
 
     def get_eofs(self):
-        """Return principal spatial directions of PCA.
+        """Return components of PCA.
+
+        Parameters:
+        -----------
+        normalize: str
+            Normalization type of components.
 
         Return:
-            components (xr.dataarray): Size (n_components, N_x, N_y)
+        -------
+        components: xr.dataarray (n_components, N_x, N_y)
         """
         # EOF maps
+        components = self.pca.components_
         eof_map = []
-        if self.weights is None:
-            eofarray=self.pca.components_
-        else:
-            eofarray=self.eofs.T[:self.n_components,:]
-        for i, comp in enumerate(eofarray):
-            eof = preproc.flattened2map(comp, self.ids_notNaN)
-            eof = eof.drop(['time'])
+        for i, comp in enumerate(components):
+            eof = pca_utils.flattened2map(comp, self.ids_notNaN)
             eof_map.append(eof)
+
         return xr.concat(eof_map, dim='eof')
-    
 
     def get_principal_components(self):
         """Returns time evolution of components.
 
+        Args:
+        -----
+        normalize: str or None
+            Method to normalize the time-series
+
         Return:
-            time_evolution (xr.Dataarray): Principal components of shape (n_components, time)
+        ------
+        time_evolution: np.ndarray (n_components, time)
         """
-        time_evolution = []
-        if self.weights is None:
-            eofarray=self.pca.components_
-        else:
-            eofarray=self.eofs.T[:self.n_components,:]
-        for i, comp in enumerate(eofarray):
-            ts = self.X.data @ comp
+        pc = self.pca.transform(self.X.data)
+        da_pc = xr.DataArray(
+            data=pc,
+            coords=dict(time=self.X['time'], eof=np.arange(
+                0, self.n_components)),
+        )
+        self.eof_nums = da_pc.eof.data
+        return da_pc
 
-            da_ts = xr.DataArray(
-                data=ts,
-                dims=['time'],
-                coords=dict(time=self.X['time']),
-            )
-            time_evolution.append(da_ts)
-        return xr.concat(time_evolution, dim='eof')
-    
+    def get_eof_nums(self):
+        if self.eof_nums is None:
+            self.eof_nums = self.get_principal_components().eof.data
+        return self.eof_nums
 
-    def get_explainedVariance(self):
-        # this is conserved
-        if self.weights is None:
-            return self.pca.explained_variance_ratio_
+    def explained_variance(self):
+        return self.pca.explained_variance_ratio_
+
+    def transform(self, x: xr.Dataset):
+        x_flat, ids_notNaN = pca_utils.map2flatten(x)
+        assert len(x_flat['z']) == len(self.X['z'])
+        z = self.pca.transform(x_flat.data)
+
+        return z
+
+    def transform_reduced(self, x: xr.Dataset,
+                          reduzed_eofs: np.ndarray) -> np.ndarray:
+        z_all = self.transform(x)
+        reduzed_eofs = np.array(reduzed_eofs)
+        eofs = self.get_eof_nums()
+        if np.array_equal(reduzed_eofs, eofs):
+            return z_all
         else:
-            return self.eigvals[:self.n_components] / np.sum(self.eigvals)
-    
-    def inverse_transform(self, z, newdim='x'):
-        """Reconstruct the dataset from components and time-evolution.
+            for red_eof in reduzed_eofs:
+                assert red_eof in eofs, f'EOF {red_eof} not in dataset'
+            z_trafo = z_all.T[reduzed_eofs]
+
+            return z_trafo.T
+
+    def transform_reduced_ts_corr(self, x: xr.Dataset,
+                                  ts: xr.DataArray,
+                                  num_eofs=None, min_corr=0):
+        sel_eofs = pca_utils.get_reduced_eofs(x=x, sppca=self, ts=ts,
+                                    num_eofs=num_eofs, min_corr=min_corr)
+
+        z_trafo = self.transform_reduced(x=x, reduzed_eofs=sel_eofs)
+
+        return z_trafo
+
+    def inverse_transform(self, z: np.ndarray, newdim='time', coords=None) -> xr.Dataset:
+        """Transform from eof space to data space.
 
         Args:
-            z (np.ndarray): Low dimensional vector of size (time, n_components)
-            newdim (str, optional): Name of dimension. Defaults to 'x'.
+            z (np.ndarray): Principal components of shape (n_samples, n_components)
+            newdim (str, optional): Name of dimension of n_samples.
+                Can be also a pd.Index object. Defaults to 'time'.
 
         Returns:
-            _type_: _description_
+            xr.Dataset: Transformed PCs to grid space.
         """
-        if self.weights is None:
-            comps = self.pca.components_
-        else:
-            comps = self.eofs.T[:self.n_components,:]
-        # if self.weights is not None:
-        #     # invert weighting transform to grid-invariant EOFs
-        #     comps = comps * np.sqrt(self.totalweight) / np.tile(np.sqrt(self.weights),(comps.shape[0],1))
-        # TODO: this was z.T but should be z?!
-        reconstruction = z @ comps
+        x_hat_flat = self.pca.inverse_transform(z)
 
-        rec_map = []
-        for rec in reconstruction:
-            x = preproc.flattened2map(rec, self.ids_notNaN)
-            rec_map.append(x)
+        x_hat_map = []
+        for x_flat in x_hat_flat:
+            x_hat = pca_utils.flattened2map(x_flat, self.ids_notNaN)
+            x_hat = x_hat.drop([dim for dim in list(
+                x_hat.dims) if dim not in ['lat', 'lon']])
+            x_hat_map.append(x_hat)
 
-        rec_map = xr.concat(rec_map, dim=newdim)
+        x_hat_map = xr.concat(x_hat_map, dim='time')
 
-        return rec_map
+        if newdim != 'time':
+            x_hat_map = x_hat_map.rename({'time': newdim})
+            x_hat_map = x_hat_map.assign_coords({newdim: coords})
+
+        return x_hat_map
+
+    def reconstruction(self, x: xr.Dataset) -> xr.Dataset:
+        """Reconstruct the dataset from components and time-evolution.
+        This is a encoder-decoder process."""
+        stack_dim = [dim for dim in list(x.dims) if dim not in [
+            'lat', 'lon']][0]
+        z = self.transform(x)
+        x_hat = self.inverse_transform(z, newdim=x[stack_dim])
+
+        return x_hat

@@ -94,13 +94,15 @@ def create_video_map(
         time_dim='time',
         plot_sig=False,
         ds_wind=None,
+        delete_frames=True,
         **kwargs):
     """ Creates a video from a sequence of frames of a DataArray."""
 
     # Create temporary folder
-    tmp_folder = fut.create_random_folder()
     extension = kwargs.pop("extension", "png")
     format = kwargs.pop("format", "mp4")
+    folder_name = kwargs.pop("folder_name", None)
+    tmp_folder = fut.create_random_folder() if folder_name is None else folder_name
 
     plot_type = kwargs.pop("plot_type", "contourf")
     central_longitude = kwargs.pop("central_longitude", None)
@@ -109,8 +111,9 @@ def create_video_map(
     cmap = kwargs.pop("cmap", 'coolwarm')
     projection = kwargs.pop("projection", None)
     label = kwargs.pop("label", None)
-    title_top = kwargs.pop("title", None)
+    title_top = kwargs.pop("title", True)
     levels = kwargs.pop("levels", 10)
+    plot_grid = kwargs.pop("plot_grid", True)
     significance_mask = kwargs.pop("significance_mask", None)
     lat_range = kwargs.pop("lat_range", None)
     lon_range = kwargs.pop("lon_range", None)
@@ -142,7 +145,7 @@ def create_video_map(
             mean_data = mean_data*sig_data
             mean_data = xr.where(sig_data, mean_data, np.nan)
 
-        title = f'Day {step}' if title_top is None else title_top
+        title = f'Day {step}' if title_top else None
         im = cplt.plot_map(mean_data,
                            ds=ds,
                            title=title,
@@ -157,6 +160,7 @@ def create_video_map(
                            lat_range=lat_range,
                            dateline=dateline,
                            central_longitude=central_longitude,
+                           unset_grid=True,
                            **kwargs
                            )
         if ds_wind is not None:
@@ -194,6 +198,7 @@ def create_video_map(
                  verbose=verbose)
 
     # Delete temporary folder
-    fut.delete_folder(tmp_folder)
+    if delete_frames:
+        fut.delete_folder(tmp_folder)
 
     return None

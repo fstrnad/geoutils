@@ -97,7 +97,6 @@ def plot_xy(
     norm=False,
     stdize=False,
     ts_axis=False,
-    kde=False,
     plot_type='xy',
     set_axis=False,
     **kwargs,
@@ -106,6 +105,9 @@ def plot_xy(
     reload(gut)
     if not isinstance(y_arr[0], (list, np.ndarray, xr.DataArray)):
         y_arr = [y_arr]
+    if x_arr is not None and len(x_arr) > 1:
+        if len(y_arr) != len(x_arr):
+            raise ValueError("x and y arrays must have the same length")
     if ax is None:
         figsize = kwargs.pop("figsize", (8, 5))
         set_axis = True
@@ -126,14 +128,17 @@ def plot_xy(
                 ax, kwargs = put.prepare_axis(
                     ax, plot_type=plot_type, **kwargs)
 
-        num_items = len(y_arr)
+    num_items = len(y_arr)
+    alpha = kwargs.pop('alpha', 1)
+    inverted_z_order = kwargs.pop('inv_z_order', False)
+    linearize_xaxis = kwargs.pop('linearize_xaxis', False)
+
+    # ############# Plotting  Scatter ################
+    if plot_type == 'xy' or plot_type == 'scatter':
         if lcmap is not None:
             lcmap, evenly_spaced_interval, ccolors = put.get_arr_colorbar(
                 cmap=lcmap, num_items=num_items,)
 
-        alpha = kwargs.pop('alpha', 1)
-        inverted_z_order = kwargs.pop('inv_z_order', False)
-        linearize_xaxis = kwargs.pop('linearize_xaxis', False)
         for idx in range(num_items):
             if x_arr is None:
                 x_arr = [np.arange(len(y_arr[idx]))]
@@ -190,22 +195,7 @@ def plot_xy(
                 im = ax.plot(x_ts, y_ts, label=label, lw=lw,
                              marker=mk, ls=ls, color=c, alpha=alpha)
             else:
-
-                if kde:
-                    levels = kwargs.pop("levels", 10)
-                    cmap = kwargs.pop("cmap", "viridis")
-                    cbar = kwargs.pop("cbar", True)
-                    im = sns.kdeplot(
-                        x=x,
-                        y=y,
-                        ax=ax,
-                        fill=True,
-                        levels=levels,
-                        label=label,
-                        cmap=cmap,
-                        cbar=cbar,
-                    )
-                elif z is not None:
+                if z is not None:
                     cmap = kwargs.pop("cmap", "viridis")
                     vmin = kwargs.pop('vmin', None)
                     vmax = kwargs.pop('vmax', None)
@@ -279,7 +269,8 @@ def plot_xy(
                                     alpha=0.5,
                                     # label=label,
                                 )
-    else:
+    # ############# Plotting  bar ################
+    elif plot_type == 'bar':
         # Bar plot
         stacked = kwargs.pop('stacked', False)
         df = pd.DataFrame(dict(
@@ -308,6 +299,16 @@ def plot_xy(
                              ax=ax,
                              )
         ax, kwargs = put.prepare_axis(ax, **kwargs)
+    # ############# Plotting  density ################
+    elif plot_type == 'density':
+        levels = kwargs.pop("levels", 10)
+        for idx in range(num_items):
+            label = label_arr[idx] if idx < len(label_arr) else None
+            color = color_arr[idx] if color_arr is not None else 'viridis'
+            im = sns.kdeplot(x=x_arr[idx], y=y_arr[idx], label=label,
+                             cmap=color, ax=ax,
+                             alpha=alpha,
+                             levels=levels, fill=True)
 
     if lcmap is not None:
         norm = mpl.colors.Normalize(
@@ -467,20 +468,6 @@ def plot_hist(data, ax=None, fig=None, label_arr=None, log=False, color_arr=None
     )
 
 
-def violinplot(data, x, y, ax=None, **kwargs):
-    hue = kwargs.pop('hue', None)
-    if ax is None:
-        figsize = kwargs.pop("figsize", (6, 4))
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-    ax, kwargs = put.prepare_axis(ax=ax, **kwargs)
-
-    ax = sns.violinplot(ax=ax, data=data, x=x, y=y, hue=hue,)
-
-    ax = set_legend(ax, **kwargs)
-
-    return ax
-
-
 def prepare_ts_x_axis(ax, dates, **kwargs):
 
     sy, ey = tu.get_start_end_date(data=dates)
@@ -495,83 +482,6 @@ def prepare_ts_x_axis(ax, dates, **kwargs):
         direction="out", length=pst.SMALL_SIZE / 2, width=1, colors="k", grid_alpha=0.5
     )
     ax.set_xlim(sy, ey)
-
-    return ax
-
-
-#  ################# Histogramms  #################
-
-
-def plot_cnt_occ_ensemble(
-    ds,
-    mean_cnt_arr,
-    std_cnt_arr=None,
-    savepath=None,
-    label_arr=None,
-    polar=False,
-    **kwargs,
-):
-    figsize = (10, 6)
-    if polar is True:
-        fig, ax = plt.subplots(figsize=figsize, subplot_kw={
-                               "projection": "polar"})
-        ax.margins(y=0)
-        x_pos = np.deg2rad(np.linspace(0, 360, 13))
-        ax.set_xticks(x_pos)
-        ax.set_xticklabels(ds.months + [""],)
-        ax.set_rlabel_position(60)  # get radial labels away from plotted line
-        ax.set_rticks([0.0, 0.1, 0.2, 0.3, 0.4])  # Less radial ticks
-        # rotate the axis arbitrarily, just replace pi with the angle you want.
-        ax.set_theta_offset(np.pi)
-    else:
-        fig, ax = plt.subplots(figsize=figsize)
-        put.prepare_axis(ax, **kwargs)
-        ax.set_xlabel("Month")
-        ax.set_ylabel("Relative Frequency")
-        x_pos = ds.months
-
-    if std_cnt_arr is None:
-        std_cnt_arr = np.zeros_like(mean_cnt_arr)
-    if len(mean_cnt_arr) != len(std_cnt_arr):
-        raise ValueError(
-            f"Mean len {len(mean_cnt_arr)} != Std len {len(std_cnt_arr)}")
-
-    sum_mean_cnt = np.zeros_like(mean_cnt_arr[0])
-    for idx in range(len(mean_cnt_arr)):
-        mean_cnt = np.array(mean_cnt_arr[idx], dtype=float)
-        std_cnt = np.array(std_cnt_arr[idx], dtype=float)
-        if polar is True:
-            mean_cnt = np.append(mean_cnt, np.array([mean_cnt[0]]), axis=0)
-            std_cnt = np.append(std_cnt, np.array([std_cnt[0]]), axis=0)
-        if label_arr is None:
-            label = None
-        else:
-            label = label_arr[idx]
-
-        width = 1 / len(mean_cnt_arr) - 0.1
-        x_pos = np.arange(len(mean_cnt)) + width * idx
-        ax.bar(
-            x_pos,
-            mean_cnt,
-            yerr=(std_cnt),
-            ecolor=pst.colors[idx],
-            capsize=10,
-            width=width,
-            color=pst.colors[idx],
-            label=label,
-        )
-        sum_mean_cnt += mean_cnt
-        # print(sum_mean_cnt)
-    # off_set = len(mean_cnt_arr)
-    ax.set_xticks(x_pos)  # + width/off_set
-    ax.set_xticklabels(ds.months)
-    ax.grid(True)
-
-    if label_arr is not None:
-        set_legend(ax, label_arr=label_arr, **kwargs)
-
-    if savepath is not None:
-        fig.savefig(savepath, bbox_inches="tight")
 
     return ax
 

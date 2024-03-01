@@ -37,8 +37,9 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                  data_nc_fac=None,
                  compute_ws=False,
                  plevels=None,
-                 can=True,
+                 can=False,
                  grad_fac=False,
+                 convention_labelling=False,  # label as U, V, OMEGA
                  **kwargs):
         reload(mp)
         u_kwargs = copy.deepcopy(kwargs)
@@ -75,10 +76,10 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
 
             u = ds_uwind.ds[self.u_name]
             v = ds_vwind.ds[self.v_name]
-            if self.u_name == 'u':
+            if self.u_name == 'u' and convention_labelling:
                 u = u.rename('U')
                 self.u_name = 'U'
-            if self.v_name == 'v':
+            if self.v_name == 'v' and convention_labelling:
                 v = v.rename('V')
                 self.v_name = 'V'
 
@@ -115,7 +116,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                         can=False,
                                                         **w_kwargs)
                 self.w_name = kwargs.pop('w_name', 'OMEGA')
-                if 'w' in ds_wwind.get_vars():
+                if 'w' in ds_wwind.get_vars() and convention_labelling:
                     w = ds_wwind.ds['w'].rename('OMEGA')
                 else:
                     w = ds_wwind.ds['OMEGA']

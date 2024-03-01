@@ -105,6 +105,7 @@ def save_pkl_dict(arr_dict, sp, verbose=True):
 def save_ds(ds, filepath, unlimited_dim=None,
             classic_nc=False,
             zlib=True,
+            only_dim_corrds=False,
             backup=False):
     if os.path.exists(filepath):
         gut.myprint(f"File {filepath} already exists!")
@@ -120,7 +121,8 @@ def save_ds(ds, filepath, unlimited_dim=None,
         os.makedirs(dirname)
     if isinstance(ds, xr.DataArray):
         zlib = False   # because dataarray has no var attibute
-
+    if only_dim_corrds:
+        ds = gut.delete_all_non_dimension_attributes(ds)
     if zlib:
         encoding = {var: {'zlib': True} for var in ds.data_vars}
         ds.to_netcdf(filepath, encoding=encoding)

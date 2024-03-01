@@ -45,6 +45,20 @@ def holm(pvals, alpha=0.05, corr_type="dunn"):
     return lst_idx
 
 
+def norths_rule_of_thumb(pca_eigval, n_samples):
+    """Error bar for PCA components.
+
+    Args:
+        pca_eigval (np.ndarray): Eigenvalues of PCA
+        n_samples (int): Number of datapoints.
+
+    Returns:
+        (np.ndarray): Error of each PCA component.
+    """
+    norths_rule = pca_eigval * np.sqrt(2 / n_samples)
+    return norths_rule
+
+
 def correct_p_values(pvals, alpha=0.05, method="fdr_bh"):
     if isinstance(pvals, xr.DataArray):
         pvals = pvals.data
@@ -324,7 +338,6 @@ def corr_function(corr_type='pearson'):
     else:
         raise ValueError(f'Correlation type {corr_type} not implemented!')
     return corr_func
-
 
 
 def onesided_test(corr):

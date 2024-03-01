@@ -11,7 +11,7 @@ import geoutils.geodata.base_dataset as bds
 import geoutils.plotting.plots as cplt
 from importlib import reload
 
-import geoutils.tsa.pca.pca as pca
+import geoutils.tsa.pca.rot_pca as rot_pca
 import geoutils.utils.time_utils as tut
 reload(tut)
 
@@ -71,11 +71,13 @@ def get_tej_index(u200,
 
 
 def get_tej_strength(u200, tej_val=0,
+                     quantile=0.8,
                      northward_extension=True,
                      definition='std',
                      start_month='Jan',
                      end_month='Dec'):
-    tej = get_tej_index(u200=u200, northward_extension=northward_extension,
+    tej = get_tej_index(u200=u200,
+                        northward_extension=northward_extension,
                         start_month=start_month,
                         end_month=end_month)
 
@@ -88,6 +90,10 @@ def get_tej_strength(u200, tej_val=0,
     elif definition == 'thresh':
         enhanced_tej = tej.where(tej < -tej_val, drop=True)
         reduced_tej = tej.where(tej > tej_val, drop=True)
+    elif definition == 'quantile':
+        gut.myprint(f'Get strength based on quantile: {quantile}')
+        enhanced_tej = tej.where(tej < tej.quantile(1-quantile), drop=True)
+        reduced_tej = tej.where(tej > tej.quantile(quantile), drop=True)
     else:
         raise ValueError('Invalid definition for tej strength')
 
@@ -95,13 +101,14 @@ def get_tej_strength(u200, tej_val=0,
     gut.myprint(f'# anomalous reduced TEJ times: {len(reduced_tej.time)}')
 
     return dict(enhanced=enhanced_tej.time,
-                reduced=reduced_tej.time)
+                reduced=reduced_tej.time,
+                index=tej)
 
 
 def tej_eofs(u200_ds):
 
     rot = 'None'
-    pca_ = pca.SpatioTemporalPCA(u200_ds,
+    pca_ = rot_pca.SpatioTemporalPCA(u200_ds,
                                  var_name='an_dayofyear',
                                  n_components=10,
                                  rotation=rot)
@@ -174,7 +181,7 @@ if __name__ == '__main__':
     var_type = f'an_{an_type}'
 
     tej_tps = get_tej_strength(u200=u_def.ds[var_type],
-                               definition='thresh',
+                               definition='quantile',
                                tej_val=3,  # or 3 for clearer results
                                start_month='Jun',
                                end_month='Sep',
@@ -265,8 +272,9 @@ if __name__ == '__main__':
                                 wspace=0.2,
                                 projection='PlateCarree',
                                 lat_range=[-50, 70],
-                                lon_range=[0, -60],
-                                dateline=True,
+                                # lon_range=[0, -60],
+                                # dateline=True,
+                                central_longitude=30
                                 )
     vmin_sst = -1
     vmax_sst = -vmin_sst

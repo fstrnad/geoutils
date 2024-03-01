@@ -468,6 +468,7 @@ def apply_cluster_data(data,
                        rm_ol=False,
                        return_model=False,
                        verbose=True,
+                       score='silhouette',
                        **kwargs):
     """
     Apply clustering algorithm to the input data.
@@ -536,9 +537,11 @@ def apply_cluster_data(data,
         objects = np.arange(len(data))
 
     Z = cluster_dict['cluster']
-    score = get_silhouette_score(data, Z)
-    gut.myprint(f'Silhouette Score: {score}', verbose=verbose, bold=True, color='green')
-    sscores = get_silhouette_scores(data, Z)
+    if score == 'silhouette':
+        score = get_silhouette_score(data, Z)
+        gut.myprint(f'Silhouette Score: {score}',
+                    verbose=verbose, bold=True, color='green')
+        sscores = get_silhouette_scores(data, Z)
 
     if plot_stats:
         plot_statistics(data, sc_th, Z)
@@ -556,7 +559,7 @@ def apply_cluster_data(data,
 
     grp_cluster_dict['keys'] = list(grp_cluster_dict.keys())
     grp_cluster_dict['Z'] = cluster_dict['cluster']
-    grp_cluster_dict['sscores'] = sscores
+    grp_cluster_dict['sscores'] = sscores if score == 'silhouette' else None
 
     if return_model:
         return cluster_dict['model']
@@ -587,10 +590,19 @@ def apply_bic(z_events, num_classes=10, n_runs=10):
     return result
 
 
-def apply_sscore(z_events, num_classes=10, n_runs=10, method='kmeans'):
+def apply_sscore(z_events, num_classes=10, n_runs=10, method='kmeans',
+                 score='silhouette'):
     if num_classes < 2:
         raise ValueError('Number of classes must be at least 2!')
-    n_classes = np.arange(2, num_classes+2, 1)
+    if method != 'gm' and score == 'bic':
+        raise ValueError(
+            'BIC score is only available for Gaussian Mixture Models!')
+
+    if score == 'bic':
+        nclasses_start = 1
+    else:
+        nclasses_start = 2
+    n_classes = np.arange(nclasses_start, num_classes+nclasses_start, 1)
     result = {}
     for k in tqdm(n_classes):
         this_scores = []
@@ -598,19 +610,26 @@ def apply_sscore(z_events, num_classes=10, n_runs=10, method='kmeans'):
             model = apply_cluster_data(data=z_events.data,
                                        n_clusters=k,
                                        method=method,
+                                       score=score,
                                        return_model=True,
                                        verbose=False,
                                        standardize=False,
                                        )
             Z = model.predict(z_events.data)
-            this_scores.append(skm.silhouette_score(z_events.data, Z))
+            if score == 'silhouette':
+                this_scores.append(skm.silhouette_score(z_events.data, Z))
+            elif score == 'bic':
+                this_scores.append(model.bic(z_events.data))
+            else:
+                raise ValueError(f'Score {score} not implemented yet!')
+
         result[k] = this_scores
     return result
 
 
 def grid_search(data_input, tps, num_classes=10, num_eofs=5, steps=15,
                 ts=None, min_corr=0, max_num_eofs=None,
-                n_runs=5, method='kmeans'):
+                n_runs=5, method='kmeans', score='silhouette'):
 
     if max_num_eofs is None:
         max_num_eofs = num_eofs
@@ -618,12 +637,12 @@ def grid_search(data_input, tps, num_classes=10, num_eofs=5, steps=15,
         if max_num_eofs < num_eofs:
             raise ValueError(
                 'Maximum number of EOFs must be larger than number of EOFs!')
-
+    n_eofs_min = 1
     grid = np.zeros((num_eofs, num_classes))
     sppca = eof.SpatioTemporalPCA(data_input, n_components=max_num_eofs)
     gut.myprint(
         f"Explained variance by {max_num_eofs} EOFs: {np.sum(sppca.explained_variance())}")
-    for i, n_components in enumerate(np.arange(2, num_eofs+2, 1)):
+    for i, n_components in enumerate(np.arange(n_eofs_min, num_eofs+n_eofs_min, 1)):
         gut.myprint(f"Get {n_components} EOFs!")
 
         # Get latent encoding
@@ -637,7 +656,8 @@ def grid_search(data_input, tps, num_classes=10, num_eofs=5, steps=15,
         n_results = apply_sscore(z_events=z_events,
                                  num_classes=num_classes,
                                  n_runs=n_runs,
-                                 method=method
+                                 method=method,
+                                 score=score
                                  )
         for j, k in enumerate(n_results):
             grid[i, j] = np.mean(n_results[k])

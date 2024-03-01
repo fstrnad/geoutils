@@ -830,6 +830,76 @@ def rename_dim(da, dim, name):
     return da
 
 
+def assign_new_coords(da, dim, coords):
+    """
+    Assigns new coordinates to a given dimension of a DataArray.
+
+    Args:
+        da (xarray.DataArray): The DataArray to modify.
+        dim (str): The dimension to assign new coordinates to.
+        coords (list): The list of new coordinates.
+
+    Returns:
+        xarray.DataArray: The modified DataArray with new coordinates assigned to the specified dimension.
+
+    Raises:
+        ValueError: If the specified dimension is not present in the DataArray.
+        ValueError: If the coordinates are not provided as a list.
+        ValueError: If the length of the coordinates list is not equal to the length of the specified dimension.
+    """
+    if dim not in get_dims(da):
+        raise ValueError(f'Dimension {dim} not in {get_dims(da)}!')
+    if not isinstance(coords, list) and not isinstance(coords, np.ndarray):
+        raise ValueError(f'Coordinates {coords} has to be list!')
+    if len(coords) != len(da[dim]):
+        raise ValueError(
+            f'Length of coordinates {len(coords)} has to be equal to length of dimension {len(da[dim])}!')
+    da = da.assign_coords({dim: coords})
+    return da
+
+
+def delete_non_dimension_attribute(dataarray, attribute_name, verbose=True):
+    """
+    Delete the given attribute from the coordinates if it is not a real dimension of the xarray DataArray.
+
+    Parameters:
+        dataarray (xarray.DataArray): The input xarray DataArray.
+        attribute_name (str): The name of the attribute to be deleted.
+
+    Returns:
+        xarray.DataArray: The modified xarray DataArray.
+    """
+    if attribute_name in dataarray.dims:
+        # Skip deletion if the attribute is a real dimension
+        myprint(f'The attribute {attribute_name} is a dimension and cannot be deleted!',
+                verbose=verbose)
+        return dataarray
+    elif attribute_name in dataarray.coords:
+        # Delete the attribute from the coordinates
+        myprint(f'Delete attribute {attribute_name} from coordinates!',)
+        del dataarray.coords[attribute_name]
+        return dataarray
+    else:
+        # Attribute not found in dims or coords
+        raise ValueError(f"The attribute '{attribute_name}' not found in dimensions or coordinates.")
+
+
+def delete_all_non_dimension_attributes(dataarray):
+    """
+    Delete all attributes from the coordinates that are not real dimensions of the xarray DataArray.
+
+    Parameters:
+        dataarray (xarray.DataArray): The input xarray DataArray.
+
+    Returns:
+        xarray.DataArray: The modified xarray DataArray.
+    """
+    attribute_names = list(dataarray.coords)
+    for attribute_name in attribute_names:
+        delete_non_dimension_attribute(dataarray, attribute_name, verbose=False)
+    return dataarray
+
+
 def rename_da(da, name):
     old_name = get_name_da(da)
     myprint(f'Rename {old_name} to {name}!')
@@ -937,7 +1007,7 @@ def merge_datasets(ds1, ds2):
     """
     # Check if the dimensions are consistent between ds1 and ds2
     for dim in ["lat", "lon", "time"]:
-        if not ds1[dim].equals(ds2[dim]):
+        if not np.array_equal(ds1[dim].data, ds2[dim].data):
             raise ValueError(
                 f"Inconsistent dimension {dim} between datasets: {ds1[dim]} vs {ds2[dim]}!")
 

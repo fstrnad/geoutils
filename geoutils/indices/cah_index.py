@@ -7,7 +7,7 @@ import geoutils.utils.general_utils as gut
 import numpy as np
 from importlib import reload
 
-import geoutils.tsa.pca.pca as pca
+import geoutils.tsa.pca.rot_pca as rot_pca
 import geoutils.utils.time_utils as tut
 reload(tut)
 

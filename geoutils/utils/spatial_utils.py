@@ -1500,3 +1500,22 @@ def find_location_groups(locations, grid_step=3, min_num_locations=5, verbose=Tr
                 verbose=verbose)
 
     return return_arr
+
+
+def stack_lat_lon(da, new_dim='z', reindex=False):
+
+    da_flat = da.stack(z=('lat', 'lon'))
+    if reindex:
+        da_flat = gut.assign_new_coords(da=da_flat, dim='z',
+                                        coords=np.arange(len(da_flat.z)))
+    if new_dim != 'z':
+        da_flat = da_flat.rename({'z': new_dim})
+
+    return da_flat
+
+
+def unstack_lat_lon(da, dim='z'):
+
+    da_unstacked = da.unstack(dim)
+
+    return da_unstacked
