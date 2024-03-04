@@ -671,6 +671,23 @@ def orange(*args, **kwargs):
     return cust_range(*args, **kwargs, include=[True, False])
 
 
+def custom_arange(start, end, step, include_end=True):
+    """
+    Generate an array of evenly spaced values within a given range.
+
+    Parameters:
+        start (float): The starting value of the range.
+        end (float): The ending value of the range.
+        step (float): The step size between values.
+
+    Returns:
+        numpy.ndarray: An array of evenly spaced values within the specified range.
+    """
+    if np.isclose(start + step * np.floor((end - start) / step), end):
+        return np.arange(start, end + step, step)
+    else:
+        return np.arange(start, end, step)
+
 def get_random_numbers_no_neighboring_elems(min_num, max_num, amount):
     """Generates amount random numbers in [min_num,..,max_num] that do not
     include neighboring numbers."""
@@ -1434,3 +1451,5 @@ def round2int(x, round=None):
         raise ValueError(f"Unsupported rounding method: {round}")
 
     return x
+
+

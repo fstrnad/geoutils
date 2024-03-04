@@ -105,9 +105,9 @@ def plot_xy(
     reload(gut)
     if not isinstance(y_arr[0], (list, np.ndarray, xr.DataArray)):
         y_arr = [y_arr]
-    if x_arr is not None and len(x_arr) > 1:
+    if x_arr is not None and isinstance(x_arr[0], (list, np.ndarray, xr.DataArray)):
         if len(y_arr) != len(x_arr):
-            raise ValueError("x and y arrays must have the same length")
+            raise ValueError(f"x and y arrays must have the same length, but are {len(x_arr)} and {len(y_arr)}!")
     if ax is None:
         figsize = kwargs.pop("figsize", (8, 5))
         set_axis = True

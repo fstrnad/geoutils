@@ -450,11 +450,11 @@ def get_cluster_dict(Z, cluster_x, cluster_names=None, verbose=True):
             if len(cluster_names) != len(grp_ids):
                 raise ValueError(f'Not same number of key names as groups!')
             keyname = cluster_names[idx]
-            gut.myprint(f'Cluster {keyname} : {len(idx_grp)} objects',
+            gut.myprint(f'Cluster {keyname} : {len(idx_grp)} samples',
                         verbose=verbose)
             grp_tps_dict[keyname] = cluster_x[idx_grp]
         else:
-            gut.myprint(f'Cluster {idx} : {len(idx_grp)} objects',
+            gut.myprint(f'Cluster {idx} : {len(idx_grp)} samples',
                         verbose=verbose)
             grp_tps_dict[idx] = cluster_x[idx_grp]
     return grp_tps_dict

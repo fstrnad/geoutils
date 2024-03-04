@@ -169,16 +169,3 @@ def get_reduced_eofs(x, sppca,
         return sel_eofs
 
 
-def unify_datasets(list_da, delete_non_dim_coords=True):
-
-    for i, da in enumerate(list_da):
-        da = gut.delete_all_non_dimension_attributes(dataarray=da)
-        new_time = da.time
-        if i == 0:
-            old_time = new_time
-            ds = da.to_dataset()
-        else:
-            if tu.are_same_time_points(old_time, new_time) is False:
-                raise ValueError('Time coordinates are not equal!')
-            ds = gut.merge_datasets(ds1=ds, ds2=da.to_dataset())
-    return ds

@@ -1090,23 +1090,28 @@ class BaseDataset():
                 gut.myprint(f'WARNING! Set min lat from {min_lat} to -89.5!')
                 min_lat = -89.5 if correct_min_lat else min_lat
 
-            # init_lat = np.arange(min_lat, max_lat, grid_step, dtype=float)
-            # init_lon = np.arange(min_lon, max_lon, grid_step, dtype=float)
             grid_step_lon = grid_step if grid_step_lon is None else grid_step_lon
             grid_step_lat = grid_step if grid_step_lat is None else grid_step_lat
 
-            init_lat = gut.crange(min_lat, max_lat, grid_step_lat)
-            init_lon = gut.crange(min_lon, max_lon, grid_step_lon)
+            init_lat = gut.custom_arange(start=min_lat,
+                                         end=max_lat,
+                                         step=grid_step_lat)
+            init_lon = gut.custom_arange(start=min_lon,
+                                         end=max_lon,
+                                         step=grid_step_lon)
+            # init_lat = gut.crange(min_lat, max_lat, grid_step_lat)  # This starts and ends with min_lat and max_lat
+            # init_lon = gut.crange(min_lon, max_lon, grid_step_lon)
 
             nlat = len(init_lat)
             if nlat % 2:
                 # Odd number of latitudes includes the poles.
                 gut.myprint(
-                    f"WARNING: Poles might be included: {min_lat} and {min_lat}!"
+                    f"WARNING: Poles might be included: {min_lat} and {min_lat}!",
+                    color='red'
                 )
 
         gut.myprint(
-            f"Interpolte grid from {float(min_lon)} to {float(max_lon)},{float(min_lat)} to {float(max_lat)}!",
+            f"Interpolte grid from {min(init_lon)} to {max(init_lon)},{min(init_lat)} to {max(init_lat)}!",
         )
         grid = {"lat": init_lat, "lon": init_lon}
 
@@ -1299,7 +1304,7 @@ class BaseDataset():
 
     def compute_all_anomalies(self, **kwargs):
         self.an_types = kwargs.pop('an_types',
-                                   ['dayofyear', 'month','JJAS'])
+                                   ['dayofyear', 'month', 'JJAS'])
         self.vars = self.get_vars()
         if self.can:
             for vname in self.vars:
@@ -1859,5 +1864,3 @@ class BaseDataset():
                 self.ds[sf_an.name] = sf_an
 
         return grad_vbar
-
-
