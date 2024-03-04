@@ -13,33 +13,34 @@ SEED = 42
 
 def myprint(str, verbose=True, lines=False, bold=False, italic=False, color=None):
     # ANSI escape codes for styling text
-    style = "\033[1m" if bold else ""
-    italic_code = "\033[3m" if italic else ""
-    reset_style = "\033[0m"
-
-    # ANSI escape codes for colors
-    color_code = ""
-    if color:
-        colors = {
-            'red': "\033[91m",
-            'green': "\033[92m",
-            'yellow': "\033[93m",
-            'blue': "\033[94m",
-            'magenta': "\033[95m",
-            'cyan': "\033[96m",
-            'white': "\033[97m",
-        }
-        if color not in colors:
-            raise ValueError(f"Invalid color: {color}! Available colors: {list(colors.keys())}")
-        color_code = colors.get(color.lower(), "")  # Default to empty string if color not found
-
     if verbose:
+        style = "\033[1m" if bold else ""
+        italic_code = "\033[3m" if italic else ""
+        reset_style = "\033[0m"
+
+        # ANSI escape codes for colors
+        color_code = ""
+        if color:
+            colors = {
+                'red': "\033[91m",
+                'green': "\033[92m",
+                'yellow': "\033[93m",
+                'blue': "\033[94m",
+                'magenta': "\033[95m",
+                'cyan': "\033[96m",
+                'white': "\033[97m",
+            }
+            if color not in colors:
+                raise ValueError(f"Invalid color: {color}! Available colors: {list(colors.keys())}")
+            color_code = colors.get(color.lower(), "")  # Default to empty string if color not found
+
         styled_text = f"{style}{italic_code}{color_code}{str}{reset_style}"
         if lines:
-            pprint(styled_text)
-        else:
-            print(styled_text, flush=True)
-    return
+            styled_text = pprint(styled_text)
+        print(styled_text, flush=True)
+        return styled_text
+    else:
+        return
 
 
 def get_dimensions(ds):

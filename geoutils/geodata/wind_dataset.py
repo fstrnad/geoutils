@@ -61,7 +61,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                 for file in data_nc_w:
                     fut.print_file_location_and_size(
                         filepath=file, verbose=False)
-            gut.myprint(f'All files are available! Now load them!')
+            gut.myprint(f'All wind files are available! Now load them!')
 
             ds_uwind = mp.MultiPressureLevelDataset(data_nc=data_nc_u,
                                                     plevels=plevels,

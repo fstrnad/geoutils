@@ -87,6 +87,7 @@ class BaseDataset():
             lat_range=lat_range,
             lon_range=lon_range,
             time_range=time_range,
+            month_range=month_range,
             grid_step=grid_step,
             large_ds=large_ds,
             decode_times=decode_times,
@@ -117,12 +118,6 @@ class BaseDataset():
         if self.can is True:
             self.compute_anomalies_ds(**kwargs)
 
-        if month_range is not None:
-            self.ds = tu.get_month_range_data(dataset=self.ds,
-                                              start_month=month_range[0],
-                                              end_month=month_range[1],
-                                              verbose=verbose)
-
         # Filter nans
         nan_filter = kwargs.pop('nan_filter', None)
         if nan_filter is not None:
@@ -149,6 +144,7 @@ class BaseDataset():
         nc_files,
         plevels=None,
         time_range=None,
+        month_range=None,
         grid_step=None,
         large_ds=True,
         lon_range=[-180, 180],
@@ -191,6 +187,13 @@ class BaseDataset():
 
         if 'time' in self.dims:
             ds = self.get_data_timerange(ds, time_range)
+
+        if month_range is not None:
+            ds = tu.get_month_range_data(dataset=ds,
+                                         start_month=month_range[0],
+                                         end_month=month_range[1],
+                                         verbose=verbose)
+
         if 'lon' in self.dims and 'lat' in self.dims:
             min_lon = kwargs.pop('min_lon', None)
             max_lon = kwargs.pop('max_lon', None)

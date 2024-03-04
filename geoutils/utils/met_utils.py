@@ -64,7 +64,8 @@ def degC_to_kelvin(temperature):
 def specific_humidity_to_relative_humidity(specific_humidity,
                                            temperature,
                                            pressure,
-                                           percentage=True):
+                                           percentage=True,
+                                           dequantify=True):
     """Convert specific humidity to relative humidity.
 
     Args:
@@ -97,6 +98,10 @@ def specific_humidity_to_relative_humidity(specific_humidity,
         rh = rh.metpy.convert_units('percent')
 
     rh = rh.to_dataset(name='rh')
+
+    if dequantify:
+        rh = remove_units(rh)
+
     return rh
 
 
