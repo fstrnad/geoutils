@@ -77,9 +77,9 @@ def create_folders(filepath):
     directory = os.path.dirname(filepath)
     if not exist_folder(filepath=filepath):
         os.makedirs(directory)
-        print(f"Created folders for path: {filepath}")
+        gut.myprint(f"Created folders for path: {filepath}")
     else:
-        print(f"Folders already exist for path: {filepath}")
+        gut.myprint(f"Folders already exist for path: {filepath}")
 
 
 # ##################### Save functions #####################
@@ -391,7 +391,6 @@ def find_files_with_string(folder_path: str, search_string: str = None,
     if sort:
         if sort == 'Number':
             file_list = sort_filenames_by_number(file_list)
-            print(file_list)
         else:
             file_list.sort()
 

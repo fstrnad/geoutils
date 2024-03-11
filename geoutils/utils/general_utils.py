@@ -16,7 +16,7 @@ def myprint(str, verbose=True, lines=False, bold=False, italic=False, color=None
     if verbose:
         style = "\033[1m" if bold else ""
         italic_code = "\033[3m" if italic else ""
-        reset_style = "\033[0m"
+        reset_style = "\033[0m" if bold or italic else ""
 
         # ANSI escape codes for colors
         color_code = ""
@@ -32,7 +32,7 @@ def myprint(str, verbose=True, lines=False, bold=False, italic=False, color=None
             }
             if color not in colors:
                 raise ValueError(f"Invalid color: {color}! Available colors: {list(colors.keys())}")
-            color_code = colors.get(color.lower(), "")  # Default to empty string if color not found
+                color_code = colors.get(color.lower(), "")  #
 
         styled_text = f"{style}{italic_code}{color_code}{str}{reset_style}"
         if lines:

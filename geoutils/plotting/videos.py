@@ -126,6 +126,7 @@ def create_video_map(
     steps = gut.crange(start, end, step)
     wind_scale = kwargs.pop("wind_scale", 100)
     key_length = kwargs.pop("key_length", 1)
+    y_title = kwargs.pop("y_title", 1.05)
     wind_unit = kwargs.pop("wind_unit", rf'm$s^{{-1}}$ ({lev}hPa)')
     wsteps = kwargs.pop("wsteps", 2)
     for d, step in enumerate(steps):
@@ -149,6 +150,7 @@ def create_video_map(
         im = cplt.plot_map(mean_data,
                            ds=ds,
                            title=title,
+                           y_title=y_title,
                            plot_type=plot_type,
                            cmap=cmap,
                            levels=levels,

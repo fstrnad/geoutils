@@ -1701,26 +1701,32 @@ def add_time_step_tps(tps, time_step=1, freq="D", ):
                            time_step=time_step, freq=freq)
 
 
-def get_tps_range(tps, start=0, time_step=1, freq="D", ):
+def get_tps_range(tps, start=0, time_step=0, freq="D", ):
     if isinstance(tps, xr.DataArray):
         tps = tps.time
     if len(np.array([tps.time.data]).shape) == 1:
         tps = [tps]
-    ntps = []
-    tps = add_time_step_tps(tps=tps, time_step=start, freq=freq)
-    for tp in tps:
-        ntp = add_time_step_tps(tps=tp, time_step=time_step, freq=freq)
+    if start == 0 and time_step == 0:
+        return tps
+    else:
+        ntps = []
+        tps = add_time_step_tps(tps=tps, time_step=start, freq=freq)
         if time_step > 0:
-            new_tps = get_dates_in_range(start_date=tp,
-                                         end_date=ntp, freq=freq)
+            for tp in tps:
+                ntp = add_time_step_tps(tps=tp, time_step=time_step, freq=freq)
+                if time_step > 0:
+                    new_tps = get_dates_in_range(start_date=tp,
+                                                 end_date=ntp, freq=freq)
+                else:
+                    new_tps = get_dates_in_range(start_date=ntp,
+                                                 end_date=tp, freq=freq)
+                ntps.append(new_tps)
         else:
-            new_tps = get_dates_in_range(start_date=ntp,
-                                         end_date=tp, freq=freq)
-        ntps.append(new_tps)
-    ntps = merge_time_arrays(ntps, multiple=None)
-    ntps = remove_duplicate_times(ntps)
+            ntps = tps
+        ntps = merge_time_arrays(ntps, multiple=None, new_dim=False)
+        ntps = remove_duplicate_times(ntps)
 
-    return ntps
+        return ntps
 
 
 def add_time_step_tps_old(tps, time_step=1, freq="D", ):
@@ -1740,11 +1746,14 @@ def add_time_step_tps_old(tps, time_step=1, freq="D", ):
     return xr.DataArray(ntps, dims=["time"], coords={"time": ntps})
 
 
-def merge_time_arrays(time_arrays, multiple='max', verbose=False):
+def merge_time_arrays(time_arrays, multiple='max',
+                      new_dim=True,
+                      verbose=False):
     # Combine the time arrays into a single DataArray with a new "time" dimension
-    # combined_data = xr.concat(time_arrays, dim="time")
-    combined_data = xr.concat(time_arrays, dim="t")
-
+    if new_dim:
+        combined_data = xr.concat(time_arrays, dim="t")
+    else:
+        combined_data = xr.concat(time_arrays, dim="time")
     if multiple is not None:
         gut.myprint(
             f'Group multiple files by {multiple} if time points occur twice!',

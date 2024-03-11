@@ -18,7 +18,7 @@ reload(put)
 reload(pst)
 
 
-def estimate_distance(minimum_value, maximum_value, min_dist_val=5):
+def estimate_distance(minimum_value, maximum_value, min_dist_val=5, multiple=10):
     # Calculate the range between minimum and maximum value
     value_range = maximum_value - minimum_value
 
@@ -33,8 +33,8 @@ def estimate_distance(minimum_value, maximum_value, min_dist_val=5):
     if step_size % 5 == 0:
         return step_size
 
-    # Find the closest multiple of 5
-    closest_multiple = ((step_size // 5) + 1) * 5
+    # Find the closest multiple of multiple to the step size
+    closest_multiple = ((step_size // multiple) + 1) * multiple
 
     return closest_multiple
 
@@ -509,7 +509,7 @@ def plot_map(dmap: xr.DataArray,
                 else:
                     this_mask = significance_mask
                 significance_mask = xr.where(
-                    this_mask==1, False, True)  # Turn around the mask
+                    this_mask == 1, False, True)  # Turn around the mask
                 hatch_type = '///'
             if sig_plot_type == 'hatch':
                 significance_mask = xr.where(significance_mask == 1, 1, np.nan)
@@ -1138,7 +1138,9 @@ def create_multi_plot(nrows, ncols, projection=None,
     if nrows > 1 or ncols > 1:
         pos_x = kwargs.pop('pos_x', -0.1)
         pos_y = kwargs.pop('pos_y', 1.1)
-        put.enumerate_subplots(axs, pos_x=pos_x, pos_y=pos_y)
+        enumerate_subplots = kwargs.pop('enumerate_subplots', True)
+        if enumerate_subplots:
+            put.enumerate_subplots(axs, pos_x=pos_x, pos_y=pos_y)
     else:
         axs = axs[0]
 

@@ -9,6 +9,7 @@ import geoutils.utils.spatial_utils as sput
 import scipy as sp
 import geoutils.utils.statistic_utils as sut
 from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering, OPTICS, Birch
+from sklearn.neighbors import NearestNeighbors
 from sklearn.mixture import GaussianMixture
 import scipy.cluster.hierarchy as shr
 from scipy.spatial.distance import pdist
@@ -27,13 +28,13 @@ reload(sput)
 
 
 def plot_statistics(data, sc_th, Z):
-    sample_sc = skm.silhouette_samples(data, Z)
+    sample_sc = get_silhouette_scores(data, Z)
     im = cplt.plot_xy(x_arr=[np.arange(len(Z))],
                       y_arr=[sample_sc],
                       ls_arr=['None'],
                       mk_arr=['.'],
                       ylabel="Shilhouette Score",
-                      ylim=(0., .5)
+                      ylim=(0., 1)
                       )
     if sc_th is not None:
         cplt.plot_hline(
@@ -42,10 +43,45 @@ def plot_statistics(data, sc_th, Z):
     return im
 
 
+def plot_kNN(data, n_neihbors=5):
+    """Plot the k-Nearest Neighbors graph of the input data.
+    """
+    nbrs = NearestNeighbors(n_neighbors=n_neihbors).fit(data)
+    # Find the k-neighbors of a point
+    neigh_dist, neigh_ind = nbrs.kneighbors(data)
+    # sort the neighbor distances (lengths to points) in ascending order
+    # axis = 0 represents sort along first axis i.e. sort along row
+    sort_neigh_dist = np.sort(neigh_dist, axis=0)
+    k_dist = sort_neigh_dist[:, n_neihbors-1]
+    im = cplt.plot_xy(x_arr=[np.arange(len(data))],
+                      y_arr=[k_dist],
+                      ls_arr=['None'],
+                      mk_arr=['.'],
+                      ylabel="k-NN Distance",
+                      xlabel=f'Sorted observations ({n_neihbors-1} neighbors)',
+                      )
+    from kneed import KneeLocator
+    kneedle = KneeLocator(x=range(1, len(neigh_dist)+1), y=k_dist, S=1.0,
+                          curve="concave", direction="increasing", online=True)
+
+    # get the estimate of knee point
+    gut.myprint(f'Knee: {kneedle.knee_y}')
+
+    return float(kneedle.knee_y)
+
+
 def get_silhouette_scores(data, Z):
     """Gets the silhouette scores for the input data of all samples
     """
-    return skm.silhouette_samples(data, Z)
+    cluster_groups = np.unique(Z)
+    if len(cluster_groups) > 1 and len(cluster_groups) < len(Z):
+        return skm.silhouette_samples(data, Z)
+    else:
+        if len(cluster_groups) == len(Z):
+            gut.myprint('All samples are their own cluster!', verbose=True)
+        else:
+            gut.myprint('Only one cluster found!', verbose=True)
+        return np.zeros(len(Z))
 
 
 def get_silhouette_score(data, Z):
@@ -59,8 +95,38 @@ def get_silhouette_score(data, Z):
     Returns:
     float: The silhouette score.
     """
-    sscore = float(skm.silhouette_score(data, Z))
+    cluster_groups = np.unique(Z)
+    if len(cluster_groups) > 1 and len(cluster_groups) < len(Z):
+        sscore = float(skm.silhouette_score(data, Z))
+    else:
+        if len(cluster_groups) == len(Z):
+            gut.myprint('All samples are their own cluster!', verbose=True)
+        else:
+            gut.myprint('Only one cluster found!', verbose=True)
+        sscore = 0.
     return np.around(sscore, 3)
+
+
+def remove_noise(Z):
+    """
+    Remove noise from the data based on the cluster labels.
+
+    Parameters:
+    data (numpy.ndarray): The input data.
+    Z (numpy.ndarray): The cluster labels.
+
+    Returns:
+    numpy.ndarray: The indices of the data points that are not considered as noise.
+    """
+    gut.myprint('Remove Noise...')
+    sign_Z = np.where(Z != -1)[0]
+    if len(sign_Z) == 0:
+        gut.myprint('Noisy samples are all samples!')
+    if len(sign_Z) != len(Z):
+        gut.myprint(
+            f'Removed noisy {1 - len(sign_Z)/len(Z)} of all inputs!')
+
+    return sign_Z
 
 
 def remove_outlayers(data, sc_th, Z):
@@ -79,7 +145,7 @@ def remove_outlayers(data, sc_th, Z):
     sample_sc = get_silhouette_scores(data, Z)
     sign_Z = np.where(sample_sc >= sc_th)[0]
     gut.myprint(
-        f'Removed {1 - np.count_nonzero(sign_Z)/len(Z)} of all inputs!')
+        f'Removed {1 - len(sign_Z)/len(Z)} of all inputs!')
 
     return sign_Z
 
@@ -180,9 +246,7 @@ def gm_clustering(data,
 
 
 def agglomerative_clustering(data, **kwargs):
-    """Perform DBSCAN clustering from vector array or distance matrix.
-    See as well https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html
-
+    """
     Args:
         data (np.Array): 2-d feature array
 
@@ -194,33 +258,26 @@ def agglomerative_clustering(data, **kwargs):
     compute_full_tree = kwargs.pop('compute_full_tree', 'auto')
     if n_clusters is None:
         compute_full_tree = True
-    plot_stats = kwargs.pop('plot_statistics', False)
     sc_th = kwargs.pop('sc_th', 0.05)
+    distance_threshold = sc_th if n_clusters is None else None
+
     # The metric to use when calculating distance between instances in a feature array
     metric = kwargs.pop('metric', 'l2')
     if 'metric' == 'chebyshev':
         metric = sp.spatial.distance.chebyshev
 
-    distance_threshold = sc_th if n_clusters is None else None
-
     linkage = kwargs.pop('linkage', 'complete')
 
-    # Perform DBSCAN clustering from vector array or distance matrix.
     clustering = AgglomerativeClustering(n_clusters=n_clusters,
                                          linkage=linkage,
                                          affinity=metric,
                                          distance_threshold=distance_threshold,
                                          compute_full_tree=compute_full_tree).fit(data)
 
-    if plot_stats:
-        # plot the top three levels of the dendrogram
-        None
-
     # Cluster labels for each point in the dataset given to fit(). Noisy samples are given the label -1.
     Z = clustering.labels_
 
     return {'cluster': Z,
-            'significance': None,
             'fit': skm,
             'model': clustering}
 
@@ -239,12 +296,7 @@ def birch_clustering(data,
                n_clusters=k).fit(data)
 
     Z = br.predict(data)
-    if plot_stats:
-        plot_statistics(data=data, sc_th=sc_th, Z=Z)
-    if rm_ol:
-        sign_Z = remove_outlayers(data, sc_th, Z)
     return {'cluster': Z,
-            'significance': sign_Z if rm_ol else None,
             'fit': skm,
             'model': br}
 
@@ -310,23 +362,25 @@ def dbscan_clustering(data, **kwargs):
     Returns:
         labels: -1 considered as noise
     """
-    # The maximum distance between two samples for one to be considered as in the neighborhood of the other.
-    eps = kwargs.pop('eps', 0.99)
+    # The radius of neighborhood samples
+    eps = kwargs.pop('eps', 2)
     # The metric to use when calculating distance between instances in a feature array
-    metric = kwargs.pop('metric', 'correlation')
-
+    metric = kwargs.pop('metric', 'euclidean')
     min_samples = kwargs.pop('min_samples', 5)
+    plot_statistics = kwargs.pop('plot_statistics', False)
+    if plot_statistics:
+        eps = plot_kNN(data, n_neihbors=min_samples)
 
     # Perform DBSCAN clustering from vector array or distance matrix.
-    clustering = DBSCAN(eps=eps, min_samples=min_samples,
-                        metric=metric).fit(data)
+    clustering = DBSCAN(eps=eps,
+                        min_samples=min_samples,
+                        metric=metric
+                        ).fit(data)
 
     # Cluster labels for each point in the dataset given to fit(). Noisy samples are given the label -1.
-    print(clustering.labels_)
     Z = clustering.labels_
 
     return {'cluster': Z,
-            'significance': None,
             'fit': skm,
             'model': clustering}
 
@@ -506,7 +560,9 @@ def apply_cluster_data(data,
             gut.myprint(
                 f'Data contains Nans: {gut.count_nans(data)}!',
                 verbose=verbose)
-    gut.myprint(f'Shape of input data_input: {data.shape}', verbose=verbose)
+    gut.myprint(f'Shape of input data_input: {data.shape}',
+                verbose=verbose)
+    gut.myprint(f'Cluster based on {method}!', verbose=verbose)
     if method == 'kmeans':
         cluster_dict = k_means_clustering(data=data,
                                           verbose=verbose,
@@ -516,7 +572,10 @@ def apply_cluster_data(data,
                                      verbose=verbose,
                                      **kwargs)
     elif method == 'dbscan':
-        cluster_dict = dbscan_clustering(data=data, **kwargs)
+        cluster_dict = dbscan_clustering(data=data,
+                                         verbose=verbose,
+                                         plot_statistics=plot_stats,
+                                         **kwargs)
     elif method == 'optics':
         cluster_dict = optics_clustering(data=data, **kwargs)
     elif method == 'agglomerative':
@@ -535,6 +594,9 @@ def apply_cluster_data(data,
 
     if objects is None:
         objects = np.arange(len(data))
+    if len(objects) != len(data):
+        raise ValueError(
+            f'Number of objects {len(objects)} and data {len(data)} are not equal!')
 
     Z = cluster_dict['cluster']
     if score == 'silhouette':
@@ -546,13 +608,15 @@ def apply_cluster_data(data,
     if plot_stats:
         plot_statistics(data, sc_th, Z)
 
+    sign_Z = remove_noise(Z)
     if rm_ol or sc_th != 0.05:
         rm_ol = True
-        sign_Z = remove_outlayers(data, sc_th, Z)
-        if sign_Z is not None:
-            Z = Z[sign_Z]
-            objects = objects[sign_Z]
+        sign_Z_rm = remove_outlayers(data, sc_th, Z)
+        sign_Z = np.intersect1d(sign_Z, sign_Z_rm)
 
+    if sign_Z is not None:
+        Z = Z[sign_Z]
+        objects = objects[sign_Z]
     grp_cluster_dict = get_cluster_dict(Z=Z, cluster_x=objects,
                                         cluster_names=cluster_names,
                                         verbose=verbose)
@@ -565,7 +629,7 @@ def apply_cluster_data(data,
         return cluster_dict['model']
     else:
         grp_cluster_dict['model'] = cluster_dict['model']
-
+        grp_cluster_dict['input'] = data
     return grp_cluster_dict
 
 
