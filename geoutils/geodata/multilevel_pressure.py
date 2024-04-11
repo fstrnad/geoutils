@@ -34,6 +34,8 @@ class MultiPressureLevelDataset(bds.BaseDataset):
                  verbose=True,
                  **kwargs):
 
+        if isinstance(data_nc, str):
+            data_nc = [data_nc]
         if plevels is None:
             gut.myprint(
                 'No Plevel provided! Assuming variable is vertically integrated!')
@@ -70,7 +72,7 @@ class MultiPressureLevelDataset(bds.BaseDataset):
         self.var_name = base_ds.var_name
         self.grid_type = base_ds.grid_type
         # Init Mask
-        init_mask = kwargs.pop('init_mask', True)
+        init_mask = kwargs.pop('init_mask', False)
         if init_mask:
             self.def_locs = base_ds.def_locs
             self.key_val_idx_point_dict = base_ds.key_val_idx_point_dict

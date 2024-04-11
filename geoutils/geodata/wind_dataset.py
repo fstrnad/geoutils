@@ -48,6 +48,9 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         self.u_name = kwargs.pop('u_name', 'u')
         self.v_name = kwargs.pop('v_name', 'v')
 
+        data_nc_u = gut.process_object(data_nc_u)
+        data_nc_v = gut.process_object(data_nc_v)
+        data_nc_w = gut.process_object(data_nc_w)
         all_files = data_nc_u + data_nc_v if data_nc_w is None else data_nc_u + data_nc_v + data_nc_w
         for file in all_files:
             fut.print_file_location_and_size(filepath=file, verbose=False)
@@ -134,7 +137,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                   windspeed=windspeed)
 
             # ds_uwind would be possible as well
-            init_mask = kwargs.pop('init_mask', True)
+            init_mask = kwargs.pop('init_mask', False)
             self.load_dataset_attributes(base_ds=ds_vwind, init_mask=init_mask)
 
             self.vars = self.get_vars()

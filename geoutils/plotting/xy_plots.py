@@ -142,7 +142,10 @@ def plot_xy(
         for idx in range(num_items):
             if x_arr is None:
                 x_arr = [np.arange(len(y_arr[idx]))]
-            x = x_arr[idx] if len(x_arr) > 1 else x_arr[0]
+            if isinstance(x_arr[0], (list, np.ndarray, xr.DataArray)):
+                x = x_arr[idx]
+            else:
+                x = x_arr
             if linearize_xaxis:
                 x = np.arange(0, len(x))
 

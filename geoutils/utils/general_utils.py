@@ -1454,3 +1454,24 @@ def round2int(x, round=None):
     return x
 
 
+def process_object(obj):
+    """
+    Process the given object and return a list representation.
+
+    Args:
+        obj: The object to be processed.
+
+    Returns:
+        A list representation of the object. If the object is already a list or numpy array, it is returned as is.
+        If the object is a string, integer, or float, it is wrapped in a list and returned.
+        If the object is of any other type, None is returned.
+
+    """
+    if isinstance(obj, (np.ndarray, list)):
+        return obj
+    elif isinstance(obj, (str, int, float)):
+        return [obj]
+    elif obj is None:
+        return None
+    else:
+        return None

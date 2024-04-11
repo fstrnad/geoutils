@@ -1746,7 +1746,8 @@ def add_time_step_tps_old(tps, time_step=1, freq="D", ):
     return xr.DataArray(ntps, dims=["time"], coords={"time": ntps})
 
 
-def merge_time_arrays(time_arrays, multiple='max',
+def merge_time_arrays(time_arrays,
+                      multiple='max',
                       new_dim=True,
                       verbose=False):
     # Combine the time arrays into a single DataArray with a new "time" dimension

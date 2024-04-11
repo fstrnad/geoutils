@@ -155,8 +155,11 @@ def prepare_axis(ax, log=False, **kwargs):
     x_ints = kwargs.pop("x_ints", False)
     y_ints = kwargs.pop("y_ints", False)
     set_twinx = kwargs.pop("set_twinx", False)
+    set_twiny = kwargs.pop("set_twiny", False)
     if set_twinx:
         ax = ax.twinx()
+    if set_twiny:
+        ax = ax.twiny()
     if plot_type != 'polar':
         if not set_twinx:
             ax.spines["right"].set_visible(False)
@@ -189,7 +192,8 @@ def prepare_axis(ax, log=False, **kwargs):
         rot = kwargs.pop("rot", 0)
         set_ticks = kwargs.pop("set_ticks", True)
         top_ticks = kwargs.pop("top_ticks", False)
-        ax.tick_params(axis="x", labelrotation=rot, bottom=set_ticks, top=top_ticks)
+        ax.tick_params(axis="x", labelrotation=rot,
+                       bottom=set_ticks, top=top_ticks)
         if xticks is not None:
             ax.set_xticks(xticks)
         if xticklabels is not None:
@@ -456,7 +460,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
     if set_cax:
         if orientation == "vertical":
             loc = "right"
-            pad = kwargs.pop('pad', -5)  # distance from right border
+            pad = kwargs.pop('pad', -2.5)  # distance from right border
             # divider = make_axes_locatable(ax)
             # cax = divider.append_axes(loc, "5%", pad=pad, axes_class=plt.Axes)
             cax = inset_axes(ax,

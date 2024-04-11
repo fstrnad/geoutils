@@ -414,6 +414,24 @@ def compute_meridional_quantile(ds, q):
     return weighted_meridional_mean
 
 
+def horizontal_average(ds, dim='lon', average_type='mean'):
+    if dim not in ds.dims:
+        raise ValueError(f'Dimension {dim} not in dataset!')
+    if average_type == 'mean':
+        return ds.mean(dim=dim, skipna=True)
+    elif average_type == 'median':
+        return ds.median(dim=dim, skipna=True)
+    elif average_type == 'std':
+        return ds.std(dim=dim, skipna=True)
+    elif average_type == 'max':
+        ds = ds.max(dim=dim)
+    else:
+        raise ValueError(
+            f'Average type {average_type} not implemented!')
+    return ds
+
+
+
 def get_vertical_ds(wind_dict, tps,
                     vname='v',
                     wname='w',

@@ -1136,8 +1136,8 @@ def create_multi_plot(nrows, ncols, projection=None,
                 break
     # fig.tight_layout()
     if nrows > 1 or ncols > 1:
-        pos_x = kwargs.pop('pos_x', -0.1)
-        pos_y = kwargs.pop('pos_y', 1.1)
+        pos_x = kwargs.pop('enumerate_x', -0.1)
+        pos_y = kwargs.pop('enumerate_y', 1.1)
         enumerate_subplots = kwargs.pop('enumerate_subplots', True)
         if enumerate_subplots:
             put.enumerate_subplots(axs, pos_x=pos_x, pos_y=pos_y)

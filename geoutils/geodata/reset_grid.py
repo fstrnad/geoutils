@@ -13,6 +13,24 @@ import geoutils.utils.general_utils as gut
 output_dir = "/home/strnad/data/"
 data_dir = "/home/strnad/data/"
 
+# %% OLR
+grid_step = 1
+dataset_file = data_dir + \
+    f"climate_data/{grid_step}/era5_ttr_{grid_step}_ds.nc"
+
+ds_olr = bds.BaseDataset(data_nc=dataset_file,
+                         grid_step=grid_step,
+                         )
+# %%
+nc_file = ds_olr.ds['olr']
+nc_file = gut.delete_all_non_dimension_attributes(nc_file)
+new_file_name = data_dir + \
+    f"climate_data/{grid_step}/era5_olr_{grid_step}_ds.nc"
+fut.save_ds(nc_file, new_file_name, backup=True)
+
+# %%
+# Q
+
 nc_files_q = []
 nc_files_t = []
 nc_files_z = []
@@ -66,7 +84,6 @@ for lev in levs:
             nc_file = ds_t.ds[var_name]
         nc_file = gut.delete_all_non_dimension_attributes(nc_file)
         fut.save_ds(nc_file, new_file_name, backup=True)
-
 
 
 # %%
