@@ -108,7 +108,7 @@ def set_title(title, ax=None, fig=None, **kwargs):
     title_color = kwargs.pop('title_color', 'black')
     # fw = kwargs.pop('title_fontweight', "normal")
     fw = kwargs.pop('title_fontweight', "bold")
-    fsize = kwargs.pop('title_fsize', pst.BIGGER_SIZE)
+    fsize = kwargs.pop('title_fsize', pst.MAXIMUM_SIZE)
     if title is not None:
         if ax is not None:
             ax.set_title(title, color=title_color,
@@ -623,18 +623,25 @@ def plot_arrow(ax, x1, y1, x2, y2, **kwargs):
                  )
 
 
-def plot_hline(ax, y, **kwargs):
+def plot_hline(ax, y, transform=None, **kwargs):
     lw = kwargs.pop("lw", 1)
     ls = kwargs.pop("ls", '--')
     color = kwargs.pop("color", "k")
     zorder = kwargs.pop('zorder', 10)
     label = kwargs.pop('label', None)
-    ax.axhline(y=y, color=color,
-               zorder=zorder,
-               lw=lw,
-               linestyle=ls,
-               label=label)
-
+    if transform is None:
+        ax.axhline(y=y, color=color,
+                   zorder=zorder,
+                   lw=lw,
+                   linestyle=ls,
+                   label=label)
+    else:
+        ax.axhline(y=y, color=color,
+                   zorder=zorder,
+                   lw=lw,
+                   linestyle=ls,
+                   transform=transform,
+                   label=label)
     return {'im': ax}
 
 

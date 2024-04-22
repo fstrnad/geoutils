@@ -675,7 +675,7 @@ def plot_2D(
             marker=mpl.markers.MarkerStyle(marker=marker, fillstyle=fillstyle),
             s=size,
         )
-    elif plot_type == "points" or z is None:
+    elif plot_type == 'points' or z is None:
         im = ax.plot(
             x,
             y,
@@ -770,7 +770,7 @@ def plot_2D(
         clabel = kwargs.pop('clabel', False)
 
         if color == 'solid_dashed':
-            colors = kwargs.pop('color_contour', ['red', 'blue'])
+            colors = kwargs.pop('color_contour', ['black', 'black'])
             styles = ['solid', 'dashed']
             level_arr = [levels[levels > 0], levels[levels < 0]]
         else:
@@ -794,7 +794,7 @@ def plot_2D(
             )
             if clabel:
                 clabel_dict = dict(
-                    fontsize=kwargs.pop('clabel_fsize', pst.TINY_SIZE),
+                    fontsize=kwargs.pop('clabel_fsize', pst.MINI_SIZE),
                     fmt=kwargs.pop('clabel_fmt', None),
                     colors=color,
                     inline=True,
@@ -1310,5 +1310,25 @@ def plot_ring(ax, xpos=0, ypos=0, **kwargs):
         zorder=10,)
 
     ax.add_patch(ring)
+
+    return ax
+
+
+
+def plot_horizontal_line_at_latitude(ax, latitude, **kwargs):
+    """
+    Plot a horizontal line at a specified latitude on a Cartopy map.
+
+    Parameters:
+        latitude (float): The latitude coordinate (in degrees) where the horizontal line will be plotted.
+
+    Returns:
+        None
+    """
+    # Plot a horizontal line at the specified latitude
+    lats = np.ones(100) * latitude
+    lons = np.linspace(-180, 180, 100)
+    ax.plot(lons, lats, zorder=2,
+            transform=ccrs.PlateCarree(), **kwargs)
 
     return ax

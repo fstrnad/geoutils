@@ -75,7 +75,8 @@ def get_tej_strength(u200, tej_val=0,
                      northward_extension=True,
                      definition='std',
                      start_month='Jan',
-                     end_month='Dec'):
+                     end_month='Dec',
+                     get_index=True,):
     tej = get_tej_index(u200=u200,
                         northward_extension=northward_extension,
                         start_month=start_month,
@@ -99,19 +100,22 @@ def get_tej_strength(u200, tej_val=0,
 
     gut.myprint(f'# anomalous enhanced TEJ times: {len(enhanced_tej.time)}')
     gut.myprint(f'# anomalous reduced TEJ times: {len(reduced_tej.time)}')
-
-    return dict(enhanced=enhanced_tej.time,
-                reduced=reduced_tej.time,
-                index=tej)
+    if get_index:
+        return dict(enhanced=enhanced_tej.time,
+                    reduced=reduced_tej.time,
+                    index=tej)
+    else:
+        return dict(enhanced=enhanced_tej.time,
+                    reduced=reduced_tej.time)
 
 
 def tej_eofs(u200_ds):
 
     rot = 'None'
     pca_ = rot_pca.SpatioTemporalPCA(u200_ds,
-                                 var_name='an_dayofyear',
-                                 n_components=10,
-                                 rotation=rot)
+                                     var_name='an_dayofyear',
+                                     n_components=10,
+                                     rotation=rot)
 
     pca_dict = pca_.get_pca_loc_dict(q=None)
     return pca_dict

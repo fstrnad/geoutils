@@ -1,5 +1,6 @@
 """Basic plotting functions for maps"""
 # import matplotlib.cm as cm
+import copy
 import xarray as xr
 import pandas as pd
 import geoutils.utils.time_utils as tu
@@ -107,7 +108,8 @@ def plot_xy(
         y_arr = [y_arr]
     if x_arr is not None and isinstance(x_arr[0], (list, np.ndarray, xr.DataArray)):
         if len(y_arr) != len(x_arr):
-            raise ValueError(f"x and y arrays must have the same length, but are {len(x_arr)} and {len(y_arr)}!")
+            raise ValueError(
+                f"x and y arrays must have the same length, but are {len(x_arr)} and {len(y_arr)}!")
     if ax is None:
         figsize = kwargs.pop("figsize", (8, 5))
         set_axis = True
@@ -120,13 +122,13 @@ def plot_xy(
         fig = ax.get_figure()
     zorder = kwargs.pop('zorder', 0)
     filled = kwargs.pop('filled', False)
-    if plot_type != 'bar':
-        if set_axis:
-            if ts_axis:
-                ax = prepare_ts_x_axis(ax, dates=x_arr[0], **kwargs)
-            else:
-                ax, kwargs = put.prepare_axis(
-                    ax, plot_type=plot_type, **kwargs)
+    kwargs_init = copy.deepcopy(kwargs)
+    if set_axis:
+        if ts_axis:
+            ax = prepare_ts_x_axis(ax, dates=x_arr[0], **kwargs)
+        else:
+            ax, kwargs = put.prepare_axis(
+                ax, plot_type=plot_type, **kwargs)
 
     num_items = len(y_arr)
     alpha = kwargs.pop('alpha', 1)
@@ -279,7 +281,8 @@ def plot_xy(
         df = pd.DataFrame(dict(
             X=x_arr
         ))
-
+        edgecolor = kwargs.pop('edge_color', None)
+        fill_bar = kwargs.pop('fill_bar', True)
         label_arr_tmp = [0] if len(label_arr) == 0 else label_arr
 
         for idx, arr in enumerate(y_arr):
@@ -299,9 +302,12 @@ def plot_xy(
                              hue='Variable',
                              data=tidy,
                              palette=color_arr,
+                             fill=fill_bar,
                              ax=ax,
+                             edgecolor=edgecolor,
                              )
-        ax, kwargs = put.prepare_axis(ax, **kwargs)
+        # set again axis, because sns changes it
+        ax, kwargs = put.prepare_axis(ax, **kwargs_init)
     # ############# Plotting  density ################
     elif plot_type == 'density':
         levels = kwargs.pop("levels", 10)
