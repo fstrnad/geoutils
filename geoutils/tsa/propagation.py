@@ -116,12 +116,34 @@ def get_day_arr(ds, tps):
     return composite_arrs
 
 
-def get_hovmoeller(ds, tps, sps=None, eps=None, num_days=0,
-                   start=1,
-                   var=None, step=1,
-                   lat_range=None, lon_range=None,
-                   zonal=True,
+def get_hovmoeller(ds, lon_range, lat_range, hov_dims,
                    dateline=False):
+    if len(hov_dims) != 2:
+        raise ValueError('hov_dims must have 2 elements')
+
+    if 'lon' in hov_dims and 'lat' in hov_dims:
+        raise ValueError('lon and lat must not be in hov_dims')
+    zonal = True if 'lon' in hov_dims else False
+
+    this_ds = sput.cut_map(ds=ds,
+                           lon_range=lon_range,
+                           lat_range=lat_range,
+                           dateline=dateline)
+
+    if zonal:
+        hov_means = sput.compute_zonal_mean(ds=this_ds)
+    else:
+        hov_means = sput.compute_meridional_mean(ds=this_ds)
+
+    return hov_means
+
+
+def get_hovmoeller_prop(ds, tps, sps=None, eps=None, num_days=0,
+                        start=1,
+                        var=None, step=1,
+                        lat_range=None, lon_range=None,
+                        zonal=True,
+                        dateline=False):
     reload(sput)
     this_ds = sput.cut_map(ds=ds,
                            lon_range=lon_range,
@@ -166,14 +188,14 @@ def get_hovmoeller_single_tps(ds, tps, num_days,
         sigma = [gf[1], gf[0]]  # sigma_y, sigma_x
 
     for tp in tqdm(tps):
-        this_hov_data = get_hovmoeller(ds=ds, tps=tp,
-                                       num_days=num_days,
-                                       start=start,
-                                       var=var, step=step,
-                                       lat_range=lat_range,
-                                       lon_range=lon_range,
-                                       zonal=zonal,
-                                       dateline=dateline)
+        this_hov_data = get_hovmoeller_prop(ds=ds, tps=tp,
+                                            num_days=num_days,
+                                            start=start,
+                                            var=var, step=step,
+                                            lat_range=lat_range,
+                                            lon_range=lon_range,
+                                            zonal=zonal,
+                                            dateline=dateline)
         if this_hov_data is not None:
             if gf[0] != 0 or gf[1] != 0:
                 tmp_data = sp.ndimage.filters.gaussian_filter(

@@ -426,7 +426,8 @@ def get_sel_years_dates(years,
 def remove_consecutive_tps(tps, steps=0,
                            start=1,
                            remove_last=True,
-                           nneighbours=False):
+                           nneighbours=False,
+                           verbose=False):
     """Removes consecutive steps in a set of time points until steps after.
 
     Args:
@@ -450,7 +451,7 @@ def remove_consecutive_tps(tps, steps=0,
         common_tps.append(this_common_tps)
     # common_tps are potential time points that are consecutive
     if len(common_tps) > 1:
-        common_tps = merge_time_arrays(common_tps, verbose=False)
+        common_tps = merge_time_arrays(common_tps, verbose=verbose)
     else:
         common_tps = common_tps[0]
 
@@ -471,7 +472,8 @@ def remove_consecutive_tps(tps, steps=0,
         else:
             first_tps = add_time_step_tps(common_tps, time_step=-step)
             rem_tps = rem_tps.drop_sel(time=first_tps)
-    gut.myprint(f'Removed {num_init_tps - len(rem_tps)} time points!')
+    gut.myprint(f'Removed {num_init_tps - len(rem_tps)} time points!',
+                verbose=verbose)
 
     return rem_tps
 
@@ -1108,6 +1110,8 @@ def get_tm_name(timemean):
         tm = "2D"
     elif timemean in ["1D", "1W", "1MS", "Q-FEB", "1Y", "5D", "3D", "2D"]:
         tm = timemean
+    elif timemean == 'all':
+        tm = None
     else:
         raise ValueError(
             f"This time mean {timemean} does not exist! Please choose week, month, season or year!"
@@ -1142,7 +1146,8 @@ def get_mean_time_series(da, lon_range, lat_range, time_roll=0, q=None):
     return ts_mean, ts_std
 
 
-def compute_timemean(ds, timemean, dropna=True, verbose=True):
+def compute_timemean(ds, timemean, dropna=True,
+                     groupby=False, verbose=True):
     """Computes the monmean average on a given xr.dataset
 
     Args:
@@ -1151,19 +1156,28 @@ def compute_timemean(ds, timemean, dropna=True, verbose=True):
     Returns:
         xr.dataset: monthly average dataset
     """
-    if timemean is None:
-        return ds
-    tm = get_tm_name(timemean)
 
-    gut.myprint(
-        f"Compute {timemean}ly means of all variables!", verbose=verbose)
-    if dropna:
-        ds = ds.resample(time=tm).mean(
-            dim="time", skipna=True).dropna(dim="time")
+    if groupby:
+        ds = ds.groupby(f'time.{timemean}').mean(dim='time')
     else:
-        ds = ds.resample(time=tm).mean(dim="time", skipna=True)
+        if timemean is None:
+            return ds
+        tm = get_tm_name(timemean)
+
+        if tm is None:
+            return ds.mean(dim='time')
+
+        gut.myprint(
+            f"Compute {timemean}ly means of all variables!", verbose=verbose)
+        if dropna:
+            ds = ds.resample(time=tm).mean(
+                dim="time", skipna=True).dropna(dim="time")
+        else:
+            ds = ds.resample(time=tm).mean(dim="time", skipna=True)
 
     return ds
+
+
 
 
 def compute_mean(ds, dropna=True, verbose=False):
@@ -1747,8 +1761,8 @@ def add_time_step_tps_old(tps, time_step=1, freq="D", ):
 
 
 def merge_time_arrays(time_arrays,
-                      multiple='max',
-                      new_dim=True,
+                      multiple='duplicate',
+                      new_dim=False,
                       verbose=False):
     # Combine the time arrays into a single DataArray with a new "time" dimension
     if new_dim:
@@ -1759,7 +1773,10 @@ def merge_time_arrays(time_arrays,
         gut.myprint(
             f'Group multiple files by {multiple} if time points occur twice!',
             verbose=verbose)
-    if multiple == 'max':
+    if multiple == 'duplicate':
+        # Remove duplicate time points
+        combined_data = remove_duplicate_times(combined_data)
+    elif multiple == 'max':
         # Group the data by time and take the maximum value for each group
         combined_data = combined_data.groupby('time').max()
     elif multiple == 'mean':

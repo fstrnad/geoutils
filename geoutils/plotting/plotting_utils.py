@@ -108,7 +108,7 @@ def set_title(title, ax=None, fig=None, **kwargs):
     title_color = kwargs.pop('title_color', 'black')
     # fw = kwargs.pop('title_fontweight', "normal")
     fw = kwargs.pop('title_fontweight', "bold")
-    fsize = kwargs.pop('title_fsize', pst.MAXIMUM_SIZE)
+    fsize = kwargs.pop('title_fsize', pst.BIGGER_SIZE)
     if title is not None:
         if ax is not None:
             ax.set_title(title, color=title_color,
@@ -438,6 +438,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
 
     ticks = kwargs.pop('ticks', None)
     sci = kwargs.pop("sci", None)
+    shift_ticks = kwargs.pop("shift_ticks", None)
 
     tick_step = int(kwargs.pop("tick_step", 2))
     if ticks is not None:
@@ -450,8 +451,11 @@ def make_colorbar(ax, im, fig=None, **kwargs):
     #     else:
     #         round_dec = 0
     round_dec = kwargs.pop("round_dec", None)
+    set_int = kwargs.pop("set_int", False)
     if round_dec is not None:
         ticks = np.around(ticks, round_dec)
+    if set_int:
+        ticks = np.round(ticks).astype(int)
     if fig is None:
         fig = ax.get_figure()
 
@@ -512,6 +516,13 @@ def make_colorbar(ax, im, fig=None, **kwargs):
             format=fmt,
             **kwargs
         )
+
+    if shift_ticks is not None:
+        set_rot = kwargs.pop('set_rot', False)
+        cbar.set_ticks(ticks[:-1]+0.5)
+        if set_rot:
+            cbar.ax.set_xticklabels(ticks[:-1], rotation=45)
+        cbar.set_ticklabels(ticks[:-1])
 
     return cbar
 
@@ -645,7 +656,9 @@ def plot_hline(ax, y, transform=None, **kwargs):
     return {'im': ax}
 
 
-def enumerate_subplots(axs, pos_x=-0.12, pos_y=1.06, fontsize=20):
+def enumerate_subplots(axs, pos_x=-0.12,
+                       pos_y=1.06,
+                       fontsize=pst.BIGGER_SIZE):
     """Adds letters to subplots of a figure.
 
     Args:
@@ -658,9 +671,9 @@ def enumerate_subplots(axs, pos_x=-0.12, pos_y=1.06, fontsize=20):
         axs (list): List of plt.axes.
     """
     axs = np.array(axs)
-    if type(pos_x) == float:
+    if isinstance(pos_x, float) or isinstance(pos_x, int):
         pos_x = [pos_x] * len(axs.flatten())
-    if type(pos_y) == float:
+    if isinstance(pos_y, float) or isinstance(pos_y, int):
         pos_y = [pos_y] * len(axs.flatten())
 
     for n, ax in enumerate(axs.flatten()):
@@ -759,3 +772,24 @@ def get_lon_lat_ticklabels(array_lon=None, array_lat=None, deg_label='°E'):
                   180 else f'{lon}°W' for lon in lon]
     lat_labels = [f'{lat}°N' if lat >= 0 else f'{lat}°S' for lat in lat]
     return lon_labels, lat_labels
+
+
+def get_grid_figure(fig=None, ax_ratios=None, **kwargs):
+    import matplotlib.gridspec as gridspec
+    figsize = kwargs.pop('figsize', (10, 6))
+    nrows = kwargs.pop('nrows', 2)
+    ncols = kwargs.pop('ncols', 1)
+    hspace = kwargs.pop('hspace', 0.4)
+    wspace = kwargs.pop('wspace', 0.4)
+
+    # Create a gridspec instance
+    if fig is None:
+        fig = plt.figure(figsize=figsize)
+    gs = gridspec.GridSpec(nrows, ncols, hspace=hspace,
+                           wspace=wspace,
+                           figure=fig)
+    ax_arr = []
+    for ax_ratio in ax_ratios:
+        ax_arr.append(plt.subplot(gs[ax_ratio[0], ax_ratio[1]]))
+
+    return {'fig': fig, 'ax': ax_arr}

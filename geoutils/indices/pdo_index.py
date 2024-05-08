@@ -127,10 +127,10 @@ if __name__ == '__main__':
     pos_tps = pdo_types['positive']
     neg_tps = pdo_types['negative']
     tps_arr = [
-        pos_tps,
         neg_tps,
+        pos_tps,
     ]
-    groups = ['Positive PDO', 'Negative PDO']
+    groups = ['Negative PDO', 'Positive PDO', ]
     an_type = 'month'
     var_type = f'an_{an_type}'
     label_sst = f'SST Anomalies (wrt {an_type}) [K]'
@@ -138,7 +138,7 @@ if __name__ == '__main__':
     vmax_sst = -vmin_sst
 
     im = cplt.create_multi_plot(nrows=1,
-                                ncols=2,
+                                ncols=len(tps_arr),
                                 orientation='horizontal',
                                 # hspace=0.7,
                                 wspace=0.2,
@@ -165,6 +165,7 @@ if __name__ == '__main__':
                             #    significance_mask=mask,
                                hatch_type='..',
                                label=label_sst,
+                               land_ocean=True,
                                )
     savepath = plot_dir + \
         f"definitions/sst_{an_type}_pdo_types.png"

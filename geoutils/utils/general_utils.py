@@ -31,7 +31,8 @@ def myprint(str, verbose=True, lines=False, bold=False, italic=False, color=None
                 'white': "\033[97m",
             }
             if color not in colors:
-                raise ValueError(f"Invalid color: {color}! Available colors: {list(colors.keys())}")
+                raise ValueError(
+                    f"Invalid color: {color}! Available colors: {list(colors.keys())}")
                 color_code = colors.get(color.lower(), "")  #
 
         styled_text = f"{style}{italic_code}{color_code}{str}{reset_style}"
@@ -689,6 +690,7 @@ def custom_arange(start, end, step, include_end=True):
     else:
         return np.arange(start, end, step)
 
+
 def get_random_numbers_no_neighboring_elems(min_num, max_num, amount):
     """Generates amount random numbers in [min_num,..,max_num] that do not
     include neighboring numbers."""
@@ -796,6 +798,17 @@ def contains_nan(arr):
         return False
 
 
+def get_None_indices(arr):
+    if isinstance(arr, list):
+        arr = np.array(arr)
+
+    nones = np.where(arr == None)[0]
+    if len(nones) == 1:
+        return nones[0]
+    else:
+        return nones
+
+
 def remove_nans(x):
     if isinstance(x, list):
         x = np.array(x)
@@ -899,7 +912,8 @@ def delete_non_dimension_attribute(dataarray, attribute_name, verbose=True):
         return dataarray
     else:
         # Attribute not found in dims or coords
-        raise ValueError(f"The attribute '{attribute_name}' not found in dimensions or coordinates.")
+        raise ValueError(
+            f"The attribute '{attribute_name}' not found in dimensions or coordinates.")
 
 
 def delete_all_non_dimension_attributes(dataarray):
@@ -914,7 +928,8 @@ def delete_all_non_dimension_attributes(dataarray):
     """
     attribute_names = list(dataarray.coords)
     for attribute_name in attribute_names:
-        delete_non_dimension_attribute(dataarray, attribute_name, verbose=False)
+        delete_non_dimension_attribute(
+            dataarray, attribute_name, verbose=False)
     return dataarray
 
 
@@ -1385,6 +1400,27 @@ def replicate_object(obj, n):
         An array containing 'n' copies of the object.
     """
     return [obj] * n
+
+
+def change_array_object(arr, obj, new_obj):
+    """
+    Changes the specified object in the array to a new object.
+
+    Args:
+        arr (list or numpy.ndarray): The input array.
+        obj: The object to be changed.
+        new_obj: The new object to replace the old object.
+
+    Returns:
+        list or numpy.ndarray: The modified array with the specified object changed to the new object.
+    """
+    if isinstance(arr, list):
+        for i in range(len(arr)):
+            if arr[i] == obj:
+                arr[i] = new_obj
+    elif isinstance(arr, np.ndarray):
+        arr[arr == obj] = new_obj
+    return arr
 
 
 def has_non_none_objects(arr):

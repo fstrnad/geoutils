@@ -16,6 +16,7 @@ import geoutils.plotting.plotting_utils as put
 import geoutils.plotting.plot_settings as pst
 reload(put)
 reload(pst)
+reload(gut)
 
 
 def estimate_distance(minimum_value, maximum_value, min_dist_val=5, multiple=10):
@@ -303,7 +304,7 @@ def create_map(
         land_ocean = kwargs.pop("land_ocean", False)
         if land_ocean:
             # ax.add_feature(ctp.feature.OCEAN, alpha=.4, zorder=-1)
-            ax.add_feature(ctp.feature.LAND, alpha=.3, zorder=-1)
+            ax.add_feature(ctp.feature.LAND, alpha=.3, zorder=-1, color='grey')
         if projection == "PlateCarree":
             rem_frame = kwargs.pop("rem_frame", False)
             if rem_frame:
@@ -849,6 +850,7 @@ def plot_2D(
     if label is not None:
         tick_step = kwargs.pop('tick_step', 2)
         unset_sci = kwargs.pop('unset_sci', False)
+        shift_ticks = kwargs.pop('shift_ticks', None)
         sci = sci if not unset_sci else None
         orientation = kwargs.pop('orientation', 'horizontal')
 
@@ -860,11 +862,8 @@ def plot_2D(
                                  sci=sci,
                                  tick_step=tick_step if plot_type != 'discrete' else 1,
                                  orientation=orientation,
+                                 shift_ticks=shift_ticks,
                                  **kwargs)
-        if plot_type == "discrete":
-            cbar.set_ticks(ticks)
-            cbar.ax.set_xticklabels(normticks[:-1], rotation=45)
-            cbar.set_ticklabels(normticks[:-1])
     if plot_type != "points":
         return {"ax": ax, "fig": fig, "projection": projection, "im": im,
                 'ticks': levels, 'extend': extend}
@@ -1056,6 +1055,7 @@ def create_multi_plot(nrows, ncols, projection=None,
 
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx
+    full_length_row = kwargs.pop('full_length_row', False)
     map_axis = kwargs.pop('map_axis', [])
     if len(map_axis) == 0:
         map_axis = np.arange(nrows*ncols)
@@ -1082,6 +1082,7 @@ def create_multi_plot(nrows, ncols, projection=None,
                           width_ratios=ratios_w,
                           hspace=hspace, wspace=wspace)
     proj_arr = kwargs.pop('proj_arr', None)
+    diff_projs = False
 
     if projection is not None or proj_arr is not None:
         central_longitude = kwargs.pop("central_longitude", None)
@@ -1091,7 +1092,8 @@ def create_multi_plot(nrows, ncols, projection=None,
         if proj_arr is None:
             proj_arr = gut.replicate_object(projection, nrows*ncols)
         else:
-            if len(proj_arr) != end_idx:
+            diff_projs = True
+            if len(proj_arr) > end_idx:
                 raise ValueError(
                     f'Length of projection array {len(proj_arr)} does not match number of pannels {end_idx}!')
     else:
@@ -1112,7 +1114,11 @@ def create_multi_plot(nrows, ncols, projection=None,
                                           central_latitude=central_latitude,
                                           dateline=dateline)
 
-                    axs.append(fig.add_subplot(gs[i, j], projection=proj))
+                    if run_idx == end_idx-1 and full_length_row:
+                        axs.append(fig.add_subplot(gs[i, j:], projection=proj,
+                                                   ))
+                    else:
+                        axs.append(fig.add_subplot(gs[i, j], projection=proj))
                     if run_idx in map_axis:
                         map_dict = create_map(
                             ax=axs[run_idx],
@@ -1127,7 +1133,11 @@ def create_multi_plot(nrows, ncols, projection=None,
                         )
                         kwargs = map_dict['kwargs']
                 else:
-                    axs.append(fig.add_subplot(gs[i, j]))
+                    # Make a row at full length until the end of the columns
+                    if run_idx == end_idx-1 and full_length_row:
+                        axs.append(fig.add_subplot(gs[i, j:]))
+                    else:
+                        axs.append(fig.add_subplot(gs[i, j]))
             else:
                 axs.append(fig.add_subplot(gs[i, j]))
 
@@ -1136,10 +1146,14 @@ def create_multi_plot(nrows, ncols, projection=None,
                 break
     # fig.tight_layout()
     if nrows > 1 or ncols > 1:
-        pos_x = kwargs.pop('enumerate_x', -0.1)
-        pos_y = kwargs.pop('enumerate_y', 1.1)
         enumerate_subplots = kwargs.pop('enumerate_subplots', True)
         if enumerate_subplots:
+            pos_x = kwargs.pop('pos_x', -0.1)
+            pos_y = kwargs.pop('pos_y', 1.1)
+            if diff_projs:
+                pos_x = gut.replicate_object(pos_x, end_idx)
+                indices_none = gut.get_None_indices(proj_arr)
+                pos_x[indices_none] = 0.
             put.enumerate_subplots(axs, pos_x=pos_x, pos_y=pos_y)
     else:
         axs = axs[0]
@@ -1165,65 +1179,6 @@ def plt_text_map(ax, lon_pos, lat_pos, text, color="k"):
     )
 
     return ax
-
-
-def plot_corr_matrix(
-    mat_corr,
-    pick_x=None,
-    pick_y=None,
-    label_x=None,
-    label_y=None,
-    ax=None,
-    vmin=-1,
-    vmax=1,
-    color="BrBG",
-    bar_title="correlation",
-):
-    """Plot correlation matrix.
-
-    Args:
-        mat_corr ([type]): [description]
-        pick_x ([type], optional): [description]. Defaults to None.
-        pick_y ([type], optional): [description]. Defaults to None.
-        label_x ([type], optional): [description]. Defaults to None.
-        label_y ([type], optional): [description]. Defaults to None.
-        ax ([type], optional): [description]. Defaults to None.
-        vmin (int, optional): [description]. Defaults to -1.
-        vmax (int, optional): [description]. Defaults to 1.
-        color (str, optional): [description]. Defaults to 'BrBG'.
-        bar_title (str, optional): [description]. Defaults to 'correlation'.
-
-    Returns:
-        im (plt.imshow): [description]
-    """
-    if ax is None:
-        fig, ax = plt.subplots()
-
-    if pick_y is not None and pick_x is not None:
-        corr = mat_corr[pick_x, :].copy()
-        corr = corr[:, pick_y]
-    elif pick_x is not None:
-        corr = mat_corr[pick_x, :]
-    elif pick_y is not None:
-        corr = mat_corr[:, pick_y]
-    else:
-        corr = mat_corr
-
-    cmap = plt.get_cmap(color)
-    im = ax.imshow(corr, vmin=vmin, vmax=vmax, aspect="auto", cmap=cmap)
-
-    cbar = plt.colorbar(
-        im, extend="both", orientation="horizontal", label=bar_title, shrink=1.0, ax=ax
-    )
-
-    if label_x is not None:
-        ax.set_xticks(np.arange(0, len(label_x)))
-        ax.set_xticklabels(label_x)
-    if label_y is not None:
-        ax.set_yticks(np.arange(0, len(label_y)))
-        ax.set_yticklabels(label_y)
-
-    return im
 
 
 def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
@@ -1255,6 +1210,7 @@ def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
 
     ring = LinearRing(list(zip(lons, lats)))
     lw = kwargs.pop("lw", 1)
+    ls = kwargs.pop("ls", "-")
     color = kwargs.pop("color", "k")
     fill = kwargs.pop("fill", False)
     facecolor = color if fill else "none"
@@ -1266,6 +1222,7 @@ def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
         edgecolor=color,
         linewidth=lw,
         zorder=zorder,
+
     )
 
     if text is not None:
@@ -1314,7 +1271,6 @@ def plot_ring(ax, xpos=0, ypos=0, **kwargs):
     return ax
 
 
-
 def plot_horizontal_line_at_latitude(ax, latitude, **kwargs):
     """
     Plot a horizontal line at a specified latitude on a Cartopy map.
@@ -1328,7 +1284,7 @@ def plot_horizontal_line_at_latitude(ax, latitude, **kwargs):
     # Plot a horizontal line at the specified latitude
     lats = np.ones(100) * latitude
     lons = np.linspace(-180, 180, 100)
-    ax.plot(lons, lats, zorder=2,
+    ax.plot(lons, lats, zorder=20,
             transform=ccrs.PlateCarree(), **kwargs)
 
     return ax
