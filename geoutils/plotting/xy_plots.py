@@ -111,7 +111,8 @@ def plot_xy(
             raise ValueError(
                 f"x and y arrays must have the same length, but are {len(x_arr)} and {len(y_arr)}!")
     if ax is None:
-        figsize = kwargs.pop("figsize", (8, 5))
+        figsize = kwargs.pop("figsize",
+                             (8, 5))
         set_axis = True
         if plot_type != 'polar':
             fig, ax = plt.subplots(figsize=(figsize), nrows=1, ncols=1)

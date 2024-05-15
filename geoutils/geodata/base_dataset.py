@@ -186,7 +186,7 @@ class BaseDataset():
         ds = gut.rename_var_era5(ds=ds, verbose=verbose, **kwargs)
 
         if 'time' in self.dims:
-            ds = self.get_data_timerange(ds, time_range)
+            ds = self.get_data_timerange(ds, time_range, verbose=verbose)
 
         if month_range is not None:
             ds = tu.get_month_range_data(dataset=ds,
@@ -1357,7 +1357,7 @@ class BaseDataset():
             # da = data.interp(time=t, method='nearest')
             da = data.sel(time=slice(time_range[0], time_range[1]))
 
-            gut.myprint("Time steps selected!")
+            gut.myprint("Time steps selected!", verbose=verbose)
         else:
             da = data
         tr = tu.get_time_range(ds=da)

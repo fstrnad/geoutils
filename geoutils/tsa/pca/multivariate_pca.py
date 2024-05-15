@@ -27,7 +27,6 @@ class MultivariatePCA(eof.SpatioTemporalPCA):
     def __init__(self, ds, n_components, **kwargs):
 
         self.X, self.ids_notNaN = self.get_input_data(ds=ds)
-        PCA
         self.pca = self.apply_pca(X=self.X, n_components=n_components,
                                   **kwargs)
 
@@ -45,11 +44,17 @@ class MultivariatePCA(eof.SpatioTemporalPCA):
         --------
         X (np.ndarray): Input data for PCA.
         """
-        self.vars = gut.get_varnames_ds(ds=ds)
-        if len(self.vars) > 1:
-            gut.myprint(f'Multivariate PCA vars: {self.vars}')
+        self.mvars = True
+        if isinstance(ds, xr.Dataset):
+            self.vars = gut.get_varnames_ds(ds=ds)
+            if len(self.vars) > 1:
+                gut.myprint(f'Multivariate PCA vars: {self.vars}')
+            else:
+                gut.myprint(f'Univariate PCA var: {self.vars[0]}')
         else:
-            gut.myprint(f'Univariate PCA var: {self.vars[0]}')
+            gut.myprint(f'Univariate PCA var with dataarray')
+            self.mvars = False
+
         X, idsnotnan = pca_utils.map2flatten(ds)
 
         return X, idsnotnan
@@ -61,7 +66,11 @@ class MultivariatePCA(eof.SpatioTemporalPCA):
         --------
         vars (list): List of variables.
         """
-        if self.vars is None:
-            raise ValueError('No variables found.')
+        if self.mvars:
+            if self.vars is None:
+                raise ValueError('No variables found.')
 
-        return self.vars
+            return self.vars
+        else:
+            gut.myprint(f'Univariate PCA with dataarray')
+            return None

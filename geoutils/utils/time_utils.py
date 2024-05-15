@@ -1147,7 +1147,8 @@ def get_mean_time_series(da, lon_range, lat_range, time_roll=0, q=None):
 
 
 def compute_timemean(ds, timemean, dropna=True,
-                     groupby=False, verbose=True):
+                     groupby=False, verbose=True,
+                     reset_time=False):
     """Computes the monmean average on a given xr.dataset
 
     Args:
@@ -1159,6 +1160,8 @@ def compute_timemean(ds, timemean, dropna=True,
 
     if groupby:
         ds = ds.groupby(f'time.{timemean}').mean(dim='time')
+        if reset_time:
+            ds = gut.rename_dim(ds, timemean, name='time')
     else:
         if timemean is None:
             return ds
@@ -1174,6 +1177,7 @@ def compute_timemean(ds, timemean, dropna=True,
                 dim="time", skipna=True).dropna(dim="time")
         else:
             ds = ds.resample(time=tm).mean(dim="time", skipna=True)
+
 
     return ds
 
