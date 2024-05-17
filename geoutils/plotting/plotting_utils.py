@@ -108,7 +108,7 @@ def set_title(title, ax=None, fig=None, **kwargs):
     title_color = kwargs.pop('title_color', 'black')
     # fw = kwargs.pop('title_fontweight', "normal")
     fw = kwargs.pop('title_fontweight', "bold")
-    fsize = kwargs.pop('title_fsize', pst.BIGGER_SIZE)
+    fsize = kwargs.pop('title_fsize', pst.MEDIUM_SIZE)
     if title is not None:
         if ax is not None:
             ax.set_title(title, color=title_color,
@@ -156,6 +156,7 @@ def prepare_axis(ax, log=False, **kwargs):
     y_ints = kwargs.pop("y_ints", False)
     set_twinx = kwargs.pop("set_twinx", False)
     set_twiny = kwargs.pop("set_twiny", False)
+    set_spines = kwargs.pop("set_spines", False)
     if set_twinx:
         ax = ax.twinx()
     if set_twiny:
@@ -163,7 +164,9 @@ def prepare_axis(ax, log=False, **kwargs):
     if plot_type != 'polar':
         if not set_twinx:
             ax.spines["right"].set_visible(False)
-        ax.spines["top"].set_visible(False)
+
+        ax.spines["top"].set_visible(set_spines)
+        ax.spines["right"].set_visible(set_spines)
 
         ax.grid(set_grid)
         ax.tick_params(
@@ -190,10 +193,17 @@ def prepare_axis(ax, log=False, **kwargs):
             ax.set_ylim(ylim)
 
         rot = kwargs.pop("rot", 0)
+        rot_y = kwargs.pop("rot_y", 0)
         set_ticks = kwargs.pop("set_ticks", True)
         top_ticks = kwargs.pop("top_ticks", False)
+        right_ticks = kwargs.pop("right_ticks", False)
         ax.tick_params(axis="x", labelrotation=rot,
-                       bottom=set_ticks, top=top_ticks)
+                       bottom=set_ticks,
+                       top=top_ticks,
+                       )
+        ax.tick_params(axis="y", labelrotation=rot_y,
+                       left=set_ticks, right=right_ticks
+                       )
         if xticks is not None:
             ax.set_xticks(xticks)
         if xticklabels is not None:
@@ -244,7 +254,7 @@ def prepare_axis(ax, log=False, **kwargs):
 
     if not set_ticks:
         ax.xaxis.set_ticklabels([])
-        # ax.yaxis.set_ticklabels([])
+        ax.yaxis.set_ticklabels([])
 
     yticks = kwargs.pop('yticks', None)
     if yticks is not None:

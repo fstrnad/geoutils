@@ -1301,9 +1301,10 @@ class BaseDataset():
         var_name = self.var_name if var_name is None else var_name
         if var_name in self.vars:
             for an_type in self.an_types:
-                self.ds[f"an_{an_type}"] = self.compute_anomalies(
+                self.ds[f"{var_name}_an_{an_type}"] = self.compute_anomalies(
                     self.ds[var_name], group=an_type
                 )
+        return self.ds
 
     def compute_all_anomalies(self, **kwargs):
         self.an_types = kwargs.pop('an_types',

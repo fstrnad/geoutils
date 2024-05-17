@@ -1178,10 +1178,7 @@ def compute_timemean(ds, timemean, dropna=True,
         else:
             ds = ds.resample(time=tm).mean(dim="time", skipna=True)
 
-
     return ds
-
-
 
 
 def compute_mean(ds, dropna=True, verbose=False):
@@ -1204,6 +1201,52 @@ def compute_mean(ds, dropna=True, verbose=False):
             ds = ds.dropna(dim='time').mean("time")
         else:
             ds = ds.mean(dim="time")
+    return ds
+
+
+def compute_quantile(ds, q, dropna=True, verbose=False):
+    """Computes the quantile of a given xr.dataset
+
+    Args:
+        ds (xr.dataset): xr dataset for the dataset
+
+    Returns:
+        xr.dataset: monthly average dataset
+    """
+    tps = ds.time
+    if gut.is_single_tp(tps=tps):
+        gut.myprint('Single time point selected!', verbose=verbose)
+        return ds
+    else:
+        gut.myprint(
+            f"Compute quantile of all variables!", verbose=verbose)
+        if dropna:
+            ds = ds.dropna(dim='time').quantile(q, dim="time")
+        else:
+            ds = ds.quantile(q, dim="time")
+    return ds
+
+
+def compute_sum(ds, dropna=True, verbose=False):
+    """Computes the sum of a given xr.dataset
+
+    Args:
+        ds (xr.dataset): xr dataset for the dataset
+
+    Returns:
+        xr.dataset: monthly average dataset
+    """
+    tps = ds.time
+    if gut.is_single_tp(tps=tps):
+        gut.myprint('Single time point selected!', verbose=verbose)
+        return ds
+    else:
+        gut.myprint(
+            f"Compute sum of all variables!", verbose=verbose)
+        if dropna:
+            ds = ds.dropna(dim='time').sum("time")
+        else:
+            ds = ds.sum(dim="time")
     return ds
 
 
@@ -1339,6 +1382,9 @@ def compute_anomalies(dataarray, climatology_array=None,
             elif group == 'DJFM':  # here it is important to include the December of the previous year
                 for month in ["Dec", "Jan", "Feb", "Mar"]:
                     month_ids.append(get_month_number(month))
+            else:
+                raise ValueError(
+                    f"ERROR! {group} is not a valid group for anomalies!")
             climatology = (
                 monthly_groups.mean(dim="time").sel(
                     month=month_ids).mean(dim="month")
