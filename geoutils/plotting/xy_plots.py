@@ -238,43 +238,37 @@ def plot_xy(
                                             color=c, alpha=alpha_fill,
                                             zorder=zorder)
 
-                if len(x_err_arr) > idx or len(y_err_arr) > idx+1 or len(y_lb_arr) > idx+1:
+                if len(y_lb_arr) > idx:
+                    y_lb = y_lb_arr[idx] if y_lb_arr[idx] is not None else None
+                    y_ub = y_ub_arr[idx] if y_ub_arr[idx] is not None else None
+                elif len(y_err_arr) > 0:
+                    y_err = y_err_arr[idx] if len(y_err_arr) > 0 else None
+                    x_err = x_err_arr[idx] if len(x_err_arr) > 0 else None
+                    y_lb = np.array(y + y_err / 2, dtype=float)
+                    y_ub = np.array(y - y_err / 2, dtype=float)
+                else:
+                    y_lb = None
+                    y_ub = None
 
-                    if len(y_lb_arr) > idx:
-                        y_lb = y_lb_arr[idx] if y_lb_arr[idx] is not None else None
-                        y_ub = y_ub_arr[idx] if y_lb_arr[idx] is not None else None
-                    elif y_err_arr[idx] is not None:
-                        y_err = y_err_arr[idx] if len(y_err_arr) > 0 else None
-                        x_err = x_err_arr[idx] if len(x_err_arr) > 0 else None
-                        y_lb = np.array(y + y_err / 2, dtype=float)
-                        y_ub = np.array(y - y_err / 2, dtype=float)
-                    if len(y_err_arr) < 1:
-                        if y_lb_arr[idx] is not None:
-                            # c = color_arr_ci[idx] if color_arr_ci is not None else c
-                            im = ax.fill_between(
-                                x,
-                                y_lb,
-                                y_ub,
-                                color=c,
-                                alpha=0.5,
-                                # label=label,
-                            )
-                    else:
-                        if y_err is not None:
-                            plot_errorbar = kwargs.pop('plot_errorbars', False)
-                            if plot_errorbar:
-                                ax.errorbar(x, y, xerr=x_err, yerr=y_err,
-                                            label=label, lw=lw, marker=mk, ls=ls, color=c,
-                                            capsize=2)
-                            else:
-                                im = ax.fill_between(
-                                    x,
-                                    y_lb,
-                                    y_ub,
-                                    color=c,
-                                    alpha=0.5,
-                                    # label=label,
-                                )
+                if y_lb is not None:
+                    color_arr_ci = kwargs.pop('color_arr_ci', None)
+                    c = color_arr_ci if color_arr_ci is not None else c
+
+                    im = ax.fill_between(
+                        x,
+                        y_lb,
+                        y_ub,
+                        color=c,
+                        alpha=0.5,
+                        # label=label,
+                    )
+
+                plot_errorbar = kwargs.pop('plot_errorbars', False)
+                if plot_errorbar:
+                    ax.errorbar(x, y, xerr=x_err, yerr=y_err,
+                                label=label, lw=lw, marker=mk, ls=ls, color=c,
+                                capsize=2)
+
     # ############# Plotting  bar ################
     elif plot_type == 'bar':
         # Bar plot

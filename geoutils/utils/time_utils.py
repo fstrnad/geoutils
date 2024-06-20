@@ -258,9 +258,7 @@ def get_max_num_tps(ds, q=None):
 def get_sel_tps_ds(ds, tps, remove_tp=False,
                    drop_dim=True,
                    verbose=False,
-                   timemean='day',
-                   sig_test=False,
-                   varname=None):
+                   ):
     if not isinstance(ds, xr.DataArray) and not isinstance(ds, xr.Dataset):
         raise ValueError(
             f'Data has to be of xarray type but is type {type(ds)}')

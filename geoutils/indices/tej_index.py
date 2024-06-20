@@ -182,7 +182,7 @@ if __name__ == '__main__':
     # %%
     reload(cplt)
     an_type = 'month'
-    var_type = f'an_{an_type}'
+    var_type = f'u_an_{an_type}'
 
     tej_tps = get_tej_strength(u200=u_def.ds[var_type],
                                definition='quantile',
@@ -207,7 +207,7 @@ if __name__ == '__main__':
                                 dateline=False)
     for idx, (tej_type, this_tps) in enumerate(tej_dict.items()):
         gut.myprint(f'Plotting {tej_type} {len(this_tps)} time steps')
-        mean_tps_u, sig_u = tu.get_mean_tps(ds_u200.ds[f'an_{an_type}'],
+        mean_tps_u, sig_u = tu.get_mean_tps(ds_u200.ds[f'u_an_{an_type}'],
                                             this_tps.time)
         vmax = 6
         vmin = -vmax
@@ -224,7 +224,7 @@ if __name__ == '__main__':
                                 vertical_title=f'{tej_type} TEJ',
                                 )
 
-        mean_tps_v, sig_v = tu.get_mean_tps(ds_v200.ds[f'an_{an_type}'],
+        mean_tps_v, sig_v = tu.get_mean_tps(ds_v200.ds[f'v_an_{an_type}'],
                                             this_tps.time)
         vmax = 5
         vmin = -vmax
@@ -240,7 +240,7 @@ if __name__ == '__main__':
                                 label=rf'V-wind Anomalies {lev} hPa (wrt {an_type}) [m/s]',
                                 )
 
-        mean_tps, sig_z = tu.get_mean_tps(ds_z200.ds[f'an_{an_type}'],
+        mean_tps, sig_z = tu.get_mean_tps(ds_z200.ds[f'z_an_{an_type}'],
                                           this_tps.time)
         vmax = 5.e2
         vmin = -vmax

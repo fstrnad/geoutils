@@ -4,15 +4,15 @@ TINY_SIZE = 8
 MINI_SIZE = 10
 SMALL_SIZE = 12
 MEDIUM_SIZE = 14
-BIGGER_SIZE = 16
-MAXIMUM_SIZE = 18
+BIGGER_SIZE = 18
+MAXIMUM_SIZE = 22
 MAX_ZORDER = 100
 plt.rcdefaults()
 
 # Choose 'serif', 'sans-serif', or 'monospace'
-plt.rcParams['font.family'] = 'serif'
+plt.rcParams['font.family'] = 'Lato'
 plt.rcParams['font.serif'] = 'Ubuntu'
-# plt.style.use('bmh')
+plt.style.use('bmh')
 plt.rcParams['axes.facecolor'] = 'white'
 plt.rc("font", size=SMALL_SIZE)  # controls default text sizes
 plt.rc("axes", titlesize=BIGGER_SIZE)  # fontsize of the axes title

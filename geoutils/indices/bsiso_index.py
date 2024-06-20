@@ -7,7 +7,7 @@ import geoutils.utils.time_utils as tu
 import geoutils.indices.indices_utils as iut
 import geoutils.tsa.time_series_analysis as tsa
 import geoutils.plotting.plots as cplt
-
+import geoutils.geodata.base_dataset as bds
 from importlib import reload
 import pandas as pd
 
@@ -44,7 +44,8 @@ def get_bsisophase_tps(phase_number,
                        index_def='Kikuchi'):
     reload(tsa)
     reload(tu)
-    bsiso_index = get_bsiso_index(time_range=time_range, start_month=start_month,
+    bsiso_index = get_bsiso_index(time_range=time_range,
+                                  start_month=start_month,
                                   end_month=end_month,
                                   index_def=index_def,
                                   )
@@ -59,10 +60,9 @@ def get_bsisophase_tps(phase_number,
             tps = tu.get_sel_tps_ds(
                 ds=tps, tps=ampl.where(ampl < ampl_th, drop=True).time)
     return tps
-
+# %%
 
 if __name__ == '__main__':
-    # %%
     # Lee et al. 2013
     bsiso_file = '/home/strnad/data/bsiso/BSISO.INDEX.NORM.data'
     bsiso_file = '/home/strnad/data/bsiso/BSISO.INDEX.NORM.data_new'
@@ -265,12 +265,12 @@ if __name__ == '__main__':
     im = cplt.create_multi_plot(nrows=nrows,
                                 ncols=ncols,
                                 projection='PlateCarree',
-                                hspace=0.45, wspace=0.15,
+                                hspace=0.5, wspace=0.15,
                                 orientation='horizontal',
                                 lon_range=[-30, 180],
                                 lat_range=[-30, 60])
 
-    index_def = 'Kiladis'
+    index_def = 'Kikuchi'
     for idx, phase in enumerate(np.arange(1, 9)):
         tps = bs.get_bsisophase_tps(
             phase_number=phase,
@@ -283,9 +283,9 @@ if __name__ == '__main__':
         mean_pr = composite_pr.mean(dim='time')
 
         an_type = 'month'
-        var_type = f'an_{an_type}'
+        var_type = f'olr_an_{an_type}'
         # var_type = 'ttr'
-        vmax = 20
+        vmax = 25
         vmin = -vmax
 
         im_comp = cplt.plot_map(mean_pr[var_type],

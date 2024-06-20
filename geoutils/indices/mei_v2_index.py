@@ -145,7 +145,7 @@ if __name__ == '__main__':
     ]
     groups = ['El Nino', 'Neutral', 'La Nina']
     an_type = 'month'
-    var_type = f'an_{an_type}'
+    var_type = f'sst_an_{an_type}'
     label_sst = f'SST Anomalies (wrt {an_type}) [K]'
     vmin_sst = -1
     vmax_sst = -vmin_sst

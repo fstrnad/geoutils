@@ -61,9 +61,9 @@ def compute_fft(ts, freq_m=1,
             raise ValueError(f'This window does not exist: {window}!')
 
         ts_fft = rfft(data*window)
-        power = np.abs(ts_fft)  # only positive values
+        power = np.abs(ts_fft)[1:]  # only positive values
         # The corresponding positive frequencies, # exclude w=0
-        w = rfftfreq(N, 1/sample_rate)
+        w = rfftfreq(N, 1/sample_rate)[1:]
         # w, power = spectrum.periodogram(data*window, Fs=T)
         if cutoff > 1:
             power = flt.apply_butter_filter(power,
@@ -146,10 +146,15 @@ def fft_by_year(ts, fft_prop='power',
                 window='blackman',
                 cutoff=1):
     year_arr = tu.split_by_year(ds=ts)
+    len_year = len(year_arr[0])
     fft_arr = []
     for year_ts in year_arr:
         this_fft = compute_fft(ts=year_ts, window=window, cutoff=cutoff)
-        fft_arr.append(this_fft[fft_prop])
+        this_len_year = len(year_ts)
+        if len_year != this_len_year:
+            fft_arr.append(this_fft[fft_prop][:-1])
+        else:
+            fft_arr.append(this_fft[fft_prop])
     mean_fft = np.mean(fft_arr, axis=0)
     return {
         'period': this_fft['period'],
@@ -258,6 +263,7 @@ def ar1_surrogates_spectrum(ts, N=1000, cutoff=1,
     """Compute the power spectrum of an AR1 model
     """
     year_arr = tu.split_by_year(ds=ts)
+    len_year = len(year_arr[0])
     year_fft = []
     year_fft95 = []
     year_fft5 = []
@@ -267,7 +273,10 @@ def ar1_surrogates_spectrum(ts, N=1000, cutoff=1,
         surr_ts_arr = surr_ts_dict['surrogates']
         for surr_ts in surr_ts_arr:
             surr_fft = compute_fft(ts=surr_ts, cutoff=cutoff, window=window)
-            surr_arr.append(surr_fft[fft_prop])
+            if len(year_ts) != len_year:
+                surr_arr.append(surr_fft[fft_prop][:-1])
+            else:
+                surr_arr.append(surr_fft[fft_prop])
         year_fft.append(np.quantile(surr_arr, q=0.5, axis=0))
         year_fft95.append(np.quantile(surr_arr, q=0.9, axis=0))
         year_fft5.append(np.quantile(surr_arr, q=0.1, axis=0))

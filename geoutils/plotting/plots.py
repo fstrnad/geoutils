@@ -15,10 +15,10 @@ reload(geoutils.plotting.plot_settings)
 reload(geoutils.plotting.map_plots)
 reload(geoutils.plotting.xy_plots)
 
+from geoutils.plotting.plot_settings import *
 from geoutils.plotting.map_plots import *
 from geoutils.plotting.xy_plots import *
 from geoutils.plotting.plotting_utils import *
-from geoutils.plotting.plot_settings import *
 
 
 def create_twinaxis(ax):
