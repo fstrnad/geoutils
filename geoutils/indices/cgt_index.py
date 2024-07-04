@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
     # %%
     an_type = 'month'
-    var_type = f'an_{an_type}'
+    var_type = f'z_an_{an_type}'
     cgti_dict = get_cgti_strength(ds_z200.ds[var_type],
                                   definition='quantile',
                                   cgti_val=1,
@@ -138,57 +138,60 @@ if __name__ == '__main__':
                                   end_month='Sep',
                                   )
     # %%
-
-    nrows = len(cgti_dict)
-    ncols = 3
+    reload(cplt)
+    cgt_types = ['pos', 'neg']
+    nrows = len(cgt_types)
+    ncols = 2
     im = cplt.create_multi_plot(nrows=nrows, ncols=ncols,
                                 projection='PlateCarree',
                                 lon_range=[-20, 180],
-                                lat_range=[-20, 70],
+                                lat_range=[-0, 80],
                                 wspace=0.1,
                                 hspace=0.8,
                                 dateline=False)
-    for idx, (cgti_type, this_tps) in enumerate(cgti_dict.items()):
+    for idx, (cgti_type) in enumerate(cgt_types):
+        this_tps = cgti_dict[cgti_type]
         gut.myprint(f'Plotting {cgti_type} {len(this_tps)} time steps')
-        mean_tps_u, sig_u = tu.get_mean_tps(ds_u200.ds[f'an_{an_type}'],
+        mean_tps_u, sig_u = tu.get_mean_tps(ds_u200.ds[f'u_an_{an_type}'],
+                                            this_tps.time)
+        # vmax = 6
+        # vmin = -vmax
+
+        # im_comp = cplt.plot_map(mean_tps_u,
+        #                         ax=im['ax'][idx*ncols + 0],
+        #                         plot_type='contourf',
+        #                         cmap='PuOr',
+        #                         centercolor='white',
+        #                         levels=12,
+        #                         vmin=vmin, vmax=vmax,
+        #                         title=f"U200 Anomalies",
+        #                         label=rf'U-wind Anomalies {lev} hPa (wrt {an_type}) [m/s]',
+        #                         vertical_title=f'{cgti_type} cgti',
+        #                         )
+
+        mean_tps_v, sig_v = tu.get_mean_tps(ds_v200.ds[f'v_an_{an_type}'],
                                             this_tps.time)
         vmax = 6
         vmin = -vmax
 
-        im_comp = cplt.plot_map(mean_tps_u,
+        im_comp = cplt.plot_map(mean_tps_v,
                                 ax=im['ax'][idx*ncols + 0],
                                 plot_type='contourf',
                                 cmap='PuOr',
                                 centercolor='white',
                                 levels=12,
                                 vmin=vmin, vmax=vmax,
-                                title=f"U200 Anomalies",
-                                label=rf'U-wind Anomalies {lev} hPa (wrt {an_type}) [m/s]',
-                                vertical_title=f'{cgti_type} cgti',
-                                )
-
-        mean_tps_v, sig_v = tu.get_mean_tps(ds_v200.ds[f'an_{an_type}'],
-                                            this_tps.time)
-        vmax = 6
-        vmin = -vmax
-
-        im_comp = cplt.plot_map(mean_tps_v,
-                                ax=im['ax'][idx*ncols + 1],
-                                plot_type='contourf',
-                                cmap='PuOr',
-                                centercolor='white',
-                                levels=12,
-                                vmin=vmin, vmax=vmax,
                                 title=f"V200 Anomalies",
+                                vertical_title=f'{cgti_type}. CGT',
                                 label=rf'V-wind Anomalies {lev} hPa (wrt {an_type}) [m/s]',
                                 )
 
-        mean_tps, sig_z = tu.get_mean_tps(ds_z200.ds[f'an_{an_type}'],
+        mean_tps, sig_z = tu.get_mean_tps(ds_z200.ds[f'z_an_{an_type}'],
                                           this_tps.time)
         vmax = 5.e2
         vmin = -vmax
         im_comp = cplt.plot_map(mean_tps,
-                                ax=im['ax'][idx*ncols + 2],
+                                ax=im['ax'][idx*ncols + 1],
                                 plot_type='contourf',
                                 cmap='RdYlBu_r',
                                 centercolor='white',

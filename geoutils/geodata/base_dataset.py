@@ -1048,11 +1048,6 @@ class BaseDataset():
             max_lat = float(np.max(init_lat)) if max_lat is None else min_lat
             max_lon = float(np.max(init_lon)) if max_lon is None else max_lon
         else:
-            # min_lon = min(lon_range)
-            # min_lat = min(lat_range)
-            # Use minimum of original dataset because other lower variables aren't defined
-            # without np. much slower!
-
             correct_max_lon = True if max_lon is None else False
             correct_min_lon = True if min_lon is None else False
             correct_min_lat = True if min_lat is None else False
@@ -1102,9 +1097,7 @@ class BaseDataset():
             init_lon = gut.custom_arange(start=min_lon,
                                          end=max_lon,
                                          step=grid_step_lon)
-            # init_lat = gut.crange(min_lat, max_lat, grid_step_lat)  # This starts and ends with min_lat and max_lat
-            # init_lon = gut.crange(min_lon, max_lon, grid_step_lon)
-
+            
             nlat = len(init_lat)
             if nlat % 2:
                 # Odd number of latitudes includes the poles.

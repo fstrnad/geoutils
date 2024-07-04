@@ -170,9 +170,9 @@ if __name__ == '__main__':
                               )
     # %%
     dataset_file = data_dir + \
-        f"/climate_data/2.5/era5_sst_{2.5}_ds.nc"
+        f"/climate_data/2.5/era5_t2m_{2.5}_ds.nc"
 
-    ds_sst = bds.BaseDataset(data_nc=dataset_file,
+    ds_sat = bds.BaseDataset(data_nc=dataset_file,
                              can=True,
                              an_types=['JJAS', 'month'],
                              month_range=['Jun', 'Sep'],
@@ -193,11 +193,11 @@ if __name__ == '__main__':
                                )
     tej_dict = dict(
         enhanced=tej_tps['enhanced'],
-        reduced=tej_tps['reduced'],
+        # reduced=tej_tps['reduced'],
     )
 
     nrows = len(tej_dict)
-    ncols = 3
+    ncols = 2
     im = cplt.create_multi_plot(nrows=nrows, ncols=ncols,
                                 projection='PlateCarree',
                                 lon_range=[-20, 180],
@@ -226,32 +226,32 @@ if __name__ == '__main__':
 
         mean_tps_v, sig_v = tu.get_mean_tps(ds_v200.ds[f'v_an_{an_type}'],
                                             this_tps.time)
-        vmax = 5
-        vmin = -vmax
+        # vmax = 5
+        # vmin = -vmax
 
-        im_comp = cplt.plot_map(mean_tps_v,
-                                ax=im['ax'][idx*ncols + 1],
-                                plot_type='contourf',
-                                cmap='PuOr',
-                                centercolor='white',
-                                levels=12,
-                                vmin=vmin, vmax=vmax,
-                                title=f"V200 Anomalies",
-                                label=rf'V-wind Anomalies {lev} hPa (wrt {an_type}) [m/s]',
-                                )
+        # im_comp = cplt.plot_map(mean_tps_v,
+        #                         ax=im['ax'][idx*ncols + 1],
+        #                         plot_type='contourf',
+        #                         cmap='PuOr',
+        #                         centercolor='white',
+        #                         levels=12,
+        #                         vmin=vmin, vmax=vmax,
+        #                         title=f"V200 Anomalies",
+        #                         label=rf'V-wind Anomalies {lev} hPa (wrt {an_type}) [m/s]',
+        #                         )
 
-        mean_tps, sig_z = tu.get_mean_tps(ds_z200.ds[f'z_an_{an_type}'],
+        mean_tps, sig_z = tu.get_mean_tps(ds_sat.ds[f't2m_an_{an_type}'],
                                           this_tps.time)
-        vmax = 5.e2
+        vmax = 1.5
         vmin = -vmax
         im_comp = cplt.plot_map(mean_tps,
-                                ax=im['ax'][idx*ncols + 2],
+                                ax=im['ax'][idx*ncols +1],
                                 plot_type='contourf',
                                 cmap='RdYlBu_r',
                                 centercolor='white',
                                 levels=12,
                                 vmin=vmin, vmax=vmax,
-                                title=f"z200 Anomalies",
+                                title=f"SAT Anomalies + Wind Field 200hPa",
                                 label=rf'Anomalies GP (wrt {an_type}) [$m^2/s^2$]',
                                 )
         dict_w = cplt.plot_wind_field(ax=im_comp['ax'],
@@ -283,11 +283,11 @@ if __name__ == '__main__':
     vmin_sst = -1
     vmax_sst = -vmin_sst
     an_type = 'month'
-    var_type = f'an_{an_type}'
+    var_type = f't2m_an_{an_type}'
     label_sst = f'SST Anomalies (wrt {an_type}) [°C]'
     for idx, (group, sel_tps) in enumerate(tej_dict.items()):
 
-        mean, mask = tu.get_mean_tps(ds_sst.ds[var_type], tps=sel_tps)
+        mean, mask = tu.get_mean_tps(ds_sat.ds[var_type], tps=sel_tps)
 
         im_sst = cplt.plot_map(mean,
                                ax=im['ax'][idx],
@@ -307,3 +307,5 @@ if __name__ == '__main__':
     savepath = plot_dir + \
         f"definitions/sst_{an_type}_tej_types.png"
     cplt.save_fig(savepath=savepath, fig=im['fig'])
+
+#%%

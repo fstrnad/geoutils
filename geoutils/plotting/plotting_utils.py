@@ -121,7 +121,7 @@ def set_title(title, ax=None, fig=None, **kwargs):
                          fontweight=fw,
                          fontsize=pst.BIGGER_SIZE)
     if vertical_title is not None:
-        fsize = kwargs.pop('vertical_title_fsize', pst.MEDIUM_SIZE)
+        fsize = kwargs.pop('vertical_title_fsize', pst.BIGGER_SIZE)
         ax.text(x=x_title_offset, y=.5, s=vertical_title,
                 transform=ax.transAxes,
                 color=title_color, rotation='vertical',

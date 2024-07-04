@@ -431,7 +431,6 @@ def horizontal_average(ds, dim='lon', average_type='mean'):
     return ds
 
 
-
 def get_vertical_ds(wind_dict, tps,
                     vname='v',
                     wname='w',
@@ -1084,7 +1083,12 @@ def average_num_eres(data):
     return num_eres/N
 
 
-def remove_useless_variables(ds):
+valid_dims = ['time', 'lat', 'lon', 'plevel', 'lev',
+              'dimx_lon', 'dimy_lon', 'dimz_lon', 'x',
+              'Year', 'year', 'month', 'day', 'points']
+
+
+def remove_useless_variables(ds, rm_var=False):
     if isinstance(ds, xr.Dataset):
         # Remove useless dimensions in ds for all variables
         dims = gut.get_dims(ds=ds)
@@ -1097,30 +1101,32 @@ def remove_useless_variables(ds):
             dims = gut.get_dims(ds=ds)
 
         for dim in dims:
-            if dim not in ['time', 'lat', 'lon', 'plevel', 'lev', 'dimx_lon', 'dimy_lon', 'dimz_lon', 'x']:
+            if dim not in valid_dims:
                 ds = ds.drop_dims(dim)
                 gut.myprint(f'Remove dimension {dim}!')
 
         # Remove useless variables
-        vars = gut.get_vars(ds=ds)
-        for var in vars:
-            this_dims = gut.get_dims(ds[var])
-            if (
-                (gut.compare_lists(this_dims, ['lat', 'lon', 'time'])) or
-                (gut.compare_lists(this_dims, ['lat', 'lon'])) or
-                (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'plevel'])) or
-                (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'lev'])) or
-                (gut.compare_lists(this_dims, ['lat', 'lon', 'lev'])) or
-                (gut.compare_lists(this_dims, ['lat', 'lon', 'plevel'])) or
-                (gut.compare_lists(this_dims, ['time', 'dimx_lon'])) or
-                (gut.compare_lists(this_dims, ['time', 'dimy_lon'])) or
-                (gut.compare_lists(this_dims, ['time', 'dimz_lon'])) or
-                (gut.compare_lists(this_dims, ['time', 'x']))
-            ):
-                continue
-            else:
-                ds = ds.drop(var)
-                gut.myprint(f'Remove variable {var} with dims: {this_dims}!')
+        if rm_var:
+            vars = gut.get_vars(ds=ds)
+            for var in vars:
+                this_dims = gut.get_dims(ds[var])
+                if (
+                    (gut.compare_lists(this_dims, ['lat', 'lon', 'time'])) or
+                    (gut.compare_lists(this_dims, ['lat', 'lon'])) or
+                    (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'plevel'])) or
+                    (gut.compare_lists(this_dims, ['lat', 'lon', 'time', 'lev'])) or
+                    (gut.compare_lists(this_dims, ['lat', 'lon', 'lev'])) or
+                    (gut.compare_lists(this_dims, ['lat', 'lon', 'plevel'])) or
+                    (gut.compare_lists(this_dims, ['time', 'dimx_lon'])) or
+                    (gut.compare_lists(this_dims, ['time', 'dimy_lon'])) or
+                    (gut.compare_lists(this_dims, ['time', 'dimz_lon'])) or
+                    (gut.compare_lists(this_dims, ['time', 'x']))
+                ):
+                    continue
+                else:
+                    ds = ds.drop(var)
+                    gut.myprint(
+                        f'Remove variable {var} with dims: {this_dims}!')
 
     return ds
 
@@ -1170,8 +1176,12 @@ def transpose_2D_data(da, dims=['lat', 'lon']):
     return da
 
 
-def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
-                     freq='D', verbose=True):
+def check_dimensions(ds, ts_days=True, sort=True, lon360=False,
+                     keep_time=False,
+                     freq='D',
+                     check_clim_dims=False,
+                     transpose_dims=False,
+                     verbose=True):
     """
     Checks whether the dimensions are the correct ones for xarray!
     """
@@ -1190,6 +1200,8 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
         'dimz_lon': 'z',
         'x': 'lon',
         'y': 'lat',
+        'Lon': 'lon',
+        'Lat': 'lat',
     }
     lon_lat_names = list(rename_dict.keys())
 
@@ -1221,26 +1233,28 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False, keep_time=False,
             clim_dims = ['time']
         else:
             raise ValueError(f'Too many dimensions: {numdims}!')
-        for dim in clim_dims:
-            if dim not in dims:
-                raise ValueError(
-                    f"The dimension {dims} not consistent with required dims {clim_dims}!")
+        if check_clim_dims:
+            for dim in clim_dims:
+                if dim not in dims:
+                    raise ValueError(
+                        f"The dimension {dims} not consistent with required dims {clim_dims}!")
 
-    if numdims == 4:
-        # Actually change location in memory if necessary!
-        ds = ds.transpose("lat", "lon", "lev", "time").compute()
-        gut.myprint('object transposed to lat-lon-lev-time!', verbose=verbose)
+    if transpose_dims:
+        if numdims == 4:
+            # Actually change location in memory if necessary!
+            ds = ds.transpose("lat", "lon", "lev", "time").compute()
+            gut.myprint('object transposed to lat-lon-lev-time!', verbose=verbose)
 
-    elif numdims == 3:
-        # Actually change location in memory if necessary!
-        ds = ds.transpose("lat", "lon", "time").compute()
-        gut.myprint('3d object transposed to lat-lon-time!', verbose=verbose)
-    elif numdims == 2:
-        if 'lon' in dims:
-            ds = ds.transpose('lat', 'lon').compute()
-        gut.myprint('2d oject transposed to lat-lon!', verbose=verbose)
-    elif numdims == 1:
-        gut.myprint('1d oject only!', verbose=verbose)
+        elif numdims == 3:
+            # Actually change location in memory if necessary!
+            ds = ds.transpose("lat", "lon", "time").compute()
+            gut.myprint('3d object transposed to lat-lon-time!', verbose=verbose)
+        elif numdims == 2:
+            if 'lon' in dims:
+                ds = ds.transpose('lat', 'lon').compute()
+            gut.myprint('2d oject transposed to lat-lon!', verbose=verbose)
+        elif numdims == 1:
+            gut.myprint('1d oject only!', verbose=verbose)
 
     if numdims >= 2 and 'lon' in dims:
         # If lon from 0 to 360 shift to -180 to 180
