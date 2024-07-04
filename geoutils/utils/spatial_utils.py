@@ -1176,7 +1176,10 @@ def transpose_2D_data(da, dims=['lat', 'lon']):
     return da
 
 
-def check_dimensions(ds, ts_days=True, sort=True, lon360=False,
+def check_dimensions(ds, ts_days=True,
+                     sort=True,
+                     lon360=False,
+                     lon_2_180=False,
                      keep_time=False,
                      freq='D',
                      check_clim_dims=False,
@@ -1263,7 +1266,7 @@ def check_dimensions(ds, ts_days=True, sort=True, lon360=False,
             if max(ds.lon) < 180:
                 ds = da_lon2_360(da=ds)
         else:
-            if max(ds.lon) > 180:
+            if max(ds.lon) > 180 and lon_2_180:
                 gut.myprint("Shift longitude -180 - 180!", verbose=verbose)
                 ds = da_lon2_180(da=ds)
 

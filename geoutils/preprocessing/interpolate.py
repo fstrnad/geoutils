@@ -1,12 +1,14 @@
 import xarray as xr
 import numpy as np
 import geoutils.utils.general_utils as gut
+import geoutils.preprocessing.open_nc_file as of
 
 from importlib import reload
 reload(gut)
+reload(of)
 
 
-def interpolate_grid(dataarray, grid_step=1,
+def interpolate_grid(dataarray, grid_step,
                      method="nearest",
                      min_lon=None, max_lon=None,
                      min_lat=None, max_lat=None,
@@ -14,6 +16,13 @@ def interpolate_grid(dataarray, grid_step=1,
                      grid_step_lat=None):
     """Common grid for all datasets.
     """
+    if grid_step is None:
+        raise ValueError("Grid step must be defined!")
+    dataarray, dims = of.check_dimensions(dataarray,
+                                          check_clim_dims=False,
+                                          transpose_dims=False,
+                                          verbose=False,
+                                          )
 
     correct_max_lon = True if max_lon is None else False
     correct_min_lon = True if min_lon is None else False
