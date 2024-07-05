@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import copy
 from tqdm import tqdm
@@ -14,35 +15,19 @@ import xarray as xr
 def open_nc_file(
         nc_files,
         plevels=None,
-        time_range=None,
-        month_range=None,
-        large_ds=True,
         decode_times=True,
         verbose=True,
-        parse_cf=True,
         var_name=None,
         **kwargs,):
     reload(gut)
     gut.myprint("Start processing data!", verbose=verbose)
-    plevel_name = kwargs.pop('plevel_name', 'lev')
 
-    if plevels is None:
-        if large_ds:
-            gut.myprint('Chunk the data', verbose=verbose)
-            ds = xr.open_mfdataset(nc_files, chunks={"time": 1000},
-                                   decode_times=decode_times)
-        else:
-            ds = xr.open_mfdataset(nc_files,
-                                   decode_times=decode_times,
-                                   parallel=True)
-    else:
-        ds = xr.open_mfdataset(nc_files, decode_times=decode_times,
-                               preprocess=self.add_dummy_dim,
-                               chunks={"time": 1000}
-                               )
+    ds = open_ds(
+        nc_files=nc_files,
+        plevels=plevels,
+        decode_times=decode_times,
+        **kwargs)
 
-        ds = ds.rename({'dummy': self.plevel_name})
-        ds[plevel_name] = plevels
     if var_name is not None:
         ds = ds[var_name]
     ds, dims = check_dimensions(
@@ -51,7 +36,37 @@ def open_nc_file(
     ds = gut.rename_var_era5(ds=ds, verbose=verbose, **kwargs)
 
     gut.myprint(f"End processing data! Dimensions: {dims}", verbose=verbose)
+
     return ds
+
+
+def open_ds(nc_files, plevels=None,
+            decode_times=True, **kwargs):
+    plevel_name = kwargs.pop('plevel_name', 'lev')
+
+    if plevels is None:
+        ds = xr.open_mfdataset(nc_files,
+                               decode_times=decode_times,
+                               parallel=True,
+                               chunks={'time': -1}
+                               )
+    else:
+        ds = xr.open_mfdataset(nc_files, decode_times=decode_times,
+                               preprocess=add_dummy_dim,
+                               chunks={"time": 1000}
+                               )
+
+        ds = ds.rename({'dummy': plevel_name})
+        ds[plevel_name] = plevels
+
+    return ds
+
+
+def add_dummy_dim(xda):
+    time.sleep(0.1)  # To ensure that data is read in correct order!
+    xda = xda.expand_dims(dummy=[datetime.now()])
+    time.sleep(0.1)
+    return xda
 
 
 def check_dimensions(ds, verbose=True, **kwargs):
@@ -76,14 +91,20 @@ def check_dimensions(ds, verbose=True, **kwargs):
 
     if len(dims) > 2:
         if 'time' in dims:
-            ds = check_time(ds, **kwargs)
+            t360 = check_time(ds, **kwargs)
 
     return ds, dims
 
 
 def get_dims(ds=None):
+
     if isinstance(ds, xr.Dataset):
-        dims = list(ds.dims.keys())
+        # check if xarray version is new
+        if xr.__version__ != '2024.6.0':
+            dims = list(ds.dims.keys())
+        else:
+            dims = list(ds.dims)  # new in xarray 2023.06.
+
     elif isinstance(ds, xr.DataArray):
         dims = ds.dims
     else:

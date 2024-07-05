@@ -1133,7 +1133,7 @@ def remove_useless_variables(ds, rm_var=False):
 
 def remove_single_dim(ds):
     if isinstance(ds, xr.Dataset):
-        dims = dict(ds.dims)
+        dims = dict(ds.sizes)  # new in xarray 2023.06.
         for dim, num in dims.items():
             if num < 2:
                 # Time and pressure level dimension is the only one that is allowed to be kept
@@ -1179,11 +1179,11 @@ def transpose_2D_data(da, dims=['lat', 'lon']):
 def check_dimensions(ds, ts_days=True,
                      sort=True,
                      lon360=False,
-                     lon_2_180=False,
+                     lon_2_180=True,
                      keep_time=False,
                      freq='D',
                      check_clim_dims=False,
-                     transpose_dims=False,
+                     transpose_dims=True,
                      verbose=True):
     """
     Checks whether the dimensions are the correct ones for xarray!

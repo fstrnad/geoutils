@@ -8,6 +8,7 @@ import os
 import numpy as np
 import copy
 from tqdm import tqdm
+import geoutils.preprocessing.open_nc_file as of
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
@@ -20,6 +21,7 @@ reload(gut)
 reload(fut)
 reload(sput)
 reload(tu)
+reload(of)
 PATH = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -146,7 +148,6 @@ class BaseDataset():
         time_range=None,
         month_range=None,
         grid_step=None,
-        large_ds=True,
         lon_range=[-180, 180],
         lat_range=[-90, 90],
         use_ds_grid=False,
@@ -157,33 +158,18 @@ class BaseDataset():
         **kwargs,
     ):
         reload(gut)
+        reload(of)
         gut.myprint("Start processing data!", verbose=verbose)
         self.plevel_name = kwargs.pop('plevel_name', 'lev')
 
-        if plevels is None:
-            if large_ds:
-                gut.myprint('Chunk the data', verbose=verbose)
-                ds = xr.open_mfdataset(nc_files, chunks={"time": 1000},
-                                       decode_times=decode_times)
-            else:
-                ds = xr.open_mfdataset(nc_files,
-                                       decode_times=decode_times,
-                                       parallel=True)
-        else:
-            ds = xr.open_mfdataset(nc_files, decode_times=decode_times,
-                                   preprocess=self.add_dummy_dim,
-                                   chunks={"time": 1000}
-                                   )
-
-            ds = ds.rename({'dummy': self.plevel_name})
-            ds[self.plevel_name] = plevels
-        if var_name is not None:
-            ds = ds[var_name]
-        ds = self.check_dimensions(
-            ds, ts_days=decode_times, verbose=verbose,
-            **kwargs)
+        ds = of.open_nc_file(nc_files=nc_files,
+                             plevels=plevels,
+                             decode_times=decode_times,
+                             verbose=verbose,
+                             var_name=var_name,
+                             plevel_name=self.plevel_name,)
         self.dims = self.get_dims(ds=ds)
-        ds = gut.rename_var_era5(ds=ds, verbose=verbose, **kwargs)
+        self.set_dim_names()
 
         if 'time' in self.dims:
             ds = self.get_data_timerange(ds, time_range, verbose=verbose)
@@ -374,7 +360,6 @@ class BaseDataset():
                                    keep_time=keep_time,
                                    freq=freq,
                                    verbose=verbose)
-        self.set_dim_names()
         # Set time series to days
         if len(list(ds.dims)) > 2:
             ds = self.check_time(ds, **kwargs)
@@ -653,7 +638,8 @@ class BaseDataset():
         # Number of non-NaNs should be equal to length of data
         if np.count_nonzero(mask_arr) != len(data):
             raise ValueError(
-                f"Number of defined ds points {non_zero_ds} != # datapoints {len(data)}"
+                f"Number of defined ds points {
+                    non_zero_ds} != # datapoints {len(data)}"
             )
 
         # create array with NaNs
@@ -772,7 +758,12 @@ class BaseDataset():
         if ds is None:
             ds = self.ds
         if isinstance(ds, xr.Dataset):
-            dims = list(ds.dims.keys())
+            # check if xarray version is new
+            if xr.__version__ != '2024.6.0':
+                dims = list(ds.dims.keys())
+            else:
+                dims = list(ds.dims)  # new in xarray 2023.06.
+
         elif isinstance(ds, xr.DataArray):
             dims = ds.dims
         else:
@@ -941,11 +932,13 @@ class BaseDataset():
                         self.flat_idx_array(ids_lst))
             else:
                 raise ValueError(
-                    f"ERROR! This region {name} does not contain any data points!"
+                    f"ERROR! This region {
+                        name} does not contain any data points!"
                 )
         else:
             raise ValueError(
-                f"ERROR! This region {name} does not fit into {lon_range}, {lat_range}!"
+                f"ERROR! This region {name} does not fit into {
+                    lon_range}, {lat_range}!"
             )
 
         self.loc_dict[name] = this_loc_dict
@@ -1097,17 +1090,19 @@ class BaseDataset():
             init_lon = gut.custom_arange(start=min_lon,
                                          end=max_lon,
                                          step=grid_step_lon)
-            
+
             nlat = len(init_lat)
             if nlat % 2:
                 # Odd number of latitudes includes the poles.
                 gut.myprint(
-                    f"WARNING: Poles might be included: {min_lat} and {min_lat}!",
+                    f"WARNING: Poles might be included: {
+                        min_lat} and {min_lat}!",
                     color='red'
                 )
 
         gut.myprint(
-            f"Interpolte grid from {min(init_lon)} to {max(init_lon)},{min(init_lat)} to {max(init_lat)}!",
+            f"Interpolte grid from {min(init_lon)} to {max(init_lon)},{
+                min(init_lat)} to {max(init_lat)}!",
         )
         grid = {"lat": init_lat, "lon": init_lon}
 
@@ -1154,7 +1149,8 @@ class BaseDataset():
         idx_lst = np.where(gut.flatten_array(dataarray=mmap,
                                              mask=self.mask,
                                              time=False,
-                                             check=False) > 0)[0]  # TODO check for better solution!
+                                             # TODO check for better solution!
+                                             check=False) > 0)[0]
 
         return {'idx': idx_lst,
                 'mmap': mmap,

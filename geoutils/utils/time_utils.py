@@ -1337,6 +1337,7 @@ def remove_duplicate_times(da):
 
 def compute_anomalies(dataarray, climatology_array=None,
                       group=None, base_period=None,
+                      chunk_data=False,
                       verbose=True):
     """Calculate anomalies.
 
@@ -1370,6 +1371,8 @@ def compute_anomalies(dataarray, climatology_array=None,
             .mean(dim="time")
         )
         anomalies = dataarray.groupby(f"time.{group}") - climatology
+        if chunk_data:
+            anomalies = anomalies.chunk(dict(time=-1))
     else:
         month_ids = []
         if climatology_array is None:

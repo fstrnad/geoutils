@@ -9,8 +9,6 @@ import geoutils.utils.time_utils as tu
 import geoutils.geodata.base_dataset as bds
 import geoutils.plotting.plots as cplt
 from importlib import reload
-
-import geoutils.tsa.pca.rot_pca as rot_pca
 import geoutils.utils.time_utils as tut
 reload(tut)
 
@@ -66,8 +64,10 @@ def get_cgti_strength(z200, cgti_val=0,
         pos_cgti = cgti.where(cgti > cgti_val, drop=True)
         neg_cgti = cgti.where(cgti < -cgti_val, drop=True)
     elif definition == 'quantile':
-        pos_cgti = cgti.where(cgti > cgti.quantile(quantile), drop=True)
-        neg_cgti = cgti.where(cgti < cgti.quantile(1 - quantile), drop=True)
+        pos_cgti = cgti.where(
+            (cgti > cgti.quantile(quantile)).compute(), drop=True)
+        neg_cgti = cgti.where(
+            (cgti < cgti.quantile(1 - quantile)).compute(), drop=True)
     else:
         raise ValueError('Invalid definition for cgti strength')
 
@@ -88,6 +88,7 @@ def cgt_pattern(z200):
 
 # %%
 if __name__ == '__main__':
+    reload(bds)
     data_dir = "/home/strnad/data/"
     plot_dir = "/home/strnad/data/plots/cgti/"
 
@@ -108,7 +109,8 @@ if __name__ == '__main__':
                               can=True,
                               an_types=['dayofyear', 'month'],
                               )
-
+    # %%
+    reload(bds)
     grid_step_z = 2.5
     dataset_file = data_dir + \
         f"climate_data/{grid_step_z}/era5_z_{grid_step_z}_{lev}_ds.nc"
@@ -183,7 +185,8 @@ if __name__ == '__main__':
                                 vmin=vmin, vmax=vmax,
                                 title=f"V200 Anomalies",
                                 vertical_title=f'{cgti_type}. CGT',
-                                label=rf'V-wind Anomalies {lev} hPa (wrt {an_type}) [m/s]',
+                                label=rf'V-wind Anomalies {
+                                    lev} hPa (wrt {an_type}) [m/s]',
                                 )
 
         mean_tps, sig_z = tu.get_mean_tps(ds_z200.ds[f'z_an_{an_type}'],
@@ -198,7 +201,8 @@ if __name__ == '__main__':
                                 levels=12,
                                 vmin=vmin, vmax=vmax,
                                 title=f"z200 Anomalies",
-                                label=rf'Anomalies GP (wrt {an_type}) [$m^2/s^2$]',
+                                label=rf'Anomalies GP (wrt {
+                                    an_type}) [$m^2/s^2$]',
                                 )
         dict_w = cplt.plot_wind_field(ax=im_comp['ax'],
                                       u=mean_tps_u,

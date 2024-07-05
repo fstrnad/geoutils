@@ -2,6 +2,7 @@ import xarray as xr
 import numpy as np
 import geoutils.utils.general_utils as gut
 import geoutils.preprocessing.open_nc_file as of
+# import xesmf as xe
 
 from importlib import reload
 reload(gut)
@@ -9,7 +10,7 @@ reload(of)
 
 
 def interpolate_grid(dataarray, grid_step,
-                     method="nearest",
+                     method="bilinear",
                      min_lon=None, max_lon=None,
                      min_lat=None, max_lat=None,
                      grid_step_lon=None,
@@ -85,9 +86,16 @@ def interpolate_grid(dataarray, grid_step,
     gut.myprint(
         f"Interpolte grid from {min(init_lon)} to {max(init_lon)},{min(init_lat)} to {max(init_lat)}!",
     )
-    grid = {"lat": init_lat, "lon": init_lon}
-
-    da = dataarray.interp(grid, method=method,
+    grid = xr.Dataset(
+        {
+            "lat": (['lat'], init_lat, {"units": "degrees_north"}),
+            "lon": (['lon'], init_lon, {"units": "degrees_east"}),
+        }
+    )
+    dr_out = dataarray.interp(grid, method=method,
                           kwargs={"fill_value": "extrapolate"}
                           )  # Extrapolate if outside of the range
-    return da
+    # regridder = xe.Regridder(dataarray, grid, method)
+    # dr_out = regridder(dataarray, keep_attrs=True)
+
+    return dr_out

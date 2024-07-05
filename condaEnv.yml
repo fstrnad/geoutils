@@ -13,12 +13,13 @@ dependencies:
   - numpy
   - tqdm
   - multiprocess
-  - mypy
+  - metpy
   - pip
   - scipy
   - joblib
-  - cartopy=0.22.0
-  - matplotlib=3.8.2
+  - cartopy  # =0.22.0
+  - matplotlib  #=3.8.2
+  - palettable
   - ipywidgets
   - scikit-learn
   - windspharm

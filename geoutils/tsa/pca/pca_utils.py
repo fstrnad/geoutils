@@ -39,10 +39,10 @@ def map2flatten(x_map: xr.Dataset, reindex_z=False) -> list:
             x_flatten.drop_dims('time')
             idx_notNaN = ~np.isnan(x_flatten)
     else:
-        
+
         idx_notNaN = ~np.isnan(x_flatten)
 
-    x_proc = x_flatten.isel(z=idx_notNaN.data)
+    x_proc = x_flatten.isel(z=idx_notNaN.variable)
 
     return x_proc, idx_notNaN
 
