@@ -431,6 +431,7 @@ def horizontal_average(ds, dim='lon', average_type='mean'):
     return ds
 
 
+
 def get_vertical_ds(wind_dict, tps,
                     vname='v',
                     wname='w',

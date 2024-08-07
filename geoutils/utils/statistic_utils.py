@@ -189,6 +189,131 @@ def standardize(dataset, axis=0):
     # return (dataset - np.nanmean(dataset, axis=axis)) / (np.nanstd(dataset, axis=axis))
 
 
+def standardize_along_time(data, dim='time'):
+    """
+    Standardizes an xarray DataArray along the 'time' dimension.
+
+    Parameters
+    ----------
+    data : xarray.DataArray
+        The input data array with dimensions (time, lon, lat).
+
+    Returns
+    -------
+    xarray.DataArray
+        A new DataArray with the same dimensions, where the data is standardized
+        along the 'time' dimension. Each point in the (lon, lat) grid will have a
+        time series with a mean of 0 and a standard deviation of 1.
+
+    """
+
+    # Step 1: Calculate the mean along the 'time' dimension
+    mean = data.mean(dim=dim)
+
+    # Step 2: Calculate the standard deviation along the 'time' dimension
+    std = data.std(dim=dim)
+
+    # Step 3: Standardize the data by subtracting the mean and dividing by the standard deviation
+    standardized_data = (data - mean) / std
+
+    return standardized_data
+
+
+def standardize_dataset(dataset, dim='time'):
+    vars = gut.get_vars(dataset)
+    x_stack_vars = []
+    for var in vars:
+        gut.myprint(f'Standardize {var}')
+        x_stack_vars.append(standardize_along_time(dataset[var], dim=dim))
+    x_stack_vars = xr.merge(x_stack_vars)
+
+    return x_stack_vars
+
+
+def normalize_along_time(data, dim='time'):
+    """
+    Normalizes an xarray DataArray along the 'time' dimension.
+
+    Normalization rescales the data such that the minimum value along the time dimension
+    is 0 and the maximum value is 1, for each (lon, lat) point.
+
+    Parameters
+    ----------
+    data : xarray.DataArray
+        The input data array with dimensions (time, lon, lat).
+
+    Returns
+    -------
+    xarray.DataArray
+        A new DataArray with the same dimensions, where the data is normalized
+        along the 'time' dimension. Each point in the (lon, lat) grid will have a
+        time series with values ranging from 0 to 1.
+
+    Example
+    -------
+    >>> import xarray as xr
+    >>> data = xr.DataArray(np.random.rand(100, 50, 50), dims=["time", "lon", "lat"])
+    >>> normalized_data = normalize_along_time(data)
+    """
+
+    # Step 1: Calculate the minimum value along the 'time' dimension
+    min_val = data.min(dim=dim)
+
+    # Step 2: Calculate the maximum value along the 'time' dimension
+    max_val = data.max(dim=dim)
+
+    # Step 3: Normalize the data by rescaling to [0, 1] along the 'time' dimension
+    normalized_data = (data - min_val) / (max_val - min_val)
+
+    return normalized_data
+
+
+def normalize_dataset(dataset, dim='time'):
+    """
+    Normalizes an xarray dataset along the 'time' dimension.
+
+    Normalization rescales the data such that the minimum value along the time dimension
+    is 0 and the maximum value is 1, for each (lon, lat) point.
+
+    Parameters
+    ----------
+    dataset : xarray.Dataset
+        The input dataset with multiple variables, each with dimensions (time, lon, lat).
+
+    Returns
+    -------
+    xarray.Dataset
+        A new Dataset with the same variables, where the data is normalized
+        along the 'time' dimension. Each point in the (lon, lat) grid will have a
+        time series with values ranging from 0 to 1.
+
+    Example
+    -------
+    >>> import xarray as xr
+    >>> data = xr.Dataset(
+    ...     {
+    ...         "var1": ("time", np.random.rand(100)),
+    ...         "var2": ("time", np.random.rand(100)),
+    ...     }
+    ... )
+    >>> normalized_data = normalize_dataset(data)
+    """
+
+    # Step 1: Get the variable names in the dataset
+    vars = gut.get_vars(dataset)
+
+    # Step 2: Normalize each variable along the 'time' dimension
+    normalized_vars = []
+    for var in vars:
+        gut.myprint(f'Normalize {var}')
+        normalized_vars.append(normalize_along_time(dataset[var], dim=dim))
+
+    # Step 3: Merge the normalized variables into a new dataset
+    normalized_dataset = xr.merge(normalized_vars)
+
+    return normalized_dataset
+
+
 def vmin_vmax_array(data, vmin, vmax):
     data = np.array(data)
     vmin_idx = np.argwhere(data <= vmin)

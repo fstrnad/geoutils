@@ -8,6 +8,7 @@ import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import string
 import cartopy.crs as ccrs
+import cartopy
 import geoutils.plotting.plot_settings as pst
 from importlib import reload
 import palettable as pt
@@ -382,6 +383,12 @@ def make_colorbar_discrete(ax, im, fig=None, vmin=None, vmax=None, **kwargs):
 
     return cbar
 
+def check_geoaxis(ax):
+    if isinstance(ax, cartopy.mpl.geoaxes.GeoAxes):
+        return True
+    else:
+        return False
+
 
 def cbarfmt(x, pos):
     a, b = f'{x:.2e}'.split('e')
@@ -712,18 +719,18 @@ def enumerate_subplots(axs, pos_x=-0.12,
 
 
 def plt_text(ax, text, xpos=0, ypos=0,
-             geoaxis=False, **kwargs):
+             **kwargs):
 
     color = kwargs.pop("color", "k")
     zorder = kwargs.pop('zorder', 10)
     rot = kwargs.pop("rot", 0)
-    fsize = kwargs.pop('fsize', pst.MEDIUM_SIZE)
+    fsize = kwargs.pop('fsize', pst.BIGGER_SIZE)
     weight = kwargs.pop('weight', "normal")
     trafo_axis = kwargs.pop('transform', False)
     box = kwargs.pop('box', False)
     plot_box = dict(facecolor='white', edgecolor='black',
                     pad=10.0) if box else None
-    if geoaxis:
+    if check_geoaxis(ax):
         lon_pos = xpos
         lat_pos = ypos
         ax.text(

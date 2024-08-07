@@ -11,7 +11,7 @@ from importlib import reload
 reload(sut)
 reload(tu)
 reload(gut)
-
+reload(pca_utils)
 
 class MultivariatePCA(eof.SpatioTemporalPCA):
     """PCA of spatio-temporal data for multivariate datasets.
@@ -24,14 +24,19 @@ class MultivariatePCA(eof.SpatioTemporalPCA):
         n_components (int): Number of components for PCA
     """
 
-    def __init__(self, ds, n_components, **kwargs):
+    def __init__(self, ds, n_components,
+                 normalize=True, **kwargs):
 
+        self.normalize = normalize
         self.X, self.ids_notNaN = self.get_input_data(ds=ds)
         self.pca = self.apply_pca(X=self.X, n_components=n_components,
                                   **kwargs)
 
         self.n_components = self.pca.n_components
         self.eof_nums = None
+        if self.normalize:
+            self.std = ds.std(dim='time')
+            self.mean = ds.mean(dim='time')
 
     def get_input_data(self, ds: xr.Dataset) -> np.ndarray:
         """Get input data for PCA.
@@ -55,7 +60,8 @@ class MultivariatePCA(eof.SpatioTemporalPCA):
             gut.myprint(f'Univariate PCA var with dataarray')
             self.mvars = False
 
-        X, idsnotnan = pca_utils.map2flatten(ds)
+        X, idsnotnan = pca_utils.map2flatten(ds,
+                                             normalize=self.normalize,)
 
         return X, idsnotnan
 

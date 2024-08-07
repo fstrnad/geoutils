@@ -134,10 +134,26 @@ def potential_temperature(temperature, pressure):
     return pt
 
 
+def vertical_cross_section_average(data, lon_range, lat_range, av_dim='lon',
+                                   av_type='mean'):
+    cut_data = sput.cut_map(data, lon_range, lat_range)
+
+    mean_data = sput.horizontal_average(cut_data, av_dim,
+                                        average_type=av_type)
+    cross_horizonatal_dim = 'lat' if av_dim == 'lon' else 'lon'
+    if 'time' in gut.get_dims(mean_data):
+        mean_data = mean_data.transpose('time', 'lev', cross_horizonatal_dim).compute()
+
+    return mean_data
+
+
 def vertical_cross_section(data, lon_range, lat_range,
                            interp_steps=100,
                            interp_type='linear',
                            ):
+    """This is a vertical cross section function along the line defined by the
+    lon_range and lat_range. The function uses metpy's cross_section function.
+    """
     # rename level to isobaric labelling for metpy
     data = gut.rename_dim(data, dim='lev', name='isobaric')
     # data = gut.rename_dim(data, dim='lat', name='latitude')
@@ -157,6 +173,8 @@ def vertical_cross_section(data, lon_range, lat_range,
         cross = cross.transpose('time', 'isobaric', 'index').compute()
     else:
         cross = cross.transpose('isobaric', 'index').compute()
+
+    cross = gut.rename_dim(cross, dim='isobaric', name='lev')
 
     return cross
 

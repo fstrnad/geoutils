@@ -1,6 +1,5 @@
 from latgmm.utils import eof
 import pandas as pd
-import hdbscan
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.cluster import AffinityPropagation
 from sklearn.cluster import MeanShift
@@ -15,7 +14,6 @@ import scipy.cluster.hierarchy as shr
 from scipy.spatial.distance import pdist
 import numpy as np
 import xarray as xr
-from kneed import KneeLocator
 import sklearn.metrics as skm
 from importlib import reload
 import geoutils.utils.general_utils as gut
@@ -342,6 +340,8 @@ def mean_shift_clustering(data,
 
 
 def hdbscan_clustering(data, **kwargs):
+    import hdbscan
+
     plot_statistics = kwargs.pop('plot_statistics', False)
     min_samples = kwargs.pop('min_samples', 5)
     this_scan = hdbscan.HDBSCAN(min_samples=min_samples)

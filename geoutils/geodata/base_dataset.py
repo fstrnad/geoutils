@@ -159,7 +159,6 @@ class BaseDataset():
     ):
         reload(gut)
         reload(of)
-        gut.myprint("Start processing data!", verbose=verbose)
         self.plevel_name = kwargs.pop('plevel_name', 'lev')
 
         ds = of.open_nc_file(nc_files=nc_files,
@@ -638,8 +637,7 @@ class BaseDataset():
         # Number of non-NaNs should be equal to length of data
         if np.count_nonzero(mask_arr) != len(data):
             raise ValueError(
-                f"Number of defined ds points {
-                    non_zero_ds} != # datapoints {len(data)}"
+                f"Number of defined ds points {non_zero_ds} != # datapoints {len(data)}"
             )
 
         # create array with NaNs
@@ -932,13 +930,11 @@ class BaseDataset():
                         self.flat_idx_array(ids_lst))
             else:
                 raise ValueError(
-                    f"ERROR! This region {
-                        name} does not contain any data points!"
+                    f"ERROR! This region {name} does not contain any data points!"
                 )
         else:
             raise ValueError(
-                f"ERROR! This region {name} does not fit into {
-                    lon_range}, {lat_range}!"
+                f"ERROR! This region {name} does not fit into {lon_range}, {lat_range}!"
             )
 
         self.loc_dict[name] = this_loc_dict
@@ -1095,14 +1091,12 @@ class BaseDataset():
             if nlat % 2:
                 # Odd number of latitudes includes the poles.
                 gut.myprint(
-                    f"WARNING: Poles might be included: {
-                        min_lat} and {min_lat}!",
+                    f"WARNING: Poles might be included: {min_lat} and {min_lat}!",
                     color='red'
                 )
 
         gut.myprint(
-            f"Interpolte grid from {min(init_lon)} to {max(init_lon)},{
-                min(init_lat)} to {max(init_lat)}!",
+            f"Interpolte grid from {min(init_lon)} to {max(init_lon)}, {min(init_lat)} to {max(init_lat)}!",
         )
         grid = {"lat": init_lat, "lon": init_lon}
 

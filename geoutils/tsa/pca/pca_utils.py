@@ -10,7 +10,9 @@ reload(sut)
 reload(sput)
 
 
-def map2flatten(x_map: xr.Dataset, reindex_z=False) -> list:
+def map2flatten(x_map: xr.Dataset,
+                normalize=False,
+                reindex_z=False) -> list:
     """Flatten dataset/dataarray and remove NaNs.
 
     Args:
@@ -22,6 +24,10 @@ def map2flatten(x_map: xr.Dataset, reindex_z=False) -> list:
     """
     if isinstance(x_map, xr.core.dataset.Dataset):
         vars = gut.get_vars(ds=x_map)
+        if normalize:
+            gut.myprint('Standardize dataset!')
+            x_map = sut.standardize_dataset(x_map, dim='time')
+
         x_stack_vars = [x_map[var] for var in vars]
         x_stack_vars = xr.concat(x_stack_vars, dim='var')
         x_stack_vars = x_stack_vars.assign_coords(

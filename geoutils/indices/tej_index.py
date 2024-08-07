@@ -11,7 +11,6 @@ import geoutils.geodata.base_dataset as bds
 import geoutils.plotting.plots as cplt
 from importlib import reload
 
-import geoutils.tsa.pca.rot_pca as rot_pca
 import geoutils.utils.time_utils as tut
 reload(tut)
 
@@ -107,18 +106,6 @@ def get_tej_strength(u200, tej_val=0,
     else:
         return dict(enhanced=enhanced_tej.time,
                     reduced=reduced_tej.time)
-
-
-def tej_eofs(u200_ds):
-
-    rot = 'None'
-    pca_ = rot_pca.SpatioTemporalPCA(u200_ds,
-                                     var_name='an_dayofyear',
-                                     n_components=10,
-                                     rotation=rot)
-
-    pca_dict = pca_.get_pca_loc_dict(q=None)
-    return pca_dict
 
 
 def tej_pattern(u200):

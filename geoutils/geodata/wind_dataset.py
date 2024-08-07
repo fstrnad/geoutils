@@ -11,11 +11,12 @@ import geoutils.geodata.multilevel_pressure as mp
 from importlib import reload
 import numpy as np
 import xarray as xr
-from windspharm.xarray import VectorWind
 import copy
 import geoutils.utils.time_utils as tu
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
+import metpy.calc as mpcalc
+
 reload(mp)
 
 
@@ -45,13 +46,18 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         u_kwargs = copy.deepcopy(kwargs)
         v_kwargs = copy.deepcopy(kwargs)
         w_kwargs = copy.deepcopy(kwargs)
+        init_mask = kwargs.pop('init_mask', False)
+
         self.u_name = kwargs.pop('u_name', 'u')
         self.v_name = kwargs.pop('v_name', 'v')
+        data_nc_u = [] if data_nc_u is None else data_nc_u
+        data_nc_v = [] if data_nc_v is None else data_nc_v
+        data_nc_w = [] if data_nc_w is None else data_nc_w  # Optional
 
-        data_nc_u = gut.process_object(data_nc_u)
-        data_nc_v = gut.process_object(data_nc_v)
-        data_nc_w = gut.process_object(data_nc_w)
-        all_files = data_nc_u + data_nc_v if data_nc_w is None else data_nc_u + data_nc_v + data_nc_w
+        data_nc_u = gut.process_object(data_nc_u) if len(data_nc_u) > 0 else []
+        data_nc_v = gut.process_object(data_nc_v) if len(data_nc_v) > 0 else []
+        data_nc_w = gut.process_object(data_nc_w) if len(data_nc_w) > 0 else []
+        all_files = data_nc_u + data_nc_v + data_nc_w
         for file in all_files:
             fut.print_file_location_and_size(filepath=file, verbose=False)
         time_range = fut.get_file_time_range(all_files)
@@ -60,31 +66,45 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             for file in data_nc_u + data_nc_v:
                 fut.print_file_location_and_size(filepath=file, verbose=False)
 
-            if data_nc_w is not None:
+            if len(data_nc_w) > 0:
                 for file in data_nc_w:
                     fut.print_file_location_and_size(
                         filepath=file, verbose=False)
             gut.myprint(f'All wind files are available! Now load them!')
 
-            ds_uwind = mp.MultiPressureLevelDataset(data_nc=data_nc_u,
-                                                    plevels=plevels,
-                                                    can=False,  # Anomalies are computed later all together
-                                                    time_range=time_range,
-                                                    **u_kwargs)
-            ds_vwind = mp.MultiPressureLevelDataset(data_nc=data_nc_v,
-                                                    plevels=plevels,
-                                                    can=False,
-                                                    time_range=time_range,
-                                                    **v_kwargs)
+            if len(data_nc_u) > 0:
+                ds_uwind = mp.MultiPressureLevelDataset(data_nc=data_nc_u,
+                                                        plevels=plevels,
+                                                        can=False,  # Anomalies are computed later all together
+                                                        time_range=time_range,
+                                                        **u_kwargs)
+                u = ds_uwind.ds[self.u_name]
+                if self.u_name == 'u' and convention_labelling:
+                    u = u.rename('U')
+                    self.u_name = 'U'
+                self.load_dataset_attributes(base_ds=ds_uwind,
+                                             init_mask=init_mask)
 
-            u = ds_uwind.ds[self.u_name]
-            v = ds_vwind.ds[self.v_name]
-            if self.u_name == 'u' and convention_labelling:
-                u = u.rename('U')
-                self.u_name = 'U'
-            if self.v_name == 'v' and convention_labelling:
-                v = v.rename('V')
-                self.v_name = 'V'
+            else:
+                u = None
+                ds_uwind = None
+
+            if len(data_nc_v) > 0:
+                ds_vwind = mp.MultiPressureLevelDataset(data_nc=data_nc_v,
+                                                        plevels=plevels,
+                                                        can=False,
+                                                        time_range=time_range,
+                                                        **v_kwargs)
+                v = ds_vwind.ds[self.v_name]
+                if self.v_name == 'v' and convention_labelling:
+                    v = v.rename('V')
+                    self.v_name = 'V'
+                if len(data_nc_u) == 0:
+                    self.load_dataset_attributes(base_ds=ds_vwind,
+                                                 init_mask=init_mask)
+            else:
+                v = None
+                ds_vwind = None
 
             if data_nc_fac is not None:
                 ds_fac = mp.MultiPressureLevelDataset(data_nc=data_nc_fac,
@@ -94,13 +114,17 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                       **w_kwargs)
                 self.fac_name = kwargs.pop('fac_name', 'fac')
                 if grad_fac:
-                    gut.myprint(f'Multiply u- and v by gradient of factor {self.fac_name}!')
+                    gut.myprint(
+                        f'Multiply u- and v by gradient of factor {self.fac_name}!')
                     ds_fac.horizontal_gradient(var=self.fac_name, dim='lon')
                     ds_fac.horizontal_gradient(var=self.fac_name, dim='lat')
-                    u = (u*ds_fac.ds[self.fac_name + '_grad_lon']).rename(self.u_name)
-                    v = (v*ds_fac.ds[self.fac_name + '_grad_lat']).rename(self.v_name)
+                    u = (u*ds_fac.ds[self.fac_name +
+                         '_grad_lon']).rename(self.u_name)
+                    v = (v*ds_fac.ds[self.fac_name +
+                         '_grad_lat']).rename(self.v_name)
                 else:
-                    gut.myprint(f'Multiply u- and v by factor {self.fac_name}!')
+                    gut.myprint(
+                        f'Multiply u- and v by factor {self.fac_name}!')
                     u = (u*ds_fac.ds[self.fac_name]).rename(self.u_name)
                     v = (v*ds_fac.ds[self.fac_name]).rename(self.v_name)
                 set_fac = kwargs.pop('set_fac', False)
@@ -109,11 +133,9 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                     ds_fac = None
             else:
                 ds_fac = None
-            self.grid_step = ds_uwind.grid_step
             self.vert_velocity = False
-            w = None
             ds_wwind = None
-            if data_nc_w is not None:
+            if len(data_nc_w) > 0:
                 ds_wwind = mp.MultiPressureLevelDataset(data_nc=data_nc_w,
                                                         plevels=plevels,
                                                         can=False,
@@ -127,18 +149,16 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                 gut.myprint(f'Multiply w by factor {-1}!', verbose=reverse_w)
                 w = -1*w if reverse_w else w
                 self.vert_velocity = True
+            else:
+                w = None
 
             windspeed = None
-            if compute_ws:
+            if compute_ws and len(data_nc_u) > 0 and len(data_nc_v) > 0:
                 windspeed = self.compute_windspeed(u=u, v=v)
 
             self.ds = self.get_ds(u=u, v=v, w=w,
                                   fac=ds_fac.ds[self.fac_name] if ds_fac is not None else None,
                                   windspeed=windspeed)
-
-            # ds_uwind would be possible as well
-            init_mask = kwargs.pop('init_mask', False)
-            self.load_dataset_attributes(base_ds=ds_vwind, init_mask=init_mask)
 
             self.vars = self.get_vars()
             self.set_var()  # sets the variable name to the first variable in the dataset
@@ -149,10 +169,17 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         else:
             gut.myprint('Only Init the Wind Dataset object without data!')
 
-    def get_ds(self, u, v, w=None, windspeed=None, fac=None):
-        gut.myprint(f'Merge u, v')
-        ds = xr.Dataset({self.u_name: u,
-                         self.v_name: v})
+    def get_ds(self, u=None, v=None, w=None, windspeed=None, fac=None):
+        if u is not None and v is not None:
+            ds = xr.Dataset({self.u_name: u,
+                            self.v_name: v})
+            gut.myprint(f'Merge u, v')
+        if u is not None and v is None:
+            ds = xr.Dataset({self.u_name: u})
+            gut.myprint('Only u component available!')
+        elif u is None and v is not None:
+            ds = xr.Dataset({self.v_name: v})
+            gut.myprint('Only v component available!')
         if windspeed is not None:
             gut.myprint(f'Merge u, v, windspeed')
             ds[self.ws_name] = windspeed
@@ -190,11 +217,11 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         """Compute vorticity with windspharm package
         see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
         """
-
-        vw = VectorWind(self.ds[self.u_name], self.ds[self.u_name])
+        # vw = VectorWind(self.ds[self.u_name], self.ds[self.u_name])
 
         gut.myprint('Compute relative vorticity...')
-        rv = vw.vorticity()  # Relative Vorticity
+        # Relative Vorticity
+        rv = mpcalc.vorticity(self.ds[self.u_name], self.ds[self.u_name])
         self.ds['rv'] = rv.rename('rv')
         if can:
             for group in self.an_types:
@@ -208,10 +235,11 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
         """
 
-        vw = VectorWind(self.ds[self.u_name], self.ds[self.u_name])
+        # vw = VectorWind(self.ds[self.u_name], self.ds[self.u_name])
 
         gut.myprint('Compute divergence...')
-        div = vw.divergence()  # divergence
+        div = mpcalc.divergence(
+            self.ds[self.u_name], self.ds[self.u_name])  # divergence
         self.ds['div'] = div.rename('div')
         if can:
             for group in self.an_types:
@@ -235,8 +263,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         """Compute rossby wave source from u and v components
         see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
         """
-
-        vw = VectorWind(self.ds[self.u_name], self.ds[self.v_name])
+        # Currently outdated!!!!
+        # vw = VectorWind(self.ds[self.u_name], self.ds[self.v_name])
 
         gut.myprint(f'Compute Vorticity...')
         eta = vw.absolutevorticity()
@@ -262,6 +290,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
 
     def compute_streamfunction(self, can=True):
         """Compute streamfunction from u and v components """
+        from windspharm.xarray import VectorWind
+
         if 'sf' not in self.get_vars():
             vw = VectorWind(self.ds[self.u_name], self.ds[self.v_name])
 

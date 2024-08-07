@@ -842,8 +842,10 @@ def plot_2D(
             im = im_tmp
     # else:
     #     raise ValueError(f"Plot type {plot_type} does not exist!")
-
-    y_title = kwargs.pop('y_title', 1.18)
+    if put.check_geoaxis(ax):
+        y_title = kwargs.pop('y_title', 1.18)
+    else:
+        y_title = kwargs.pop('y_title', 1.)
     kwargs = put.set_title(title=title, ax=ax,
                            y_title=y_title, **kwargs)
 
@@ -1228,7 +1230,6 @@ def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
     if text is not None:
         put.plt_text(ax=ax,
                      text=text,
-                     geoaxis=True,
                      color=color,
                      xpos=np.mean(lon_range),
                      # always plot above(!) the rectangle
