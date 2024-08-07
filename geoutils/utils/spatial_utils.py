@@ -1539,8 +1539,13 @@ def find_location_groups(locations, grid_step=3, min_num_locations=5, verbose=Tr
 
 
 def stack_lat_lon(da, new_dim='z', reindex=False):
-
-    da_flat = da.stack(z=('lat', 'lon'))
+    dims = gut.get_dims(da)
+    if len(dims) == 3:
+        if 'time' in dims:
+            dims.remove('time')
+    else:
+        raise ValueError('Dataarray not of dimension 3!')
+    da_flat = da.stack(z=dims)
     if reindex:
         da_flat = gut.assign_new_coords(da=da_flat, dim='z',
                                         coords=np.arange(len(da_flat.z)))

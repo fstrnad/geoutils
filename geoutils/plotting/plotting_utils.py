@@ -383,6 +383,7 @@ def make_colorbar_discrete(ax, im, fig=None, vmin=None, vmax=None, **kwargs):
 
     return cbar
 
+
 def check_geoaxis(ax):
     if isinstance(ax, cartopy.mpl.geoaxes.GeoAxes):
         return True
@@ -780,6 +781,16 @@ def check_plot_type(plot_type):
     if plot_type not in avail_types:
         raise ValueError(f'ERROR plot_type {plot_type} not available!')
     return True
+
+
+def check_projection(ax, projection):
+    if ax is not None and projection is not None:
+        raise ValueError(
+            f'Axis already given, projection {projection} will have no effect.')
+    else:
+        # Set default to PlateCarree
+        projection = 'PlateCarree' if projection is None else projection
+    return projection
 
 
 def get_lon_lat_ticklabels(array_lon=None, array_lat=None, deg_label='°E'):

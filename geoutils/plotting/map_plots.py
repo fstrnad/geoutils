@@ -402,12 +402,7 @@ def plot_map(dmap: xr.DataArray,
     if plot_type != 'points':
         dmap = sput.check_dimensions(dmap, verbose=False)
     put.check_plot_type(plot_type)
-    if ax is not None and projection is not None:
-        raise ValueError(
-            f'Axis already given, projection {projection} will have no effect. Please do not pass projection argument!')
-    else:
-        # Set default to PlateCarree
-        projection = 'PlateCarree' if projection is None else projection
+    projection = put.check_projection(ax=ax, projection=projection)
 
     if not isinstance(dmap, xr.DataArray) and plot_type != 'points':
         raise ValueError(
@@ -626,7 +621,7 @@ def plot_2D(
             expo = gut.get_exponent10(np.abs(vmax-vmin)) if float(
                 vmin) != 0. else gut.get_exponent10(np.abs(vmax-vmin))
             if sci is None:
-                sci = expo if np.abs(expo) > 1 else None
+                sci = expo # if np.abs(expo) > 1 else None
             if sci is not None:
                 if sci < 0:
                     round_dec = abs(sci) + 1
@@ -636,15 +631,14 @@ def plot_2D(
                 if round_dec is None:
                     round_dec = 1 if vmax > 1 else 2  # because the range is between 0 and 10
             if levels is not None:
-                levels = np.around(
+                this_levels = np.around(
                     levels, round_dec) if round_dec is not None else levels
                 i = 1
-                this_levels = copy.deepcopy(levels)
-                while gut.has_duplicate(levels):
-                    levels = np.around(
-                        this_levels, round_dec+i)
+                while gut.has_duplicate(this_levels):
+                    this_levels = np.around(
+                        levels, round_dec+i)
                     i += 1
-                # print(sci, round_dec, levels)
+                levels = this_levels
             if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
                 # norm = mpl.colors.LogNorm(levels=levels)
                 centercolor = kwargs.pop('centercolor', None)
@@ -855,7 +849,6 @@ def plot_2D(
         shift_ticks = kwargs.pop('shift_ticks', None)
         sci = sci if not unset_sci else None
         orientation = kwargs.pop('orientation', 'horizontal')
-
         cbar = put.make_colorbar(ax=ax, im=im,
                                  norm=set_norm,
                                  ticks=levels,
