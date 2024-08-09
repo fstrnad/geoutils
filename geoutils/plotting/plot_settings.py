@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import matplotlib
 TINY_SIZE = 8
 MINI_SIZE = 10
 SMALL_SIZE = 12

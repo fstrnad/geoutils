@@ -1184,13 +1184,13 @@ def check_dimensions(ds, ts_days=True,
                      keep_time=False,
                      freq='D',
                      check_clim_dims=False,
-                     transpose_dims=True,
+                     transpose_dims=False,
                      verbose=True):
     """
     Checks whether the dimensions are the correct ones for xarray!
     """
     reload(tu)
-
+    gut.myprint('Check dimensions of dataset!', verbose=verbose)
     rename_dict = {
         'longitude': 'lon',
         'latitude': 'lat',
@@ -1243,7 +1243,10 @@ def check_dimensions(ds, ts_days=True,
                     raise ValueError(
                         f"The dimension {dims} not consistent with required dims {clim_dims}!")
 
+    gut.myprint(f'Checked labelling according to netcdf conventions!', verbose=verbose)
+
     if transpose_dims:
+        gut.myprint('Transpose dimensions...')
         if numdims == 4:
             # Actually change location in memory if necessary!
             ds = ds.transpose("lat", "lon", "lev", "time").compute()
@@ -1259,6 +1262,8 @@ def check_dimensions(ds, ts_days=True,
             gut.myprint('2d oject transposed to lat-lon!', verbose=verbose)
         elif numdims == 1:
             gut.myprint('1d oject only!', verbose=verbose)
+
+    gut.myprint(f'Checked order of dimensions!', verbose=verbose)
 
     if numdims >= 2 and 'lon' in dims:
         # If lon from 0 to 360 shift to -180 to 180

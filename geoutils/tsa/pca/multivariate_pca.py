@@ -3,8 +3,6 @@ import geoutils.utils.statistic_utils as sut
 import geoutils.utils.time_utils as tu
 import numpy as np
 import xarray as xr
-import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
 import geoutils.tsa.pca.eof as eof
 import geoutils.tsa.pca.pca_utils as pca_utils
 from importlib import reload
@@ -12,6 +10,7 @@ reload(sut)
 reload(tu)
 reload(gut)
 reload(pca_utils)
+
 
 class MultivariatePCA(eof.SpatioTemporalPCA):
     """PCA of spatio-temporal data for multivariate datasets.

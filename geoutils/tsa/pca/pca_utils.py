@@ -53,7 +53,8 @@ def map2flatten(x_map: xr.Dataset,
     return x_proc, idx_notNaN
 
 
-def flattened2map(x_flat: np.ndarray, ids_notNaN: xr.DataArray, times: np.ndarray = None) -> xr.Dataset:
+def flattened2map(x_flat: np.ndarray, ids_notNaN: xr.DataArray,
+                  times: np.ndarray = None) -> xr.Dataset:
     """Transform flattened array without NaNs to gridded data with NaNs.
 
     Args:

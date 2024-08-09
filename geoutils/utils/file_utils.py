@@ -288,10 +288,11 @@ def check_file_time_equity(file_arr, verbose=True):
     for datafile in file_arr:
         file = xr.open_dataset(datafile)
         time_arr.append(file.time)
-    for timetest in time_arr[1:]:
+    for i, timetest in enumerate(time_arr[1:]):
         if not tu.check_hour_equality(da1=time_arr[0],
                                       da2=timetest):
-            raise ValueError('ERROR different hour timeing!')
+            gut.myprint(f'WARNING! Different hour timeing in {file_arr[i+1]}!',
+                        color='red', verbose=verbose)
     return True
 
 

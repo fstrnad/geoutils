@@ -166,7 +166,8 @@ class BaseDataset():
                              decode_times=decode_times,
                              verbose=verbose,
                              var_name=var_name,
-                             plevel_name=self.plevel_name,)
+                             plevel_name=self.plevel_name,
+                             **kwargs)
         self.dims = self.get_dims(ds=ds)
         self.set_dim_names()
 

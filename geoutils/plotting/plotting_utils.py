@@ -5,10 +5,10 @@ from matplotlib.cm import ScalarMappable
 import matplotlib.pyplot as plt
 import copy
 import numpy as np
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 import string
 import cartopy.crs as ccrs
-import cartopy
+import cartopy as ctp
+import cartopy.mpl as cmpl
 import geoutils.plotting.plot_settings as pst
 from importlib import reload
 import palettable as pt
@@ -384,11 +384,14 @@ def make_colorbar_discrete(ax, im, fig=None, vmin=None, vmax=None, **kwargs):
     return cbar
 
 
-def check_geoaxis(ax):
-    if isinstance(ax, cartopy.mpl.geoaxes.GeoAxes):
-        return True
-    else:
-        return False
+def check_geoaxis(ax, check_axis=True):
+    import cartopy.mpl.geoaxes as cmga
+
+    if check_axis:
+        if isinstance(ax, cmga.GeoAxes) or isinstance(ax, cmga.GeoAxesSubplot):
+            return True
+
+    return False
 
 
 def cbarfmt(x, pos):
@@ -705,16 +708,9 @@ def enumerate_subplots(axs, pos_x=-0.12,
             size=fontsize,
             weight="bold",
             transform=True,
-            box=False
+            box=False,
+            check_axis=False,
         )
-        # ax.text(
-        #     pos_x[n],
-        #     pos_y[n],
-        #     f"{string.ascii_lowercase[n]}.",
-        #     transform=ax.transAxes,
-        #     size=fontsize,
-        #     weight="bold",
-        # )
 
     return axs
 
@@ -728,10 +724,11 @@ def plt_text(ax, text, xpos=0, ypos=0,
     fsize = kwargs.pop('fsize', pst.BIGGER_SIZE)
     weight = kwargs.pop('weight', "normal")
     trafo_axis = kwargs.pop('transform', False)
+    check_axis = kwargs.pop('check_axis', True)
     box = kwargs.pop('box', False)
     plot_box = dict(facecolor='white', edgecolor='black',
                     pad=10.0) if box else None
-    if check_geoaxis(ax):
+    if check_geoaxis(ax, check_axis):
         lon_pos = xpos
         lat_pos = ypos
         ax.text(
@@ -747,6 +744,7 @@ def plt_text(ax, text, xpos=0, ypos=0,
             transform=ccrs.Geodetic(),
             bbox=plot_box
         )
+        print(lon_pos, lat_pos)
     else:
         # Add the text s to the Axes at location x, y in data coordinates.
         ax.text(

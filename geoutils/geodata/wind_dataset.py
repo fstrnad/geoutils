@@ -50,6 +50,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
 
         self.u_name = kwargs.pop('u_name', 'u')
         self.v_name = kwargs.pop('v_name', 'v')
+        verbose = kwargs.pop('verbose', True)
         data_nc_u = [] if data_nc_u is None else data_nc_u
         data_nc_v = [] if data_nc_v is None else data_nc_v
         data_nc_w = [] if data_nc_w is None else data_nc_w  # Optional
@@ -60,7 +61,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         all_files = data_nc_u + data_nc_v + data_nc_w
         for file in all_files:
             fut.print_file_location_and_size(filepath=file, verbose=False)
-        time_range = fut.get_file_time_range(all_files)
+        time_range = fut.get_file_time_range(all_files, verbose=verbose)
 
         if data_nc_u is not None:
             for file in data_nc_u + data_nc_v:
@@ -70,7 +71,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                 for file in data_nc_w:
                     fut.print_file_location_and_size(
                         filepath=file, verbose=False)
-            gut.myprint(f'All wind files are available! Now load them!')
+            gut.myprint(f'U-Wind files are available! Now load them!',
+                        verbose=verbose)
 
             if len(data_nc_u) > 0:
                 ds_uwind = mp.MultiPressureLevelDataset(data_nc=data_nc_u,

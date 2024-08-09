@@ -27,9 +27,11 @@ class SpatioTemporalPCA:
 
     def __init__(self, ds, n_components, **kwargs):
         self.ds = ds
-
+        self.dims = gut.get_dims(self.ds)
+        if 'time' in self.dims:
+            self.dims.remove('time')
         self.X, self.ids_notNaN = pca_utils.map2flatten(self.ds)
-
+        self.dims = gut.get_dims(self.ids_notNaN)
         # PCA
         self.pca = self.apply_pca(X=self.X, n_components=n_components,
                                   **kwargs)
@@ -126,7 +128,7 @@ class SpatioTemporalPCA:
                                   ts: xr.DataArray,
                                   num_eofs=None, min_corr=0):
         sel_eofs = pca_utils.get_reduced_eofs(x=x, sppca=self, ts=ts,
-                                    num_eofs=num_eofs, min_corr=min_corr)
+                                              num_eofs=num_eofs, min_corr=min_corr)
 
         z_trafo = self.transform_reduced(x=x, reduzed_eofs=sel_eofs)
 
@@ -149,7 +151,7 @@ class SpatioTemporalPCA:
         for x_flat in x_hat_flat:
             x_hat = pca_utils.flattened2map(x_flat, self.ids_notNaN)
             x_hat = x_hat.drop([dim for dim in list(
-                x_hat.dims) if dim not in ['lat', 'lon']])
+                x_hat.dims) if dim not in self.dims])
             x_hat_map.append(x_hat)
 
         x_hat_map = xr.concat(x_hat_map, dim='time')
@@ -169,3 +171,13 @@ class SpatioTemporalPCA:
         x_hat = self.inverse_transform(z, newdim=x[stack_dim])
 
         return x_hat
+
+    def eofs_real_space(self):
+        """Return EOFs in real space."""
+        num_eofs = self.get_eof_nums()
+        len_eofs = len(num_eofs)
+        basis_vectors = gut.identity_matrix(len_eofs)
+        real_eofs = self.inverse_transform(basis_vectors,
+                                           newdim='eof',
+                                           coords=num_eofs)
+        return real_eofs

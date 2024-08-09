@@ -208,6 +208,7 @@ def get_netcdf_encoding(ds,
     freq = get_frequency(ds)
     if freq != 'hour':
         gut.myprint('set hours to 0', verbose=verbose)
+        # This avoids problems with time encoding at 0h and 11h!
         ds = set_hours_to_zero(x=ds)
 
     # ds = ds.transpose('time', 'lat', 'lon
@@ -1083,9 +1084,29 @@ def check_hour_equality(da1, da2):
     # Check hour equality for each timestamp
     for t1, t2 in zip(time1, time2):
         if t1.hour != t2.hour:
+            gut.myprint(f"Hour mismatch: {t1} != {t2}")
             return False
 
     # If all hours are equal, return True
+    return True
+
+
+def check_hour_occurrence(da):
+
+    # Ensure both DataArrays have a time dimension
+    if 'time' not in da.dims:
+        raise ValueError("DataArrays must have a 'time' dimension.")
+
+    # Extract time coordinates
+    time1 = pd.Series(da.time.values)
+
+    for t1 in time1:
+        t_hour = t1.hour
+        if t_hour != 0:
+            gut.myprint(f"Hour mismatch: {t_hour}!")
+            return False
+
+    # If all hours are 0, return True
     return True
 
 
@@ -1338,6 +1359,7 @@ def remove_duplicate_times(da):
 def compute_anomalies(dataarray, climatology_array=None,
                       group=None, base_period=None,
                       chunk_data=False,
+                      normalize=False,
                       verbose=True):
     """Calculate anomalies.
 
@@ -1370,7 +1392,14 @@ def compute_anomalies(dataarray, climatology_array=None,
             .groupby(f"time.{group}")
             .mean(dim="time")
         )
+        std_climatology = (
+            climatology_array.sel(time=slice(base_period[0], base_period[1]))
+            .groupby(f"time.{group}")
+            .std(dim="time")
+        )
         anomalies = dataarray.groupby(f"time.{group}") - climatology
+        if normalize:
+            anomalies = anomalies / std_climatology
         if chunk_data:
             anomalies = anomalies.chunk(dict(time=-1))
     else:

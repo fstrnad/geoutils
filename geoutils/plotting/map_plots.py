@@ -6,10 +6,11 @@ import matplotlib.patches as mpatches
 import geoutils.utils.general_utils as gut
 import numpy as np
 import xarray as xr
+import cartopy
+import cartopy as ctp
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
-import cartopy as ctp
 from importlib import reload
 
 import geoutils.plotting.plotting_utils as put
@@ -621,7 +622,7 @@ def plot_2D(
             expo = gut.get_exponent10(np.abs(vmax-vmin)) if float(
                 vmin) != 0. else gut.get_exponent10(np.abs(vmax-vmin))
             if sci is None:
-                sci = expo # if np.abs(expo) > 1 else None
+                sci = expo if np.abs(expo) > 1 else None
             if sci is not None:
                 if sci < 0:
                     round_dec = abs(sci) + 1
@@ -1149,7 +1150,8 @@ def create_multi_plot(nrows, ncols, projection=None,
                 pos_x = gut.replicate_object(pos_x, end_idx)
                 indices_none = gut.get_None_indices(proj_arr)
                 pos_x[indices_none] = 0.
-            put.enumerate_subplots(axs, pos_x=pos_x, pos_y=pos_y)
+            put.enumerate_subplots(axs, pos_x=pos_x, pos_y=pos_y,
+                                   )
     else:
         axs = axs[0]
 

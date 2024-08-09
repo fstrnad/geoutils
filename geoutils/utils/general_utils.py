@@ -1511,3 +1511,30 @@ def process_object(obj):
         return None
     else:
         return None
+
+
+def identity_matrix(n):
+    """
+    Generates an n x n identity matrix.
+
+    Parameters
+    ----------
+    n : int
+        The size of the identity matrix (number of rows and columns).
+
+    Returns
+    -------
+    numpy.ndarray
+        An n x n identity matrix.
+
+    Example
+    -------
+    >>> identity_matrix(3)
+    array([[1., 0., 0.],
+           [0., 1., 0.],
+           [0., 0., 1.]])
+    """
+    if not isinstance(n, int):
+        raise ValueError("Input must be an integer.")
+
+    return np.eye(n)

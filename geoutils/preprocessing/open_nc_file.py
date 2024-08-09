@@ -10,7 +10,7 @@ import geoutils.utils.met_utils as mut
 from datetime import datetime
 from importlib import reload
 import xarray as xr
-
+reload(sput)
 
 def open_nc_file(
         nc_files,
@@ -20,7 +20,7 @@ def open_nc_file(
         var_name=None,
         **kwargs,):
     reload(gut)
-    gut.myprint("Start processing data!", verbose=verbose)
+    gut.myprint("Start Loading data...", verbose=verbose)
 
     ds = open_ds(
         nc_files=nc_files,
@@ -30,6 +30,8 @@ def open_nc_file(
 
     if var_name is not None:
         ds = ds[var_name]
+    dims = gut.get_dims(ds=ds)
+    gut.myprint(f'Read data from store', verbose=verbose)
     ds, dims = check_dimensions(
         ds, ts_days=decode_times, verbose=verbose,
         **kwargs)
@@ -43,17 +45,20 @@ def open_nc_file(
 def open_ds(nc_files, plevels=None,
             decode_times=True, **kwargs):
     plevel_name = kwargs.pop('plevel_name', 'lev')
-
+    gut.myprint(f'Open files: {nc_files}')
     if plevels is None:
         ds = xr.open_mfdataset(nc_files,
                                decode_times=decode_times,
                                parallel=True,
-                               chunks={'time': -1}
+                            #    chunks={'time': -1}
                                )
     else:
-        ds = xr.open_mfdataset(nc_files, decode_times=decode_times,
+        chunks = kwargs.pop('chunks', {'time': 1000})
+        gut.myprint(f'Open files with chunks: {chunks}')
+        ds = xr.open_mfdataset(nc_files,
+                               decode_times=decode_times,
                                preprocess=add_dummy_dim,
-                               chunks={"time": 1000}
+                            #    chunks=chunks,
                                )
 
         ds = ds.rename({'dummy': plevel_name})
@@ -62,7 +67,10 @@ def open_ds(nc_files, plevels=None,
     return ds
 
 
-def add_dummy_dim(xda):
+def add_dummy_dim(xda, set_hours_zero=True):
+    if set_hours_zero:
+        xda = tu.set_hours_to_zero(x=xda)
+
     time.sleep(0.1)  # To ensure that data is read in correct order!
     xda = xda.expand_dims(dummy=[datetime.now()])
     time.sleep(0.1)
