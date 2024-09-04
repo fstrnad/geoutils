@@ -84,18 +84,24 @@ def interpolate_grid(dataarray, grid_step,
         )
 
     gut.myprint(
-        f"Interpolte grid from {min(init_lon)} to {max(init_lon)},{min(init_lat)} to {max(init_lat)}!",
+        f"Interpolte grid from {min(init_lon)} to {max(init_lon)},{min(init_lat)} to {max(init_lat)}  with grid_step {grid_step}!",
     )
-    grid = xr.Dataset(
-        {
-            "lat": (['lat'], init_lat, {"units": "degrees_north"}),
-            "lon": (['lon'], init_lon, {"units": "degrees_east"}),
-        }
-    )
-    dr_out = dataarray.interp(grid, method=method,
-                          kwargs={"fill_value": "extrapolate"}
-                          )  # Extrapolate if outside of the range
+
+    grid = {
+        "lat": (['lat'], init_lat, {"units": "degrees_north"}),
+        "lon": (['lon'], init_lon, {"units": "degrees_east"}),
+    }
+    dr_out = dataarray.interp(coords=grid,
+                              method=method,
+                              kwargs={"fill_value": "extrapolate"}
+                              )  # Extrapolate if outside of the range
+
+    # grid = xr.Dataset(
+    #     {
+    #         "lat": (['lat'], init_lat, {"units": "degrees_north"}),
+    #         "lon": (['lon'], init_lon, {"units": "degrees_east"}),
+    #     }
+    # )
     # regridder = xe.Regridder(dataarray, grid, method)
     # dr_out = regridder(dataarray, keep_attrs=True)
-
     return dr_out
