@@ -5,7 +5,6 @@ import random
 import pickle
 import numpy as np
 import os
-import sys
 import xarray as xr
 import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
