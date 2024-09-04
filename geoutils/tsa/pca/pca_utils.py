@@ -87,7 +87,8 @@ def flattened2map(x_flat: np.ndarray, ids_notNaN: xr.DataArray,
     return x_map
 
 
-def spatio_temporal_latent_volume(sppca, x_encode, tps=None, steps=0,
+def spatio_temporal_latent_volume(sppca, x_encode, tps=None,
+                                  steps=0, step_size=1,
                                   ts=None,
                                   min_corr=0, num_eofs=None):
     """Generates a space-time volume of latent variables. The volume is a 2D array with a vector of steps*components for each time point.
@@ -119,7 +120,7 @@ def spatio_temporal_latent_volume(sppca, x_encode, tps=None, steps=0,
         data = sppca.transform_reduced(x=x_encode, reduzed_eofs=sel_eofs)
         num_steps = 1
     else:
-        steps_arr = np.arange(1, steps+1)
+        steps_arr = np.arange(1, steps+1, step_size)
         num_steps = len(steps_arr)
         data = np.array([])
         for idx, step in enumerate(steps_arr):

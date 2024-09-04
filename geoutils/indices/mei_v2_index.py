@@ -14,7 +14,8 @@ data_dir = "/home/strnad/data/"
 plot_dir = "/home/strnad/data/plots/enso/"
 
 
-def get_mei_index(start_month='Jan', end_month='Dec'):
+def get_mei_index(start_month='Jan', end_month='Dec',
+                  time_range=None):
     """Wrapper for get_meiv2_index
 
     Args:
@@ -24,12 +25,16 @@ def get_mei_index(start_month='Jan', end_month='Dec'):
     Returns:
         xr.dataarray: dataarray with MEI index
     """
-    return get_meiv2_index(start_month=start_month, end_month=end_month)
+    return get_meiv2_index(start_month=start_month, end_month=end_month,
+                           time_range=time_range)
 
 
-def get_meiv2_index(start_month='Jan', end_month='Dec'):
+def get_meiv2_index(start_month='Jan', end_month='Dec',
+                    time_range=None):
     savepath_meiv2 = '/home/strnad/data/meiv2/meiv2_days.nc'
     mei_index = xr.open_dataset(savepath_meiv2)['MEIV2']
+    mei_index = tu.get_time_range_data(mei_index,
+                                       time_range=time_range)
     mei_index = tu.get_month_range_data(mei_index,
                                         start_month=start_month,
                                         end_month=end_month,
@@ -132,7 +137,7 @@ if __name__ == '__main__':
     ds_sst = bds.BaseDataset(data_nc=dataset_file,
                              can=True,
                              an_types=['JJAS', 'month'],
-                             month_range=['Jun', 'Sep'],
+                             #  month_range=['Jun', 'Sep'],
                              #  lon_range=lon_range_cut,
                              #  lat_range=lat_range_cut,
                              )
@@ -143,7 +148,9 @@ if __name__ == '__main__':
         # neutral_tps,
         nina_tps,
     ]
-    groups = ['El Nino', 'Neutral', 'La Nina']
+    groups = ['El Nino',
+              #   'Neutral',
+              'La Nina']
     an_type = 'month'
     var_type = f'sst_an_{an_type}'
     label_sst = f'SST Anomalies (wrt {an_type}) [K]'
@@ -167,7 +174,7 @@ if __name__ == '__main__':
 
         im_sst = cplt.plot_map(mean*mask,
                                ax=im['ax'][idx],
-                               title=f'{group} (JJAS)',
+                               title=f'{group}',
                                cmap='RdBu_r',
                                plot_type='contourf',
                                levels=14,

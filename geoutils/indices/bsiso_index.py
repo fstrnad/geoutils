@@ -62,6 +62,7 @@ def get_bsisophase_tps(phase_number,
     return tps
 # %%
 
+
 if __name__ == '__main__':
     # Lee et al. 2013
     bsiso_file = '/home/strnad/data/bsiso/BSISO.INDEX.NORM.data'
@@ -256,23 +257,29 @@ if __name__ == '__main__':
     ds_olr_25 = bds.BaseDataset(data_nc=dataset_file,
                                 can=True,
                                 an_types=['dayofyear', 'month', 'JJAS'],
+                                month_range=['Jun', 'Sep']
                                 )
     # %%
-    import geoutils.indices.bsiso_index as bs
-    reload(bs)
-    nrows = 2
-    ncols = 4
+    reload(cplt)
+    nrows = 3
+    ncols = 3
+    an_type = 'month'
+    var_type = f'olr_an_{an_type}'
+    label = rf'Anomalies OLR (wrt {an_type}) [W/m$^2$]'
     im = cplt.create_multi_plot(nrows=nrows,
                                 ncols=ncols,
                                 projection='PlateCarree',
-                                hspace=0.5, wspace=0.15,
+                                hspace=0.4,
+                                wspace=0.2,
+                                figsize=(18, 10),
                                 orientation='horizontal',
-                                lon_range=[-30, 180],
-                                lat_range=[-30, 60])
+                                lon_range=[20, 180],
+                                lat_range=[-30, 50],
+                                end_idx=8,)
 
     index_def = 'Kikuchi'
     for idx, phase in enumerate(np.arange(1, 9)):
-        tps = bs.get_bsisophase_tps(
+        tps = get_bsisophase_tps(
             phase_number=phase,
             start_month='Jun',
             end_month='Sep',
@@ -282,8 +289,6 @@ if __name__ == '__main__':
         composite_pr = tu.get_sel_tps_ds(ds=ds_olr_25.ds, tps=tps)
         mean_pr = composite_pr.mean(dim='time')
 
-        an_type = 'month'
-        var_type = f'olr_an_{an_type}'
         # var_type = 'ttr'
         vmax = 25
         vmin = -vmax
@@ -295,9 +300,16 @@ if __name__ == '__main__':
                                 centercolor='white',
                                 levels=12,
                                 vmin=vmin, vmax=vmax,
-                                title=f"BSISO Phase {phase} ({len(tps)} days)",
-                                label=rf'Anomalies OLR (wrt {an_type}) [W/m$^2$]',
+                                title=f"Phase {phase}",
                                 )
+    cplt.add_colorbar(im=im_comp,
+                      fig=im['fig'],
+                      width=0.8,
+                      height=0.02,
+                      x_pos=0.1,
+                      y_pos=0.05,
+                      label=label)
+
     plot_dir = "/home/strnad/data/plots/bsiso/"
     savepath = plot_dir + \
         f"definitions/bsiso_phase_{index_def}_olr_{an_type}.png"

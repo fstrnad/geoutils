@@ -367,14 +367,12 @@ def normlize_time_slides(data, min=0, max=1):
 
 def get_sel_tps_lst(ds, tps_lst, remove_tp=False,
                     drop_dim=True,
-                    verbose=False,
-                    timemean='day'):
+                    verbose=False):
     ds_sel = ds
     for tps in tps_lst:
         ds_sel = get_sel_tps_ds(ds=ds_sel, tps=tps, remove_tp=remove_tp,
                                 drop_dim=drop_dim,
-                                verbose=verbose,
-                                timemean=timemean)
+                                verbose=verbose)
 
     return ds_sel
 
@@ -420,6 +418,31 @@ def get_sel_years_dates(years,
                                    end_month=end_month)
 
     return sel_dates
+
+
+def remove_time_points(dataset, time_points, verbose=False):
+    """
+    Remove specified time points from an xarray Dataset.
+
+    Parameters:
+        dataset (xarray.Dataset): The input xarray Dataset from which time points should be removed.
+        time_points (xarray.DataArray): An xarray DataArray containing time points to be removed.
+
+    Returns:
+        xarray.Dataset: The dataset with the specified time points removed.
+    """
+    if isinstance(time_points, list):
+        time_points = merge_time_arrays(time_points)
+    if isinstance(time_points, xr.DataArray):
+        time_points = time_points.time
+
+    # Convert time_points to a set for faster lookups
+    rem_tps = get_intersect_tps(dataset.time, time_points)
+    gut.myprint(f'Remove {len(rem_tps)} time points!', verbose=verbose)
+    # Select time points that are not in the time_points_set
+    filtered_dataset = dataset.drop_sel(time=rem_tps)
+
+    return filtered_dataset
 
 
 def remove_consecutive_tps(tps, steps=0,
@@ -670,7 +693,7 @@ def is_in_month_range(month, start_month, end_month):
     return mask
 
 
-def get_month_range_data(dataset, start_month="Jan", end_month="Dec", verbose=True):
+def get_month_range_data(dataset, start_month="Jan", end_month="Dec", verbose=False):
     """
     This function generates data within a given month range. It can be from smaller month
     to higher (eg. Jul-Sep) but as well from higher month to smaller month (eg. Dec-Feb)

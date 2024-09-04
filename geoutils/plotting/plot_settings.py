@@ -6,6 +6,7 @@ MEDIUM_SIZE = 14
 BIGGER_SIZE = 18
 MAXIMUM_SIZE = 22
 MAX_ZORDER = 100
+
 plt.rcdefaults()
 
 # Choose 'serif', 'sans-serif', or 'monospace'

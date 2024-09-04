@@ -103,7 +103,7 @@ def get_cmap(cmap, levels=None):
 
 
 def set_title(title, ax=None, fig=None, **kwargs):
-    y_title = kwargs.pop('y_title', 1.)
+    y_title = kwargs.pop('y_title', 1.05)
     vertical_title = kwargs.pop('vertical_title', None)
     x_title_offset = kwargs.pop('x_title_offset', -0.2)
     title_color = kwargs.pop('title_color', 'black')
@@ -129,6 +129,19 @@ def set_title(title, ax=None, fig=None, **kwargs):
                 verticalalignment="center",
                 fontweight=fw, size=fsize)
     return kwargs
+
+
+def has_labels(ax):
+    """
+    Check if the given Matplotlib axis has x and y labels set.
+
+    Parameters:
+    ax (matplotlib.axes.Axes): The axis to check for labels.
+
+    Returns:
+    bool: True if either x or y labels are set, False otherwise.
+    """
+    return bool(ax.get_xlabel()) or bool(ax.get_ylabel())
 
 
 def prepare_axis(ax, log=False, **kwargs):
@@ -158,16 +171,25 @@ def prepare_axis(ax, log=False, **kwargs):
     set_twinx = kwargs.pop("set_twinx", False)
     set_twiny = kwargs.pop("set_twiny", False)
     set_spines = kwargs.pop("set_spines", False)
+    spines_color = kwargs.pop("spines_color", "black")
+    reset_axis = kwargs.pop("reset_axis", False)
     if set_twinx:
+        ax.set_zorder(1)
         ax = ax.twinx()
+        ax.set_zorder(1)
     if set_twiny:
         ax = ax.twiny()
     if plot_type != 'polar':
         if not set_twinx:
             ax.spines["right"].set_visible(False)
-
+        else:
+            ax.spines["left"].set_visible(False)
         ax.spines["top"].set_visible(set_spines)
-        ax.spines["right"].set_visible(set_spines)
+        if set_spines:
+            ax.spines['bottom'].set_color(spines_color)
+            ax.spines['top'].set_color(spines_color)
+            ax.spines['left'].set_color(spines_color)
+            ax.spines['right'].set_color(spines_color)
 
         ax.grid(set_grid)
         ax.tick_params(
@@ -176,17 +198,18 @@ def prepare_axis(ax, log=False, **kwargs):
             colors=ylabel_color, grid_alpha=0.5
         )
 
-        ax.set_xlabel(xlabel, color=x_label_color)
-        ax.set_ylabel(ylabel, color=ylabel_color)
+        if not has_labels(ax) or reset_axis:
+            ax.set_xlabel(xlabel, color=x_label_color)
+            ax.set_ylabel(ylabel, color=ylabel_color)
 
-        if xlabel_pos is not None:
-            if xlabel_pos == "right":
-                ax.xaxis.set_label_coords(1.0, -0.2)
-            else:
-                ax.xaxis.set_label_coords(xlabel_pos)
-        if ylabel_pos is not None:
-            ax.yaxis.set_label_coords(x=ylabel_pos[0],
-                                      y=ylabel_pos[1])
+            if xlabel_pos is not None:
+                if xlabel_pos == "right":
+                    ax.xaxis.set_label_coords(1.0, -0.2)
+                else:
+                    ax.xaxis.set_label_coords(xlabel_pos)
+            if ylabel_pos is not None:
+                ax.yaxis.set_label_coords(x=ylabel_pos[0],
+                                          y=ylabel_pos[1])
 
         if xlim is not None:
             ax.set_xlim(xlim)
@@ -198,12 +221,19 @@ def prepare_axis(ax, log=False, **kwargs):
         set_ticks = kwargs.pop("set_ticks", True)
         top_ticks = kwargs.pop("top_ticks", False)
         right_ticks = kwargs.pop("right_ticks", False)
+        left_ticks = kwargs.pop("left_ticks", True)
+        if set_ticks is False:
+            left_ticks = False
+            right_ticks = False
+        if set_twinx:
+            left_ticks = False
+            right_ticks = True
         ax.tick_params(axis="x", labelrotation=rot,
                        bottom=set_ticks,
                        top=top_ticks,
                        )
         ax.tick_params(axis="y", labelrotation=rot_y,
-                       left=set_ticks, right=right_ticks
+                       left=left_ticks, right=right_ticks,
                        )
         if xticks is not None:
             ax.set_xticks(xticks)
@@ -442,6 +472,7 @@ def add_colorbar(im, fig, label,
 
     ax_cbar = fig.add_axes([x_pos, y_pos, width, height])
     orientation = kwargs.pop('orientation', 'horizontal')
+    fsize = kwargs.pop('fontsize', pst.BIGGER_SIZE)
     cbar = make_colorbar(ax=ax_cbar,
                          im=im['im'],
                          fig=fig,
@@ -450,6 +481,7 @@ def add_colorbar(im, fig, label,
                          set_cax=False,
                          ticks=im['ticks'],
                          extend=extend,  # gives a warning for contourf...
+                         fontsize=fsize,
                          **kwargs,
                          )
     return cbar
@@ -460,7 +492,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
     ticks = kwargs.pop('ticks', None)
     sci = kwargs.pop("sci", None)
     shift_ticks = kwargs.pop("shift_ticks", None)
-
+    fsize = kwargs.pop('fontsize', None)
     tick_step = int(kwargs.pop("tick_step", 2))
     if ticks is not None:
         ticks = ticks[::tick_step]
@@ -544,6 +576,10 @@ def make_colorbar(ax, im, fig=None, **kwargs):
         if set_rot:
             cbar.ax.set_xticklabels(ticks[:-1], rotation=45)
         cbar.set_ticklabels(ticks[:-1])
+
+    if fsize is not None:
+        cbar.ax.tick_params(labelsize=fsize)
+        cbar.set_label(label=label, size=fsize)
 
     return cbar
 
@@ -744,7 +780,6 @@ def plt_text(ax, text, xpos=0, ypos=0,
             transform=ccrs.Geodetic(),
             bbox=plot_box
         )
-        print(lon_pos, lat_pos)
     else:
         # Add the text s to the Axes at location x, y in data coordinates.
         ax.text(

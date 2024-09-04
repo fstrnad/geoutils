@@ -6,6 +6,7 @@
 import numpy as np
 import geoutils.utils.statistic_utils as sut
 import geoutils.utils.general_utils as gut
+import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
 import geoutils.geodata.base_dataset as bds
 import geoutils.plotting.plots as cplt
@@ -13,7 +14,8 @@ from importlib import reload
 
 import geoutils.utils.time_utils as tut
 reload(tut)
-
+data_dir = "/home/strnad/data/"
+plot_dir = "/home/strnad/data/plots/tej/"
 
 # ======================================================================================
 # Compute the  tropical easterly jet (TEJ) index (TEJI) as the
@@ -21,7 +23,7 @@ reload(tut)
 # ======================================================================================
 
 
-def get_tej_index(u200,
+def get_tej_index(u200=None,
                   #   lon_range=[-0, 30],
                   #   lat_range=[5, 15],
                   lon_range=[0, 70],  # definition by Huang et al. 2019
@@ -41,26 +43,33 @@ def get_tej_index(u200,
     Returns:
         tej_index (xr.Dataset): Nino indices.
     """
-    da = u200
-    box_tropics, box_tropics_std = tut.get_mean_time_series(
-        da,
-        lon_range=lon_range,
-        lat_range=lat_range,
-        time_roll=0
-    )
-    if northward_extension:
-        box_india, box_tropics_std = tut.get_mean_time_series(
+    if u200 is not None:
+        da = u200
+        box_tropics, box_tropics_std = tut.get_mean_time_series(
             da,
-            lon_range=[70, 80],
-            lat_range=[10, 30],
+            lon_range=lon_range,
+            lat_range=lat_range,
             time_roll=0
         )
-    else:
-        box_india = 0
-    box_sum = box_tropics + box_india
-    box_sum.name = 'tej'
+        if northward_extension:
+            box_india, box_tropics_std = tut.get_mean_time_series(
+                da,
+                lon_range=[70, 80],
+                lat_range=[10, 30],
+                time_roll=0
+            )
+        else:
+            box_india = 0
+        box_sum = box_tropics + box_india
+        box_sum.name = 'tej'
 
-    tej_idx = box_sum.to_dataset()
+        tej_idx = box_sum.to_dataset()
+    else:
+        grid_step = 1
+        tej_path = data_dir + \
+            f"tej/tej_index_{grid_step}_days.nc"
+        tej_idx = fut.load_xr(filepath=tej_path)
+
     tej_idx = tu.get_month_range_data(tej_idx,
                                       start_month=start_month,
                                       end_month=end_month,
@@ -69,13 +78,15 @@ def get_tej_index(u200,
     return tej_idx
 
 
-def get_tej_strength(u200, tej_val=0,
+def get_tej_strength(u200=None,
+                     tej_val=0,
                      quantile=0.8,
                      northward_extension=True,
                      definition='std',
                      start_month='Jan',
                      end_month='Dec',
-                     get_index=True,):
+                     get_index=False,
+                     verbose=False):
     tej = get_tej_index(u200=u200,
                         northward_extension=northward_extension,
                         start_month=start_month,
@@ -97,8 +108,10 @@ def get_tej_strength(u200, tej_val=0,
     else:
         raise ValueError('Invalid definition for tej strength')
 
-    gut.myprint(f'# anomalous enhanced TEJ times: {len(enhanced_tej.time)}')
-    gut.myprint(f'# anomalous reduced TEJ times: {len(reduced_tej.time)}')
+    gut.myprint(f'# anomalous enhanced TEJ times: {len(enhanced_tej.time)}',
+                verbose=verbose)
+    gut.myprint(f'# anomalous reduced TEJ times: {len(reduced_tej.time)}',
+                verbose=verbose)
     if get_index:
         return dict(enhanced=enhanced_tej.time,
                     reduced=reduced_tej.time,
@@ -121,9 +134,6 @@ def tej_pattern(u200):
 # %%
 if __name__ == '__main__':
     reload(cplt)
-    data_dir = "/home/strnad/data/"
-    plot_dir = "/home/strnad/data/plots/tej/"
-
     lev = 200
     grid_step = 1
     dataset_file = data_dir + \
@@ -133,7 +143,19 @@ if __name__ == '__main__':
                             can=True,
                             an_types=['dayofyear', 'month'],
                             )
+    # %%
+    # save tej index as file
+    tej_index = get_tej_index(u200=u_def.ds['u_an_month'],
+                              start_month='Jan',
+                              end_month='Dec',
+                              )
+    grid_step = 1
+    savepath = data_dir + \
+        f"tej/tej_index_{grid_step}_days.nc"
+    fut.save_ds(ds=tej_index, filepath=savepath,
+                only_dim_corrds=True)
 
+    # %%
     grid_step = 2.5
     dataset_file = data_dir + \
         f"climate_data/{grid_step}/era5_v_{grid_step}_{lev}_ds.nc"
@@ -182,7 +204,7 @@ if __name__ == '__main__':
         enhanced=tej_tps['enhanced'],
         # reduced=tej_tps['reduced'],
     )
-
+    # %%
     nrows = len(tej_dict)
     ncols = 2
     im = cplt.create_multi_plot(nrows=nrows, ncols=ncols,
@@ -232,14 +254,14 @@ if __name__ == '__main__':
         vmax = 1.5
         vmin = -vmax
         im_comp = cplt.plot_map(mean_tps,
-                                ax=im['ax'][idx*ncols +1],
+                                ax=im['ax'][idx*ncols + 1],
                                 plot_type='contourf',
                                 cmap='RdYlBu_r',
                                 centercolor='white',
                                 levels=12,
                                 vmin=vmin, vmax=vmax,
                                 title=f"SAT Anomalies + Wind Field 200hPa",
-                                label=rf'Anomalies GP (wrt {an_type}) [$m^2/s^2$]',
+                                label=rf'SAT Anomalies (wrt {an_type}) [K]',
                                 )
         dict_w = cplt.plot_wind_field(ax=im_comp['ax'],
                                       u=mean_tps_u,
@@ -295,4 +317,4 @@ if __name__ == '__main__':
         f"definitions/sst_{an_type}_tej_types.png"
     cplt.save_fig(savepath=savepath, fig=im['fig'])
 
-#%%
+# %%

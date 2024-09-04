@@ -3,18 +3,15 @@
 Base class for the geodata datasets with lon-lat resolution.
 """
 
-import time
 import os
 import numpy as np
 import copy
-from tqdm import tqdm
 import geoutils.preprocessing.open_nc_file as of
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
 import geoutils.utils.met_utils as mut
-from datetime import datetime
 from importlib import reload
 import xarray as xr
 reload(gut)
@@ -131,6 +128,10 @@ class BaseDataset():
 
         self.set_ds_objects()
 
+        read_into_memory = kwargs.pop('read_into_memory', True)
+        if read_into_memory:
+            self.ds = self.read_data_into_memory()
+
         if metpy_labels:
             self.ds = self.set_metpy_labels()
 
@@ -239,11 +240,11 @@ class BaseDataset():
 
         return ds
 
-    def add_dummy_dim(self, xda):
-        time.sleep(0.1)  # To ensure that data is read in correct order!
-        xda = xda.expand_dims(dummy=[datetime.now()])
-        time.sleep(0.1)
-        return xda
+    def read_data_into_memory(self):
+        gut.myprint(f'Attention! All data is read into memory!',
+                    color='red', bold=True)
+        self.ds = self.ds.compute()
+        return self.ds
 
     def load(self, load_nc, lon_range=[-180, 180], lat_range=[-90, 90],
              verbose=True):
@@ -386,10 +387,12 @@ class BaseDataset():
             if not gut.is_datetime360(time=ds.time.data[0]):
                 self.calender360 = False
             else:
-                gut.myprint('WARNING: 360 day calender is used!')
+                gut.myprint('WARNING: 360 day calender is used!',
+                            color='yellow')
                 self.calender360 = True
         else:
-            gut.myprint('WARNING! No standard calender is used!')
+            gut.myprint('WARNING! No standard calender is used!',
+                        color='yellow')
             self.calender360 = False
         return ds
 
@@ -567,7 +570,8 @@ class BaseDataset():
                 self.indices_flat, self.idx_map = self.init_map_indices(
                     verbose=verbose)
             else:
-                gut.myprint('WARNING! Index dictionaries not initialized!')
+                gut.myprint('WARNING! Index dictionaries not initialized!',
+                            color='yellow')
                 self.indices_flat = self.idx_map = None
         else:
             gut.myprint('No mask initialized!', verbose=verbose)
@@ -1093,7 +1097,7 @@ class BaseDataset():
                 # Odd number of latitudes includes the poles.
                 gut.myprint(
                     f"WARNING: Poles might be included: {min_lat} and {min_lat}!",
-                    color='red'
+                    color='red', bold=True
                 )
 
         gut.myprint(

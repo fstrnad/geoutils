@@ -1,12 +1,9 @@
 import geoutils.utils.spatial_utils as sput
-import geoutils.geodata.multilevel_pressure as mp
 import metpy.calc as metcalc
 from metpy.units import units
 from importlib import reload
-import numpy as np
 import xarray as xr
 import geoutils.utils.general_utils as gut
-import geoutils.utils.file_utils as fut
 from metpy.interpolate import cross_section
 reload(gut)
 

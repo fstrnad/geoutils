@@ -1,7 +1,4 @@
 import time
-import numpy as np
-import copy
-from tqdm import tqdm
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
@@ -11,6 +8,7 @@ from datetime import datetime
 from importlib import reload
 import xarray as xr
 reload(sput)
+
 
 def open_nc_file(
         nc_files,
@@ -50,7 +48,7 @@ def open_ds(nc_files, plevels=None,
         ds = xr.open_mfdataset(nc_files,
                                decode_times=decode_times,
                                parallel=True,
-                            #    chunks={'time': -1}
+                               #    chunks={'time': -1}
                                )
     else:
         chunks = kwargs.pop('chunks', {'time': 1000})
@@ -58,7 +56,7 @@ def open_ds(nc_files, plevels=None,
         ds = xr.open_mfdataset(nc_files,
                                decode_times=decode_times,
                                preprocess=add_dummy_dim,
-                            #    chunks=chunks,
+                               #    chunks=chunks,
                                )
 
         ds = ds.rename({'dummy': plevel_name})

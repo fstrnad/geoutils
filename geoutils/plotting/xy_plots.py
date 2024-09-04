@@ -74,7 +74,7 @@ def set_legend(ax,
         # )
 
         leg.get_frame().set_linewidth(0.0)
-
+        leg.set_zorder(pst.MAX_ZORDER)
     return ax
 
 
@@ -96,7 +96,7 @@ def plot_xy(
     ax=None,
     all_x=False,
     norm=False,
-    stdize=False,
+    standardize=False,
     ts_axis=False,
     plot_type='xy',
     set_axis=False,
@@ -157,7 +157,7 @@ def plot_xy(
             z = z_arr[idx] if len(z_arr) == 1 else None
             if norm is True:
                 y = sut.normalize(y)
-            if stdize is True:
+            if standardize is True:
                 y = sut.standardize(y)
                 if len(y_err_arr) > 0:
                     y_err_arr[idx] = sut.standardize(y_err_arr[idx])
@@ -302,7 +302,7 @@ def plot_xy(
                              edgecolor=edgecolor,
                              )
         # set again axis, because sns changes it
-        ax, kwargs = put.prepare_axis(ax, **kwargs_init)
+        ax, kwargs = put.prepare_axis(ax, reset_axis=True, **kwargs_init)
     # ############# Plotting  density ################
     elif plot_type == 'density':
         levels = kwargs.pop("levels", 10)

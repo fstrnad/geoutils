@@ -567,7 +567,7 @@ def apply_cluster_data(data,
         cluster_dict = k_means_clustering(data=data,
                                           verbose=verbose,
                                           **kwargs)
-    elif method == 'gm':
+    elif method == 'gm' or method == 'gmm':
         cluster_dict = gm_clustering(data=data,
                                      verbose=verbose,
                                      **kwargs)

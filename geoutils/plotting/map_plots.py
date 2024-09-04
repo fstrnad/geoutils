@@ -608,8 +608,11 @@ def plot_2D(
     if z is not None:
         vmin = np.nanquantile(z, q=0.1) if vmin is None else vmin
         vmax = np.nanquantile(z, q=0.9) if vmax is None else vmax
+        if vmin == vmax and plot_type != 'hatch':
+            raise ValueError(f'Vmin and vmax are equal: {vmin}!')
     else:
         vmin = vmax = None
+
     if set_norm == 'log':
         base = kwargs.pop('base', 2)
         # vmin and vmax are now the exponentials
@@ -840,7 +843,7 @@ def plot_2D(
     if put.check_geoaxis(ax):
         y_title = kwargs.pop('y_title', 1.18)
     else:
-        y_title = kwargs.pop('y_title', 1.)
+        y_title = kwargs.pop('y_title', 1.05)
     kwargs = put.set_title(title=title, ax=ax,
                            y_title=y_title, **kwargs)
 
@@ -949,7 +952,7 @@ def plot_wind_field(
     ax=None,
     x_vals=None,
     y_vals=None,
-    key_loc=(1., -.06),
+    key_loc=(0.95, -.06),
     stream=False,
     transform=True,
     **kwargs,
@@ -1026,7 +1029,7 @@ def plot_wind_field(
                 zorder=zorder,
             )
         key_length = kwargs.pop('key_length', 1)
-        wind_unit = kwargs.pop('wind_unit', r"$ms^{-1}$")
+        wind_unit = kwargs.pop('wind_unit', r"ms$^{-1}$")
         if key_loc:
             ax.quiverkey(
                 Q,
@@ -1078,6 +1081,9 @@ def create_multi_plot(nrows, ncols, projection=None,
                           width_ratios=ratios_w,
                           hspace=hspace, wspace=wspace)
     proj_arr = kwargs.pop('proj_arr', None)
+    if proj_arr is None:
+        proj_arr = kwargs.pop('projection_arr', None)
+
     diff_projs = False
 
     if projection is not None or proj_arr is not None:

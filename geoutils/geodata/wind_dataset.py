@@ -43,14 +43,19 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                  convention_labelling=False,  # label as U, V, OMEGA
                  **kwargs):
         reload(mp)
+        init_mask = kwargs.pop('init_mask', False)
+        read_into_memory = kwargs.pop('read_into_memory', True)
+        self.u_name = kwargs.pop('u_name', 'u')
+        self.v_name = kwargs.pop('v_name', 'v')
+        self.fac_name = kwargs.pop('fac_name', 'fac')
+        set_fac = kwargs.pop('set_fac', False)
+
+        verbose = kwargs.pop('verbose', True)
+
         u_kwargs = copy.deepcopy(kwargs)
         v_kwargs = copy.deepcopy(kwargs)
         w_kwargs = copy.deepcopy(kwargs)
-        init_mask = kwargs.pop('init_mask', False)
 
-        self.u_name = kwargs.pop('u_name', 'u')
-        self.v_name = kwargs.pop('v_name', 'v')
-        verbose = kwargs.pop('verbose', True)
         data_nc_u = [] if data_nc_u is None else data_nc_u
         data_nc_v = [] if data_nc_v is None else data_nc_v
         data_nc_w = [] if data_nc_w is None else data_nc_w  # Optional
@@ -79,6 +84,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                         plevels=plevels,
                                                         can=False,  # Anomalies are computed later all together
                                                         time_range=time_range,
+                                                        read_into_memory=False,
                                                         **u_kwargs)
                 u = ds_uwind.ds[self.u_name]
                 if self.u_name == 'u' and convention_labelling:
@@ -96,6 +102,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                         plevels=plevels,
                                                         can=False,
                                                         time_range=time_range,
+                                                        read_into_memory=False,
                                                         **v_kwargs)
                 v = ds_vwind.ds[self.v_name]
                 if self.v_name == 'v' and convention_labelling:
@@ -113,8 +120,9 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                       plevels=plevels,
                                                       can=False,
                                                       time_range=time_range,
+                                                      read_into_memory=False,
                                                       **w_kwargs)
-                self.fac_name = kwargs.pop('fac_name', 'fac')
+
                 if grad_fac:
                     gut.myprint(
                         f'Multiply u- and v by gradient of factor {self.fac_name}!')
@@ -129,7 +137,6 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                         f'Multiply u- and v by factor {self.fac_name}!')
                     u = (u*ds_fac.ds[self.fac_name]).rename(self.u_name)
                     v = (v*ds_fac.ds[self.fac_name]).rename(self.v_name)
-                set_fac = kwargs.pop('set_fac', False)
                 if not set_fac:
                     del ds_fac
                     ds_fac = None
@@ -166,6 +173,9 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             self.set_var()  # sets the variable name to the first variable in the dataset
             self.can = can
             self.compute_all_anomalies(**kwargs)
+
+        if read_into_memory:
+            self.ds = self.read_data_into_memory()
 
             del u, v, w, windspeed, ds_uwind, ds_vwind, ds_wwind
         else:

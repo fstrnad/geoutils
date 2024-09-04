@@ -33,7 +33,7 @@ def myprint(str, verbose=True, lines=False, bold=False, italic=False, color=None
             if color not in colors:
                 raise ValueError(
                     f"Invalid color: {color}! Available colors: {list(colors.keys())}")
-                color_code = colors.get(color.lower(), "")  #
+            color_code = colors.get(color.lower(), "")  #
 
         styled_text = f"{style}{italic_code}{color_code}{str}{reset_style}"
         if lines:
