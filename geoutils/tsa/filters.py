@@ -4,7 +4,46 @@ import numpy as np
 import scipy.ndimage as ndim
 import geoutils.utils.general_utils as gut
 from importlib import reload
+import xrscipy.signal.extra as dsp_extra
+
+
 reload(gut)
+
+
+def lowpass(x, cutoff, order=None, dim='time'):
+    if isinstance(x, xr.DataArray):
+        coords = x.coords
+        dims = gut.get_dims(x)
+        if 'time' in dims:
+            x = x.assign_coords(time=np.arange(len(x.time)))
+    x_filt = dsp_extra.lowpass(x, f_cutoff=cutoff, dim=dim)
+    x_filt = x_filt.transpose(*dims)
+    if isinstance(x, xr.DataArray):
+        x_filt = xr.DataArray(
+            data=x_filt.data,
+            coords=coords,
+            dims=dims
+        )
+    return x_filt
+
+
+def bandpass(x, cutoff_low, cutoff_high, order=None, dim='time'):
+    if isinstance(x, xr.DataArray):
+        coords = x.coords
+        dims = gut.get_dims(x)
+        if 'time' in dims:
+            x = x.assign_coords(time=np.arange(len(x.time)))
+    x_filt = dsp_extra.bandpass(x, f_low=cutoff_low,
+                                f_high=cutoff_high,
+                                dim=dim)
+    x_filt = x_filt.transpose(*dims)
+    if isinstance(x, xr.DataArray):
+        x_filt = xr.DataArray(
+            data=x_filt.data,
+            coords=coords,
+            dims=dims
+        )
+    return x_filt
 
 
 def cheby_lowpass(cutoff, fs, order, rp):
@@ -98,7 +137,6 @@ def apply_med_filter(ts,
     ts_med_fil = ndim.median_filter(ts, size=size)
 
     return ts_med_fil
-
 
 
 def compute_lead_lag_corr(ts1, ts2, lag=0, corr_method='spearman'):

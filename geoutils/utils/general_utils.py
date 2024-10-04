@@ -563,7 +563,12 @@ def get_quantile_of_ts(ts, q=0.9,
 
 
 def get_varnames_ds(ds):
-    return list(ds.keys())
+    if isinstance(ds, xr.Dataset):
+        return list(ds.keys())
+    elif isinstance(ds, xr.DataArray):
+        return ds.name
+    else:
+        raise ValueError('Input has to be xr.Dataset or xr.DataArray!')
 
 
 def get_source_target_corr(corr, sids):
@@ -807,6 +812,17 @@ def get_None_indices(arr):
         return nones[0]
     else:
         return nones
+
+
+def get_not_None_indices(arr):
+    if isinstance(arr, list):
+        arr = np.array(arr)
+
+    notnones = np.where(arr != None)[0]
+    if len(notnones) == 1:
+        return notnones[0]
+    else:
+        return notnones
 
 
 def remove_nans(x):
@@ -1399,7 +1415,7 @@ def replicate_object(obj, n):
     list
         An array containing 'n' copies of the object.
     """
-    return [obj] * n
+    return np.array([obj] * n)
 
 
 def change_array_object(arr, obj, new_obj):

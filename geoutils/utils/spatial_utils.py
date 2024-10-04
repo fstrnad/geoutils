@@ -431,7 +431,6 @@ def horizontal_average(ds, dim='lon', average_type='mean'):
     return ds
 
 
-
 def get_vertical_ds(wind_dict, tps,
                     vname='v',
                     wname='w',
@@ -755,6 +754,25 @@ def get_kde_map(ds, data, coord_rad=None, nn_points=None, bandwidth='scott'):
                           bw_opt=bandwidth)
 
     return ds.get_map(Z_kde)
+
+
+def get_mask_for_nan_array(arr, var_name=None):
+
+    if isinstance(arr, xr.Dataset):
+        if var_name is None:
+            var_names = gut.get_varnames_ds(arr)
+            var_name = var_names[0]
+            if len(var_names) > 1:
+                gut.myprint(f'WARNING: More than one variable in dataset! Select first variable {var_name}!',
+                            color='yellow')
+        arr = arr[var_name]
+
+    if gut.contains_nan(arr):
+        time_dim = tu.get_time_dim(arr)
+        mask = xr.where(arr.mean(dim=time_dim) == np.nan, 1, 0)
+    else:
+        mask = xr.ones_like(arr[0])
+    return mask
 
 
 def get_LR_map(ds, var, method='standardize', sids=None, deg=1):
@@ -1243,19 +1261,22 @@ def check_dimensions(ds, ts_days=True,
                     raise ValueError(
                         f"The dimension {dims} not consistent with required dims {clim_dims}!")
 
-    gut.myprint(f'Checked labelling according to netcdf conventions!', verbose=verbose)
+    gut.myprint(
+        f'Checked labelling according to netcdf conventions!', verbose=verbose)
 
     if transpose_dims:
-        gut.myprint('Transpose dimensions...')
+        gut.myprint('Transpose dimensions...', verbose=verbose)
         if numdims == 4:
             # Actually change location in memory if necessary!
             ds = ds.transpose("lat", "lon", "lev", "time").compute()
-            gut.myprint('object transposed to lat-lon-lev-time!', verbose=verbose)
+            gut.myprint('object transposed to lat-lon-lev-time!',
+                        verbose=verbose)
 
         elif numdims == 3:
             # Actually change location in memory if necessary!
             ds = ds.transpose("lat", "lon", "time").compute()
-            gut.myprint('3d object transposed to lat-lon-time!', verbose=verbose)
+            gut.myprint('3d object transposed to lat-lon-time!',
+                        verbose=verbose)
         elif numdims == 2:
             if 'lon' in dims:
                 ds = ds.transpose('lat', 'lon').compute()
@@ -1365,7 +1386,8 @@ def get_grid_step(ds, verbose=True):
         grid_step = grid_step_lat
     else:
         gut.myprint(
-            f'Different grid step in lon {grid_step_lon} and lat {grid_step_lat} direction!',
+            f'Different grid step in lon {grid_step_lon} and lat {
+                grid_step_lat} direction!',
             verbose=verbose)
         grid_step = grid_step_lat
     return grid_step, grid_step_lon, grid_step_lat

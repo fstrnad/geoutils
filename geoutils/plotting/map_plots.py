@@ -367,6 +367,7 @@ def plot_map(dmap: xr.DataArray,
              lat_range: tuple[float, float] = None,
              lon_range: tuple[float, float] = None,
              dateline: bool = False,
+             verbose=False,
              **kwargs):
     """
     This function plots a map of a given xr.DataArray.
@@ -401,7 +402,9 @@ def plot_map(dmap: xr.DataArray,
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
     if plot_type != 'points':
-        dmap = sput.check_dimensions(dmap, verbose=False)
+        dmap = sput.check_dimensions(dmap, 
+                                     transpose_dims=True,
+                                     verbose=verbose)
     put.check_plot_type(plot_type)
     projection = put.check_projection(ax=ax, projection=projection)
 
@@ -1152,10 +1155,11 @@ def create_multi_plot(nrows, ncols, projection=None,
         if enumerate_subplots:
             pos_x = kwargs.pop('pos_x', -0.1)
             pos_y = kwargs.pop('pos_y', 1.1)
-            if diff_projs:
+            if diff_projs and isinstance(pos_x, (int, float)):
+                pos_x_proj = kwargs.pop('pos_x_proj', pos_x)
                 pos_x = gut.replicate_object(pos_x, end_idx)
-                indices_none = gut.get_None_indices(proj_arr)
-                pos_x[indices_none] = 0.
+                indices_proj = gut.get_not_None_indices(proj_arr)
+                pos_x[indices_proj] = pos_x_proj
             put.enumerate_subplots(axs, pos_x=pos_x, pos_y=pos_y,
                                    )
     else:
@@ -1225,7 +1229,7 @@ def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
         edgecolor=color,
         linewidth=lw,
         zorder=zorder,
-
+        linestyle=ls,
     )
 
     if text is not None:

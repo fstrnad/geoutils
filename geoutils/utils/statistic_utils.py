@@ -220,14 +220,17 @@ def standardize_along_time(data, dim='time'):
 
 
 def standardize_dataset(dataset, dim='time'):
-    vars = gut.get_vars(dataset)
-    x_stack_vars = []
-    for var in vars:
-        gut.myprint(f'Standardize {var}')
-        x_stack_vars.append(standardize_along_time(dataset[var], dim=dim))
-    x_stack_vars = xr.merge(x_stack_vars)
+    if isinstance(dataset, xr.DataArray):
+        return standardize_along_time(dataset, dim=dim)
+    else:
+        vars = gut.get_vars(dataset)
+        x_stack_vars = []
+        for var in vars:
+            gut.myprint(f'Standardize {var}')
+            x_stack_vars.append(standardize_along_time(dataset[var], dim=dim))
+        x_stack_vars = xr.merge(x_stack_vars)
 
-    return x_stack_vars
+        return x_stack_vars
 
 
 def normalize_along_time(data, dim='time'):

@@ -48,7 +48,8 @@ def get_cgt_index(z200, start_month='Jan', end_month='Dec',):
     return cgti_idx
 
 
-def get_cgti_strength(z200, cgti_val=0,
+def get_cgti_strength(z200,
+                      cgti_val=0,
                       quantile=0.8,
                       start_month='Jun',
                       end_month='Sep',
@@ -56,6 +57,11 @@ def get_cgti_strength(z200, cgti_val=0,
     cgti = get_cgt_index(z200=z200,
                          start_month=start_month,
                          end_month=end_month,)
+    if cgti_val != 0:
+        definition = 'thresh'
+    if quantile != 0.8:
+        definition = 'quantile'
+
     if definition == 'std':
         std = cgti.std()
         pos_cgti = cgti.where(cgti > std, drop=True)
@@ -116,7 +122,7 @@ if __name__ == '__main__':
         f"climate_data/{grid_step_z}/era5_z_{grid_step_z}_{lev}_ds.nc"
     ds_z200 = bds.BaseDataset(data_nc=dataset_file,
                               can=True,
-                              an_types=['dayofyear', 'month'],
+                              an_types=['dayofyear', 'month', 'season'],
                               )
     # %%
     dataset_file = data_dir + \
@@ -135,7 +141,8 @@ if __name__ == '__main__':
     var_type = f'z_an_{an_type}'
     cgti_dict = get_cgti_strength(ds_z200.ds[var_type],
                                   definition='quantile',
-                                  cgti_val=1,
+                                  quantile=0.9,
+                                #   cgti_val=10,
                                   start_month='Jun',
                                   end_month='Sep',
                                   )
@@ -143,13 +150,13 @@ if __name__ == '__main__':
     reload(cplt)
     cgt_types = ['pos', 'neg']
     nrows = len(cgt_types)
-    ncols = 2
+    ncols = 1
     im = cplt.create_multi_plot(nrows=nrows, ncols=ncols,
                                 projection='PlateCarree',
                                 lon_range=[-20, 180],
                                 lat_range=[-0, 80],
                                 wspace=0.1,
-                                hspace=0.8,
+                                hspace=0.4,
                                 dateline=False)
     for idx, (cgti_type) in enumerate(cgt_types):
         this_tps = cgti_dict[cgti_type]
@@ -176,46 +183,45 @@ if __name__ == '__main__':
         vmax = 6
         vmin = -vmax
 
-        im_comp = cplt.plot_map(mean_tps_v,
+        im_comp = cplt.plot_map(mean_tps_v*sig_v,
                                 ax=im['ax'][idx*ncols + 0],
                                 plot_type='contourf',
                                 cmap='PuOr',
                                 centercolor='white',
                                 levels=12,
                                 vmin=vmin, vmax=vmax,
-                                title=f"V200 Anomalies",
+                                # title=f"V200 Anomalies",
                                 vertical_title=f'{cgti_type}. CGT',
-                                label=rf'V-wind Anomalies {
-                                    lev} hPa (wrt {an_type}) [m/s]',
+                                label=rf'V-wind ({lev} hPa) Anomalies (wrt {an_type}) [m/s]',
                                 )
 
-        mean_tps, sig_z = tu.get_mean_tps(ds_z200.ds[f'z_an_{an_type}'],
-                                          this_tps.time)
-        vmax = 5.e2
-        vmin = -vmax
-        im_comp = cplt.plot_map(mean_tps,
-                                ax=im['ax'][idx*ncols + 1],
-                                plot_type='contourf',
-                                cmap='RdYlBu_r',
-                                centercolor='white',
-                                levels=12,
-                                vmin=vmin, vmax=vmax,
-                                title=f"z200 Anomalies",
-                                label=rf'Anomalies GP (wrt {
-                                    an_type}) [$m^2/s^2$]',
-                                )
-        dict_w = cplt.plot_wind_field(ax=im_comp['ax'],
-                                      u=mean_tps_u,
-                                      v=mean_tps_v,
-                                      #   u=mean_u,
-                                      #   v=mean_v,
-                                      scale=50,
-                                      steps=2,
-                                      key_length=2,
-                                      )
+        # mean_tps, sig_z = tu.get_mean_tps(ds_z200.ds[f'z_an_{an_type}'],
+        #                                   this_tps.time)
+        # vmax = 5.e2
+        # vmin = -vmax
+        # im_comp = cplt.plot_map(mean_tps,
+        #                         ax=im['ax'][idx*ncols + 1],
+        #                         plot_type='contourf',
+        #                         cmap='RdYlBu_r',
+        #                         centercolor='white',
+        #                         levels=12,
+        #                         vmin=vmin, vmax=vmax,
+        #                         title=f"z200 Anomalies",
+        #                         label=rf'Anomalies GP (wrt {
+        #                             an_type}) [$m^2/s^2$]',
+        #                         )
+        # dict_w = cplt.plot_wind_field(ax=im_comp['ax'],
+        #                               u=mean_tps_u,
+        #                               v=mean_tps_v,
+        #                               #   u=mean_u,
+        #                               #   v=mean_v,
+        #                               scale=50,
+        #                               steps=2,
+        #                               key_length=2,
+        #                               )
 
         savepath = plot_dir + \
-            f"definitions/u200_uv200_{an_type}_cgti_types.png"
+            f"definitions/v200_{an_type}_cgti_types.png"
         cplt.save_fig(savepath=savepath, fig=im['fig'])
 
     # %%

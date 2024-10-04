@@ -245,15 +245,19 @@ if __name__ == '__main__':
     # %%
     nrows = 3
     ncols = 3
+    an_type = 'month'
+    var_type = f'olr_an_{an_type}'
+    label = rf'Anomalies OLR (wrt {an_type}) [W/m$^2$]'
     im = cplt.create_multi_plot(nrows=nrows,
                                 ncols=ncols,
+                                figsize=(18, 10),
                                 projection='PlateCarree',
-                                hspace=0.8,
+                                hspace=0.,
                                 wspace=0.15,
                                 orientation='horizontal',
-                                lon_range=[-0, -140],
+                                lon_range=[30, -140],
                                 dateline=True,
-                                lat_range=[-30, 50],
+                                lat_range=[-30, 40],
                                 end_idx=8,)
 
     for idx, phase in enumerate(np.arange(1, 9)):
@@ -266,9 +270,6 @@ if __name__ == '__main__':
         composite_pr = tu.get_sel_tps_ds(ds=ds_olr_25.ds, tps=tps)
         mean_pr = composite_pr.mean(dim='time')
 
-        an_type = 'month'
-        var_type = f'olr_an_{an_type}'
-
         vmax = 20
         vmin = -vmax
 
@@ -279,9 +280,16 @@ if __name__ == '__main__':
                                 centercolor='white',
                                 levels=12,
                                 vmin=vmin, vmax=vmax,
-                                title=f"Phase {phase}", # ({len(tps)} days)",
-                                label=rf'Anomalies OLR (wrt {an_type}) [W/m$^2$]',
+                                title=f"Phase {phase}",  # ({len(tps)} days)",
+                                extend='both',
                                 )
+    cplt.add_colorbar(im=im_comp,
+                      fig=im['fig'],
+                      width=0.8,
+                      height=0.015,
+                      x_pos=0.1,
+                      y_pos=0.09,
+                      label=label)
     plot_dir = "/home/strnad/data/plots/mjo/"
     savepath = plot_dir + \
         f"definitions/mjo_phases_olr_{an_type}.png"

@@ -11,7 +11,7 @@ import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
-# import geoutils.utils.met_utils as mut
+import geoutils.utils.met_utils as mut
 from importlib import reload
 import xarray as xr
 reload(gut)
@@ -1263,7 +1263,8 @@ class BaseDataset():
         gut.myprint("... finished!")
         return
 
-    def compute_anomalies(self, dataarray=None, group="dayofyear"):
+    def compute_anomalies(self, dataarray=None, group="dayofyear",
+                          normalize_anomalies=False):
         """Calculate anomalies.
 
         Parameters:
@@ -1280,17 +1281,21 @@ class BaseDataset():
         reload(tu)
         if dataarray is None:
             dataarray = self.ds[self.var_name]
-        anomalies = tu.compute_anomalies(dataarray=dataarray, group=group)
+        anomalies = tu.compute_anomalies(dataarray=dataarray,
+                                         group=group,
+                                         normalize=normalize_anomalies)
 
         return anomalies
 
     def compute_anomalies_ds(self, var_name=None, **kwargs):
         self.an_types = kwargs.pop('an_types', [])
+        normalize_anomalies = kwargs.pop('normalize_anomalies', False)
         var_name = self.var_name if var_name is None else var_name
         if var_name in self.vars:
             for an_type in self.an_types:
                 self.ds[f"{var_name}_an_{an_type}"] = self.compute_anomalies(
-                    self.ds[var_name], group=an_type
+                    self.ds[var_name], group=an_type,
+                    normalize_anomalies=normalize_anomalies
                 )
         return self.ds
 

@@ -3,10 +3,8 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - graph-tool
   - jupyter
   - netcdf4
-  - python[version='>=3.8']
   - pandas
   - ipython
   - xarray
@@ -17,7 +15,7 @@ dependencies:
   - pip
   - scipy
   - joblib
-  - cartopy  # =0.22.0
+  - cartopy=0.22.0
   - matplotlib  #=3.8.2
   - palettable
   - ipywidgets
@@ -25,4 +23,5 @@ dependencies:
   - windspharm
   - statsmodels
   - seaborn
+  - dask
 

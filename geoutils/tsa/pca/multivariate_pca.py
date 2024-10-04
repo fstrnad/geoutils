@@ -28,6 +28,9 @@ class MultivariatePCA(eof.SpatioTemporalPCA):
 
         self.normalize = normalize
         self.X, self.ids_notNaN = self.get_input_data(ds=ds)
+        self.dims = gut.get_dims(ds)
+        if 'time' in self.dims:
+            self.dims.remove('time')
         self.pca = self.apply_pca(X=self.X, n_components=n_components,
                                   **kwargs)
 
@@ -49,8 +52,8 @@ class MultivariatePCA(eof.SpatioTemporalPCA):
         X (np.ndarray): Input data for PCA.
         """
         self.mvars = True
+        self.vars = gut.get_varnames_ds(ds=ds)
         if isinstance(ds, xr.Dataset):
-            self.vars = gut.get_varnames_ds(ds=ds)
             if len(self.vars) > 1:
                 gut.myprint(f'Multivariate PCA vars: {self.vars}')
             else:
@@ -60,7 +63,7 @@ class MultivariatePCA(eof.SpatioTemporalPCA):
             self.mvars = False
 
         X, idsnotnan = pca_utils.map2flatten(ds,
-                                             normalize=self.normalize,)
+                                             normalize=self.normalize)
 
         return X, idsnotnan
 
@@ -78,4 +81,4 @@ class MultivariatePCA(eof.SpatioTemporalPCA):
             return self.vars
         else:
             gut.myprint(f'Univariate PCA with dataarray')
-            return None
+            return [self.vars]

@@ -40,6 +40,21 @@ jjas_months = np.array([
 ])
 
 
+def get_time_dim(da):
+    dims = gut.get_dimensions(da)
+    if 'time' in dims:
+        return 'time'
+    else:
+        spatial_dims = ['lat', 'lon']
+        if len(dims) == 3:
+            time_dim = [dim for dim in dims if dim not in spatial_dims]
+            if len(time_dim) == 1:
+                return time_dim[0]
+        else:
+            raise ValueError(
+                f"Time dimension not found in {dims}!")
+
+
 def assert_has_time_dimension(da):
     """
     Assert that a given xarray DataArray has a time dimension.
@@ -1269,6 +1284,15 @@ def compute_quantile(ds, q, dropna=True, verbose=False):
     return ds
 
 
+def get_extremes(ds, q=0.9, dropna=True, verbose=False):
+    quantile_val = compute_quantile(ds=ds, q=q, dropna=dropna, verbose=verbose)
+    quantile_val_below = compute_quantile(ds=ds, q=1-q, dropna=dropna, verbose=verbose)
+    above_q = ds.where(ds > quantile_val).dropna(dim='time')
+    below_q = ds.where(ds < quantile_val_below).dropna(dim='time')
+
+    return above_q, below_q
+
+
 def compute_sum(ds, dropna=True, verbose=False):
     """Computes the sum of a given xr.dataset
 
@@ -1420,9 +1444,16 @@ def compute_anomalies(dataarray, climatology_array=None,
             .groupby(f"time.{group}")
             .std(dim="time")
         )
-        anomalies = dataarray.groupby(f"time.{group}") - climatology
         if normalize:
-            anomalies = anomalies / std_climatology
+            gut.myprint(f"Normalize {group}ly anomalies!")
+            anomalies = dataarray.groupby(
+                f"time.{group}") / std_climatology
+            # Needs to be done in a two-step process, because the mean and std are calculated
+            anomalies = anomalies.groupby(
+                f"time.{group}") - climatology / std_climatology
+        else:
+            anomalies = dataarray.groupby(f"time.{group}") - climatology
+
         if chunk_data:
             anomalies = anomalies.chunk(dict(time=-1))
     else:

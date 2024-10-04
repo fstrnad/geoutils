@@ -46,7 +46,7 @@ def open_ds(nc_files, plevels=None,
         ds = xr.open_mfdataset(nc_files,
                                decode_times=decode_times,
                                parallel=True,
-                               #    chunks={'time': -1}
+                            #    chunks={'time': -1}
                                )
     else:
         chunks = kwargs.pop('chunks', {'time': 1000})

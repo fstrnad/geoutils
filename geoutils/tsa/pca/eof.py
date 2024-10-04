@@ -26,12 +26,14 @@ class SpatioTemporalPCA:
     """
 
     def __init__(self, ds, n_components, **kwargs):
-        self.ds = ds
-        self.dims = gut.get_dims(self.ds)
+        self.dims = gut.get_dims(ds)
         if 'time' in self.dims:
             self.dims.remove('time')
-        self.X, self.ids_notNaN = pca_utils.map2flatten(self.ds)
-        self.dims = gut.get_dims(self.ids_notNaN)
+        self.normalize = kwargs.get('normalize', False)
+        print(f'Normalize: {self.normalize}')
+        self.X, self.ids_notNaN = pca_utils.map2flatten(
+            ds,
+            normalize=self.normalize)
         # PCA
         self.pca = self.apply_pca(X=self.X, n_components=n_components,
                                   **kwargs)
@@ -48,31 +50,11 @@ class SpatioTemporalPCA:
         n_components (int): Number of components for PCA.
         """
         # PCA
-        pca = PCA(n_components=n_components, whiten=True)
+        pca = PCA(n_components=n_components,
+                  whiten=True)
         pca.fit(X.data)
 
         return pca
-
-    def get_eofs(self):
-        """Return components of PCA.
-
-        Parameters:
-        -----------
-        normalize: str
-            Normalization type of components.
-
-        Return:
-        -------
-        components: xr.dataarray (n_components, N_x, N_y)
-        """
-        # EOF maps
-        components = self.pca.components_
-        eof_map = []
-        for i, comp in enumerate(components):
-            eof = pca_utils.flattened2map(comp, self.ids_notNaN)
-            eof_map.append(eof)
-
-        return xr.concat(eof_map, dim='eof')
 
     def get_principal_components(self):
         """Returns time evolution of components.
@@ -89,7 +71,8 @@ class SpatioTemporalPCA:
         pc = self.pca.transform(self.X.data)
         da_pc = xr.DataArray(
             data=pc,
-            coords=dict(time=self.X['time'], eof=np.arange(
+            coords=dict(time=self.X['time'],
+                        eof=np.arange(
                 0, self.n_components)),
         )
         self.eof_nums = da_pc.eof.data
@@ -158,6 +141,8 @@ class SpatioTemporalPCA:
 
         if newdim != 'time':
             x_hat_map = x_hat_map.rename({'time': newdim})
+
+        if coords is not None:
             x_hat_map = x_hat_map.assign_coords({newdim: coords})
 
         return x_hat_map
@@ -172,6 +157,30 @@ class SpatioTemporalPCA:
 
         return x_hat
 
+    def get_eofs(self):
+        """Return components of PCA.
+
+        Parameters:
+        -----------
+        normalize: str
+            Normalization type of components.
+
+        Return:
+        -------
+        components: xr.dataarray (n_components, N_x, N_y)
+        """
+        # EOF maps
+        components = self.pca.components_
+        eof_map = []
+        for i, comp in enumerate(components):
+            eof = pca_utils.flattened2map(comp, self.ids_notNaN)
+            eof_map.append(eof)
+
+        eofs = xr.concat(eof_map, dim='eof')
+        eofs = eofs.assign_coords({'eof': np.arange(0, self.n_components)})
+
+        return eofs
+
     def eofs_real_space(self):
         """Return EOFs in real space."""
         num_eofs = self.get_eof_nums()
@@ -180,4 +189,18 @@ class SpatioTemporalPCA:
         real_eofs = self.inverse_transform(basis_vectors,
                                            newdim='eof',
                                            coords=num_eofs)
+
         return real_eofs
+
+    def get_extremes(self):
+        """Return extreme values of PCs."""
+        pcs = self.get_principal_components()
+        nums = pcs.eof.data
+
+        extremes = {}
+        for eof_num in nums:
+            pc = pcs.sel(eof=eof_num)
+            a, b = tu.get_extremes(pc, q=0.95)
+            extremes[eof_num] = {'max': a, 'min': b}
+
+        return extremes

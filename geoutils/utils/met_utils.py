@@ -82,10 +82,13 @@ def specific_humidity_to_relative_humidity(specific_humidity,
     # check for units:
     if temperature.metpy.units != units.K:
         temperature = temperature * units.K
+        gut.myprint('Temperature converted to Kelvin')
     if pressure.metpy.units != units.hPa:
         pressure = pressure * units.hPa
+        gut.myprint(f'Pressure converted to hPa')
     if specific_humidity.metpy.units != units('kg/kg'):
         specific_humidity = specific_humidity * units('kg/kg')
+        gut.myprint(f'Specific humidity converted to kg/kg')
 
     rh = metcalc.relative_humidity_from_specific_humidity(
         pressure=pressure,
@@ -139,7 +142,8 @@ def vertical_cross_section_average(data, lon_range, lat_range, av_dim='lon',
                                         average_type=av_type)
     cross_horizonatal_dim = 'lat' if av_dim == 'lon' else 'lon'
     if 'time' in gut.get_dims(mean_data):
-        mean_data = mean_data.transpose('time', 'lev', cross_horizonatal_dim).compute()
+        mean_data = mean_data.transpose(
+            'time', 'lev', cross_horizonatal_dim).compute()
 
     return mean_data
 

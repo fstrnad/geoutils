@@ -1,11 +1,13 @@
 import xarray as xr
 import numpy as np
 import geoutils.utils.general_utils as gut
+import geoutils.utils.spatial_utils as sput
 import geoutils.preprocessing.open_nc_file as of
-# import xesmf as xe
+import xesmf as xe
 
 from importlib import reload
 reload(gut)
+reload(sput)
 reload(of)
 
 
@@ -14,7 +16,8 @@ def interpolate_grid(dataarray, grid_step,
                      min_lon=None, max_lon=None,
                      min_lat=None, max_lat=None,
                      grid_step_lon=None,
-                     grid_step_lat=None):
+                     grid_step_lat=None,
+                     use_esmf=True,):
     """Common grid for all datasets.
     """
     if grid_step is None:
@@ -80,28 +83,36 @@ def interpolate_grid(dataarray, grid_step,
         # Odd number of latitudes includes the poles.
         gut.myprint(
             f"WARNING: Poles might be included: {min_lat} and {min_lat}!",
-            color='red'
+            color='yellow'
         )
 
     gut.myprint(
-        f"Interpolte grid from {min(init_lon)} to {max(init_lon)},{min(init_lat)} to {max(init_lat)}  with grid_step {grid_step}!",
+        f"Interpolte grid from {min(init_lon)} to {max(init_lon)},{min(init_lat)} to {
+            max(init_lat)}  with grid_step {grid_step}!",
     )
 
-    grid = {
-        "lat": (['lat'], init_lat, {"units": "degrees_north"}),
-        "lon": (['lon'], init_lon, {"units": "degrees_east"}),
-    }
-    dr_out = dataarray.interp(coords=grid,
-                              method=method,
-                              kwargs={"fill_value": "extrapolate"}
-                              )  # Extrapolate if outside of the range
+    if use_esmf:
+        grid = xr.Dataset(
+            {
+                "lat": (['lat'], init_lat, {"units": "degrees_north"}),
+                "lon": (['lon'], init_lon, {"units": "degrees_east"}),
+            }
+        )
+        gut.myprint(f"Using ESMF regridder with method {method}!")
+        regridder = xe.Regridder(dataarray, grid,
+                                 method=method,
+                                 #    extrap_method="nearest_s2d",
+                                 periodic=True)
+        dr_out = regridder(dataarray,
+                           skipna=True,   # keeps as many pixels as possible
+                           na_thres=1.0,  # lowering this results in more NaNs in ds_out
+                           keep_attrs=True)
+    else:
+        grid = {"lat": init_lat, "lon": init_lon}
 
-    # grid = xr.Dataset(
-    #     {
-    #         "lat": (['lat'], init_lat, {"units": "degrees_north"}),
-    #         "lon": (['lon'], init_lon, {"units": "degrees_east"}),
-    #     }
-    # )
-    # regridder = xe.Regridder(dataarray, grid, method)
-    # dr_out = regridder(dataarray, keep_attrs=True)
+        dr_out = dataarray.interp(coords=grid,
+                                  method=method,
+                                  kwargs={"fill_value": "extrapolate"}
+                                  )  # Extrapolate if outside of the range
+
     return dr_out

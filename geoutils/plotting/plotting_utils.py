@@ -12,6 +12,7 @@ import cartopy.mpl as cmpl
 import geoutils.plotting.plot_settings as pst
 from importlib import reload
 import palettable as pt
+import cmocean as cmo
 
 
 def get_available_mpl_colormaps():
@@ -173,6 +174,9 @@ def prepare_axis(ax, log=False, **kwargs):
     set_spines = kwargs.pop("set_spines", False)
     spines_color = kwargs.pop("spines_color", "black")
     reset_axis = kwargs.pop("reset_axis", False)
+    face_color = kwargs.pop("face_color", 'none')
+
+    ax.set_facecolor(face_color)
     if set_twinx:
         ax.set_zorder(1)
         ax = ax.twinx()
@@ -219,6 +223,8 @@ def prepare_axis(ax, log=False, **kwargs):
         rot = kwargs.pop("rot", 0)
         rot_y = kwargs.pop("rot_y", 0)
         set_ticks = kwargs.pop("set_ticks", True)
+        set_xticks = kwargs.pop("set_xticks", True)
+        set_yticks = kwargs.pop("set_yticks", True)
         top_ticks = kwargs.pop("top_ticks", False)
         right_ticks = kwargs.pop("right_ticks", False)
         left_ticks = kwargs.pop("left_ticks", True)
@@ -229,15 +235,17 @@ def prepare_axis(ax, log=False, **kwargs):
             left_ticks = False
             right_ticks = True
         ax.tick_params(axis="x", labelrotation=rot,
-                       bottom=set_ticks,
+                       bottom=set_xticks,
                        top=top_ticks,
                        )
         ax.tick_params(axis="y", labelrotation=rot_y,
-                       left=left_ticks, right=right_ticks,
+                       left=left_ticks if set_yticks else False,
+                       right=right_ticks,
                        )
-        if xticks is not None:
+        if xticks is not None and set_xticks:
             ax.set_xticks(xticks)
-        if xticklabels is not None:
+
+        if xticklabels is not None and set_xticks:
             ax.set_xticklabels(xticklabels)
         if x_ints:
             ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
@@ -283,9 +291,11 @@ def prepare_axis(ax, log=False, **kwargs):
         ax.xaxis.set_minor_locator(x_minor)
         ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
 
-    if not set_ticks:
-        ax.xaxis.set_ticklabels([])
-        ax.yaxis.set_ticklabels([])
+    if not set_ticks or not set_xticks or not set_yticks:
+        if not set_xticks:
+            ax.xaxis.set_ticklabels([])
+        if not set_yticks:
+            ax.yaxis.set_ticklabels([])
 
     yticks = kwargs.pop('yticks', None)
     if yticks is not None:

@@ -34,6 +34,9 @@ def map2flatten(x_map: xr.Dataset,
             {'var': list(x_map.data_vars)})
         x_flatten = x_stack_vars.stack(z=('var', 'lat', 'lon'))
     else:
+        if normalize:
+            gut.myprint('Standardize dataset!')
+            x_map = sut.standardize_dataset(x_map, dim='time')
         x_flatten = sput.stack_lat_lon(x_map, reindex=reindex_z)
 
     # Flatten and remove NaNs
