@@ -104,9 +104,9 @@ def plot_xy(
 ):
     reload(sut)
     reload(gut)
-    if not isinstance(y_arr[0], (list, np.ndarray, xr.DataArray)):
+    if not isinstance(y_arr[0], (list, np.ndarray, xr.DataArray, xr.Dataset)):
         y_arr = [y_arr]
-    if x_arr is not None and isinstance(x_arr[0], (list, np.ndarray, xr.DataArray)):
+    if x_arr is not None and isinstance(x_arr[0], (list, np.ndarray, xr.DataArray, xr.Dataset)):
         if len(y_arr) != len(x_arr):
             raise ValueError(
                 f"x and y arrays must have the same length, but are {len(x_arr)} and {len(y_arr)}!")
@@ -397,7 +397,10 @@ def plot_lines(ax, te, color="Turquoise"):
     return {'ax': ax}
 
 
-def plot_hist(data, ax=None, fig=None, label_arr=None, log=False, color_arr=None, **kwargs):
+def plot_hist(data, ax=None, fig=None,
+              label_arr=None,
+              log=False,
+              color_arr=None, **kwargs):
     reload(sut)
     reload(gut)
 

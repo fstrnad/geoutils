@@ -1386,8 +1386,7 @@ def get_grid_step(ds, verbose=True):
         grid_step = grid_step_lat
     else:
         gut.myprint(
-            f'Different grid step in lon {grid_step_lon} and lat {
-                grid_step_lat} direction!',
+            f'Different lon {grid_step_lon} and lat {grid_step_lat} step!',
             verbose=verbose)
         grid_step = grid_step_lat
     return grid_step, grid_step_lon, grid_step_lat

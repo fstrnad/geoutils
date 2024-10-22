@@ -26,7 +26,7 @@ def get_air_index(start_month='Jan', end_month='Dec',
                                            verbose=False)
 
     air_index.name = 'air'
-    air_index = air_index.to_dataset()
+    # air_index = air_index.to_dataset()
 
     return air_index
 
