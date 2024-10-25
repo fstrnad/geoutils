@@ -629,6 +629,8 @@ def is_larger_as(t1, t2):
         t1 = str2datetime(t1)
     if isinstance(t2, str):
         t2 = str2datetime(t2)
+    if gut.check_any_type([t1, t2], float):
+        raise ValueError('Time points must not be floats!')
 
     return t1 > t2
 
@@ -675,6 +677,46 @@ def get_time_range_data(ds, time_range,
     else:
         ds_sel = ds
     return ds_sel
+
+
+
+def get_data_timerange(data, time_range=None, verbose=True):
+    """Gets data in a certain time range.
+    Checks as well if time range exists in file!
+
+    Args:
+        data (xr.Dataarray): xarray dataarray
+        time_range (list, optional): List dim 2 that contains the time interval. Defaults to None.
+
+    Raises:
+        ValueError: If time range is not in time range of data
+
+    Returns:
+        xr.Dataarray: xr.Dataarray in seleced time range.
+    """
+
+    # if isinstance(time_range[0], np.datetime64):
+    #     time_range =
+
+    td = data.time.data
+    if time_range is not None:
+        if (is_larger_as(td[0], time_range[0])) or (
+            is_larger_as(time_range[1], td[-1])
+        ):
+            raise ValueError(
+                f"Chosen time {time_range} out of range. Please select times within {td[0]} - {td[-1]}!")
+        else:
+            sd = tp2str(time_range[0])
+            ed = tp2str(time_range[-1])
+            gut.myprint(f"Time steps within {sd} to {ed} selected!")
+        # da = data.interp(time=t, method='nearest')
+        da = data.sel(time=slice(time_range[0], time_range[1]))
+    else:
+        da = data
+    tr = get_time_range(ds=da)
+    gut.myprint(f'Load data in time range {tr}!',
+                verbose=verbose)
+    return da
 
 
 def split_by_year(ds, start_month='Jan', end_month='Dec'):
@@ -1024,6 +1066,7 @@ def get_time_range(ds):
     return sd, ed
 
 
+
 def get_dates_of_ds(ds):
     sd, ed = get_time_range(ds=ds)
     tps = get_dates_of_time_range(time_range=[sd, ed])
@@ -1171,7 +1214,8 @@ def get_tm_name(timemean):
         tm = None
     else:
         raise ValueError(
-            f"This time mean {timemean} does not exist! Please choose week, month, season or year!"
+            f"This time mean {
+                timemean} does not exist! Please choose week, month, season or year!"
         )
 
     return tm
@@ -1286,7 +1330,8 @@ def compute_quantile(ds, q, dropna=True, verbose=False):
 
 def get_extremes(ds, q=0.9, dropna=True, verbose=False):
     quantile_val = compute_quantile(ds=ds, q=q, dropna=dropna, verbose=verbose)
-    quantile_val_below = compute_quantile(ds=ds, q=1-q, dropna=dropna, verbose=verbose)
+    quantile_val_below = compute_quantile(
+        ds=ds, q=1-q, dropna=dropna, verbose=verbose)
     above_q = ds.where(ds > quantile_val).dropna(dim='time')
     below_q = ds.where(ds < quantile_val_below).dropna(dim='time')
 
@@ -1502,18 +1547,22 @@ def compute_anomalies_ds(ds, var_name=None,
     return ds
 
 
-def get_ee_ds(dataarray, q=0.95, min_threshold=1, th_eev=15):
-    # Remove days without rain
-    data_above_th = dataarray.where(dataarray > min_threshold)
+def get_ee_ds(dataarray, q=0.95, min_threshold=None,
+              th_eev=None):
+    if min_threshold is not None:
+        # Remove days without rain
+        dataarray = dataarray.where(dataarray > min_threshold)
     # Gives the quanile value for each cell
-    q_val_map = data_above_th.quantile(q, dim="time")
+    q_val_map = dataarray.quantile(q, dim="time")
+
     # Set values below quantile to 0
     data_above_quantile = xr.where(
-        data_above_th > q_val_map[:], data_above_th, np.nan)
-    # Set values to 0 that have not at least the value th_eev
-    data_above_quantile = xr.where(
-        data_above_quantile > th_eev, data_above_quantile, np.nan
-    )
+        dataarray > q_val_map[:], dataarray, np.nan)
+    if th_eev is not None:
+        # Set values to 0 that have not at least the value th_eev
+        data_above_quantile = xr.where(
+            data_above_quantile > th_eev, data_above_quantile, np.nan
+        )
     ee_map = data_above_quantile.count(dim="time")
 
     rel_frac_q_map = data_above_quantile.sum(
@@ -1534,8 +1583,8 @@ def get_ee_count_ds(ds, q=0.95):
 
 def compute_evs(dataarray,
                 q=0.9,
-                min_threshold=1,
-                th_eev=5,
+                min_threshold=None,
+                th_eev=None,
                 min_evs=1):
     """Creates an event series from an input time series.
 
@@ -1557,14 +1606,9 @@ def compute_evs(dataarray,
     """
     if q > 1 or q < 0:
         raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
-    if min_threshold <= 0:
-        raise ValueError(
-            f"ERROR! min_thresholdreshold for values min_threshold = {min_threshold} has to be > 0!")
 
     # Compute percentile data, remove all values below percentile, but with a minimum of
     # threshold q
-    gut.myprint(
-        f"Start remove values below q={q} and at least with q_value >= {th_eev} ...")
     _, ee_map, data_above_quantile, _ = get_ee_ds(
         dataarray=dataarray, q=q, min_threshold=min_threshold, th_eev=th_eev
     )
@@ -1725,7 +1769,8 @@ def date2ymdhstr(date, seperate_hour=True):
     dstr = f'{di}' if di > 9 else f'0{di}'
     hstr = f'{hi}' if hi > 9 else f'0{hi}'
 
-    strdate = f'{ystr}{mstr}{dstr}_{hstr}' if seperate_hour else f'{ystr}{mstr}{dstr}{hstr}'
+    strdate = f'{ystr}{mstr}{dstr}_{
+        hstr}' if seperate_hour else f'{ystr}{mstr}{dstr}{hstr}'
 
     return strdate
 
@@ -2137,7 +2182,8 @@ def sliding_time_window(
         corr, pvalue = corr_function(data=this_tp_data)
         if corr.shape != (num_nodes, num_nodes):
             raise ValueError(
-                f"Wrong dimension of corr matrix {corr.shape} != {(num_nodes, num_nodes)}!"
+                f"Wrong dimension of corr matrix {
+                    corr.shape} != {(num_nodes, num_nodes)}!"
             )
 
         # Define source - correlations, target correlations and source-target correlations
@@ -2245,7 +2291,8 @@ def get_corr_full_ts(
     corr, pvalue = corr_function(data=this_tp_data)
     if corr.shape != (num_nodes, num_nodes):
         raise ValueError(
-            f"Wrong dimension of corr matrix {corr.shape} != {(num_nodes, num_nodes)}!"
+            f"Wrong dimension of corr matrix {
+                corr.shape} != {(num_nodes, num_nodes)}!"
         )
 
     # Define source - correlations, target correlations and source-target correlations in

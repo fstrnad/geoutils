@@ -170,7 +170,8 @@ def set_extent(da, ax,
         min_ext_lon += 180
         max_ext_lon += 180
         gut.myprint(
-            f'Dateline: Set min_ext_lon to {min_ext_lon} and max_ext_lon to {max_ext_lon}!',
+            f'Dateline: Set min_ext_lon to {
+                min_ext_lon} and max_ext_lon to {max_ext_lon}!',
             verbose=verbose)
     else:
         projection = ccrs.PlateCarree(central_longitude=0)
@@ -330,7 +331,8 @@ def get_projection(projection, central_longitude=None, central_latitude=None,
 
     if not isinstance(central_longitude, float) and not isinstance(central_longitude, int):
         raise ValueError(
-            f'central_longitude is not of type int or float, but of type {type(central_longitude)}!'
+            f'central_longitude is not of type int or float, but of type {
+                type(central_longitude)}!'
         )
     if projection == "Mollweide":
         proj = ccrs.Mollweide(central_longitude=central_longitude)
@@ -402,7 +404,7 @@ def plot_map(dmap: xr.DataArray,
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
     if plot_type != 'points':
-        dmap = sput.check_dimensions(dmap, 
+        dmap = sput.check_dimensions(dmap,
                                      transpose_dims=True,
                                      verbose=verbose)
     put.check_plot_type(plot_type)
@@ -662,8 +664,8 @@ def plot_2D(
     else:
         sci = round_dec = norm = levels = None
 
-    extend = put.set_cb_boundaries(data=z, im=None,
-                                   vmin=vmin, vmax=vmax, **kwargs)
+    extend, kwargs = put.set_cb_boundaries(data=z, im=None,
+                                           vmin=vmin, vmax=vmax, **kwargs)
     if plot_type == "scatter":
         im = ax.scatter(
             x=x,
@@ -844,7 +846,7 @@ def plot_2D(
     # else:
     #     raise ValueError(f"Plot type {plot_type} does not exist!")
     if put.check_geoaxis(ax):
-        y_title = kwargs.pop('y_title', 1.18)
+        y_title = kwargs.pop('y_title', 1.1)
     else:
         y_title = kwargs.pop('y_title', 1.05)
     kwargs = put.set_title(title=title, ax=ax,
@@ -1045,6 +1047,99 @@ def plot_wind_field(
                 zorder=pst.MAX_ZORDER,
             )
     return {'ax': ax}
+
+
+def plot_trajectory(lon_lat_pairs,
+                    vals=None,
+                    ax=None,
+                    fig=None,
+                    vmin=None, vmax=None,
+                    smooth_traj=False,
+                    label=None,
+                    lon_range=None,
+                    lat_range=None,
+                    **kwargs):
+    # plotting parameters
+    lw = kwargs.pop("lw", .5)
+    alpha = kwargs.pop("alpha", 1)
+    color = kwargs.pop("color", None)
+    cmap = kwargs.pop("cmap", None)
+
+    if isinstance(lon_lat_pairs, list):
+        lon_lat_pairs = np.array(lon_lat_pairs)
+
+    lons = lon_lat_pairs[:, 0]
+    lats = lon_lat_pairs[:, 1]
+
+    if ax is None:
+        central_longitude = kwargs.pop('central_longitude', 0)
+        projection = kwargs.pop('projection', 'PlateCarree')
+        map_dict = create_map(da=None,
+                              lat_range=lat_range,
+                              lon_range=lon_range,
+                              central_longitude=central_longitude,
+                              projection=projection,
+                              **kwargs)
+        ax = map_dict['ax']
+        title = kwargs.pop('title', None)
+        y_title = kwargs.pop('y_title', 1.18)
+        kwargs = put.set_title(title=title, ax=ax,
+                               y_title=y_title,
+                               **kwargs)
+
+    if cmap is not None:
+        cmap = plt.get_cmap(cmap)
+        if vals is not None:
+            vmin = np.nanquantile(vals, q=0.05) if vmin is None else vmin
+            vmax = np.nanquantile(vals, q=0.95) if vmax is None else vmax
+        else:
+            # plot as a line with color, where color denotes the sequence of the trajectory
+            vals = np.arange(len(lon_lat_pairs)-1)
+            vmin = 0
+            vmax = len(lon_lat_pairs)-1
+        norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+        cmap = mpl.cm.ScalarMappable(norm=norm, cmap=plt.get_cmap(cmap))
+        for i, lon_lat in enumerate(lon_lat_pairs[:-1]):
+            lon_lat_pair = np.array([lon_lat, lon_lat_pairs[i+1]])
+            traj_plot = dict(lon=lon_lat_pair[:, 0], lat=lon_lat_pair[:, 1])
+            c = cmap.to_rgba(vals[i])
+
+            lon_traj = traj_plot['lon']
+            if np.abs(np.max(lon_traj) - np.min(lon_traj)) > 300:
+                lon_traj = sput.lon2_360(lon_traj)
+
+            X = lon_traj
+            Y = traj_plot['lat']
+
+            ax.plot(
+                X, Y,
+                transform=ccrs.PlateCarree(central_longitude=0),
+                c=c, linewidth=lw, alpha=alpha)
+
+        label = 'Trajectory' if label is None else label
+        cbar = put.make_colorbar(ax,
+                                 im=cmap,
+                                 norm=True,
+                                 label=label,
+                                 set_cax=True,
+                                 **kwargs)
+
+    else:
+        X, Y = lons, lats
+        if smooth_traj:
+            from scipy.interpolate import splprep, splev
+            tck, _ = splprep([X, Y], s=0, per=False)
+            X, Y = splev(np.linspace(0, 1, 1000), tck, der=0)
+
+        ax.plot(X,
+                Y,
+                transform=ccrs.PlateCarree(central_longitude=0),
+                c=color, linewidth=lw, alpha=alpha)
+
+    return dict(
+        ax=ax,
+        fig=fig,
+    )
 
 
 def create_multi_plot(nrows, ncols, projection=None,

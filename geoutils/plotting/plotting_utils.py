@@ -13,6 +13,7 @@ import geoutils.plotting.plot_settings as pst
 from importlib import reload
 import palettable as pt
 import cmocean as cmo
+import cmweather
 
 
 def get_available_mpl_colormaps():
@@ -71,7 +72,8 @@ def get_cmap(cmap, levels=None):
         reverse = True if 'r' in cmap_strs else False
         if cmap in d_cmaps:
             colormap = pt.colorbrewer.get_map(
-                cmap_strs[0], 'diverging',  number=int(cmap_strs[1]), reverse=reverse)
+                cmap_strs[0], 'diverging',  number=int(cmap_strs[1]),
+                reverse=reverse)
         elif cmap in s_cmaps:
             colormap = pt.colorbrewer.get_map(
                 cmap_strs[0], 'sequential',  number=int(cmap_strs[1]), reverse=reverse)
@@ -470,17 +472,36 @@ def set_cb_boundaries(data, im=None, vmin=None, vmax=None, **kwargs):
 
     kwargs["extend"] = extend
 
-    return extend
+    return extend, kwargs
 
 
 def add_colorbar(im, fig, label,
-                 x_pos=0, y_pos=0, width=0.8, height=0.05,
+                 x_pos=0, y_pos=0,
+                 width=None, height=None,
+                 set_cax=False,
+                 multi_plots=False,
                  **kwargs):
-    extend = kwargs.pop('extend', None)
-    if extend is None:
-        extend = im['extend']
+    if multi_plots:
+        # find out number of rows and columns
+        grid_spec = fig.axes[0].get_subplotspec().get_gridspec()
+        num_rows, num_cols = grid_spec.get_geometry()
 
-    ax_cbar = fig.add_axes([x_pos, y_pos, width, height])
+        bbox0 = fig.axes[0].get_position(fig)
+        bbox1 = fig.axes[num_cols-1].get_position(fig)  # last column
+        bboxlast = fig.axes[-1].get_position(fig)
+        if width is None:
+            width = (bbox1.x1 - bbox0.x0)/1.1
+            delta_width = (bbox1.x1 - bbox0.x0) - width
+            height = 0.05 / (1+0.2*num_rows)
+        x_pos = bbox0.x0 + delta_width/2
+        y_pos = bboxlast.y0 - height*1.5
+
+        positions = [x_pos, y_pos, width, height]
+    else:
+        width = 0.8 if width is None else width
+        height = 0.05 if height is None else height
+        positions = [x_pos, y_pos, width, height]
+    ax_cbar = fig.add_axes(positions)
     orientation = kwargs.pop('orientation', 'horizontal')
     fsize = kwargs.pop('fontsize', pst.BIGGER_SIZE)
     cbar = make_colorbar(ax=ax_cbar,
@@ -488,9 +509,8 @@ def add_colorbar(im, fig, label,
                          fig=fig,
                          orientation=orientation,
                          label=label,
-                         set_cax=False,
+                         set_cax=set_cax,
                          ticks=im['ticks'],
-                         extend=extend,  # gives a warning for contourf...
                          fontsize=fsize,
                          **kwargs,
                          )
@@ -498,8 +518,8 @@ def add_colorbar(im, fig, label,
 
 
 def make_colorbar(ax, im, fig=None, **kwargs):
-
     ticks = kwargs.pop('ticks', None)
+    extend = kwargs.pop('extend', 'neither')
     sci = kwargs.pop("sci", None)
     shift_ticks = kwargs.pop("shift_ticks", None)
     fsize = kwargs.pop('fontsize', None)
@@ -560,6 +580,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
             label=label,
             format=fmt,
             ticks=ticks,
+            extend=extend,
             **kwargs,
         )
     else:
@@ -577,6 +598,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
             label=label,
             ticks=ticks,
             format=fmt,
+            extend=extend,
             **kwargs
         )
 
@@ -750,7 +772,8 @@ def enumerate_subplots(axs, pos_x=-0.12,
             ax=ax,
             xpos=pos_x[n],
             ypos=pos_y[n],
-            text=f"{string.ascii_lowercase[li]}." if n < 26 else f"{string.ascii_uppercase[li]}{fac}.",
+            text=f"{string.ascii_lowercase[li]}." if n < 26 else f"{
+                string.ascii_uppercase[li]}{fac}.",
             size=fontsize,
             weight="bold",
             transform=True,

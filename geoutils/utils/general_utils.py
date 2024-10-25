@@ -1554,3 +1554,31 @@ def identity_matrix(n):
         raise ValueError("Input must be an integer.")
 
     return np.eye(n)
+
+
+def check_all_type(items, data_type):
+    """
+    Function to check if all elements in a list are of the specified type.
+
+    Parameters:
+    items (list): List of elements to check.
+    data_type (type): The type to check against (e.g., float, int, str, etc.).
+
+    Returns:
+    bool: True if all elements are of the specified type, False otherwise.
+    """
+    return all(isinstance(x, data_type) for x in items)
+
+
+def check_any_type(items, data_type):
+    """
+    Function to check if at least one element in a list is of the specified type.
+
+    Parameters:
+    items (list): List of elements to check.
+    data_type (type): The type to check against (e.g., float, int, str, etc.).
+
+    Returns:
+    bool: True if at least one element is of the specified type, False otherwise.
+    """
+    return any(isinstance(x, data_type) for x in items)
