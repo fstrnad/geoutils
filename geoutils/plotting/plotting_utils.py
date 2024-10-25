@@ -492,7 +492,7 @@ def add_colorbar(im, fig, label,
         if width is None:
             width = (bbox1.x1 - bbox0.x0)/1.1
             delta_width = (bbox1.x1 - bbox0.x0) - width
-            height = 0.05 / (1+0.2*num_rows)
+            height = bboxlast.height / 10  # 10% of height
         x_pos = bbox0.x0 + delta_width/2
         y_pos = bboxlast.y0 - height*1.5
 
