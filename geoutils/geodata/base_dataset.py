@@ -244,6 +244,8 @@ class BaseDataset():
         gut.myprint(f'Attention! All data is read into memory!',
                     color='red', bold=True)
         self.ds = self.ds.compute()
+        gut.myprint(f'Finished reading data into memory!',
+                    verbose=self.verbose)
         return self.ds
 
     def load(self, load_nc, lon_range=[-180, 180], lat_range=[-90, 90],
@@ -762,7 +764,7 @@ class BaseDataset():
             ds = self.ds
         if isinstance(ds, xr.Dataset):
             # check if xarray version is new
-            if xr.__version__ != '2024.6.0':
+            if xr.__version__ != '2024.9.0':
                 dims = list(ds.dims.keys())
             else:
                 dims = list(ds.dims)  # new in xarray 2023.06.
@@ -1355,7 +1357,7 @@ class BaseDataset():
         else:
             da = data
         tr = tu.get_time_range(ds=da)
-        gut.myprint(f'Load data from in time range {tr}!',
+        gut.myprint(f'Load data from in time range {tu.tps2str(tr)}!',
                     verbose=verbose)
         return da
 

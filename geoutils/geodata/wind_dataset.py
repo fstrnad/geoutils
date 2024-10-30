@@ -53,7 +53,6 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         verbose = kwargs.pop('verbose', True)
 
         u_kwargs = copy.deepcopy(kwargs)
-        v_kwargs = copy.deepcopy(kwargs)
         w_kwargs = copy.deepcopy(kwargs)
 
         data_nc_u = [] if data_nc_u is None else data_nc_u
@@ -68,140 +67,78 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             fut.print_file_location_and_size(filepath=file, verbose=False)
         time_range = fut.get_file_time_range(all_files, verbose=verbose)
 
-        if data_nc_u is not None:
-            for file in data_nc_u + data_nc_v:
-                fut.print_file_location_and_size(filepath=file, verbose=False)
+        ds_wind = mp.MultiPressureLevelDataset(data_nc=all_files,
+                                               plevels=plevels,
+                                               can=False,  # Anomalies are computed later all together
+                                               time_range=time_range,
+                                               read_into_memory=False,
+                                               **u_kwargs)
+        u = ds_wind.ds[self.u_name]
+        if self.u_name == 'u' and convention_labelling:
+            u = u.rename('U')
+            self.u_name = 'U'
+        self.load_dataset_attributes(base_ds=ds_wind,
+                                     init_mask=init_mask)
 
-            if len(data_nc_w) > 0:
-                for file in data_nc_w:
-                    fut.print_file_location_and_size(
-                        filepath=file, verbose=False)
-            gut.myprint(f'U-Wind files are available! Now load them!',
-                        verbose=verbose)
+        v = ds_wind.ds[self.v_name]
+        if self.v_name == 'v' and convention_labelling:
+            v = v.rename('V')
+            self.v_name = 'V'
+        if data_nc_fac is not None:
+            ds_fac = mp.MultiPressureLevelDataset(data_nc=data_nc_fac,
+                                                  plevels=plevels,
+                                                  can=False,
+                                                  time_range=time_range,
+                                                  read_into_memory=False,
+                                                  **w_kwargs)
 
-            if len(data_nc_u) > 0:
-                ds_uwind = mp.MultiPressureLevelDataset(data_nc=data_nc_u,
-                                                        plevels=plevels,
-                                                        can=False,  # Anomalies are computed later all together
-                                                        time_range=time_range,
-                                                        read_into_memory=False,
-                                                        **u_kwargs)
-                u = ds_uwind.ds[self.u_name]
-                if self.u_name == 'u' and convention_labelling:
-                    u = u.rename('U')
-                    self.u_name = 'U'
-                self.load_dataset_attributes(base_ds=ds_uwind,
-                                             init_mask=init_mask)
-
+            if grad_fac:
+                gut.myprint(
+                    f'Multiply u- and v by gradient of factor {self.fac_name}!')
+                ds_fac.horizontal_gradient(var=self.fac_name, dim='lon')
+                ds_fac.horizontal_gradient(var=self.fac_name, dim='lat')
+                u = (u*ds_fac.ds[self.fac_name +
+                                 '_grad_lon']).rename(self.u_name)
+                v = (v*ds_fac.ds[self.fac_name +
+                                 '_grad_lat']).rename(self.v_name)
             else:
-                u = None
-                ds_uwind = None
-
-            if len(data_nc_v) > 0:
-                ds_vwind = mp.MultiPressureLevelDataset(data_nc=data_nc_v,
-                                                        plevels=plevels,
-                                                        can=False,
-                                                        time_range=time_range,
-                                                        read_into_memory=False,
-                                                        **v_kwargs)
-                v = ds_vwind.ds[self.v_name]
-                if self.v_name == 'v' and convention_labelling:
-                    v = v.rename('V')
-                    self.v_name = 'V'
-                if len(data_nc_u) == 0:
-                    self.load_dataset_attributes(base_ds=ds_vwind,
-                                                 init_mask=init_mask)
-            else:
-                v = None
-                ds_vwind = None
-
-            if data_nc_fac is not None:
-                ds_fac = mp.MultiPressureLevelDataset(data_nc=data_nc_fac,
-                                                      plevels=plevels,
-                                                      can=False,
-                                                      time_range=time_range,
-                                                      read_into_memory=False,
-                                                      **w_kwargs)
-
-                if grad_fac:
-                    gut.myprint(
-                        f'Multiply u- and v by gradient of factor {self.fac_name}!')
-                    ds_fac.horizontal_gradient(var=self.fac_name, dim='lon')
-                    ds_fac.horizontal_gradient(var=self.fac_name, dim='lat')
-                    u = (u*ds_fac.ds[self.fac_name +
-                         '_grad_lon']).rename(self.u_name)
-                    v = (v*ds_fac.ds[self.fac_name +
-                         '_grad_lat']).rename(self.v_name)
-                else:
-                    gut.myprint(
-                        f'Multiply u- and v by factor {self.fac_name}!')
-                    u = (u*ds_fac.ds[self.fac_name]).rename(self.u_name)
-                    v = (v*ds_fac.ds[self.fac_name]).rename(self.v_name)
-                if not set_fac:
-                    del ds_fac
-                    ds_fac = None
-            else:
+                gut.myprint(
+                    f'Multiply u- and v by factor {self.fac_name}!')
+                u = (u*ds_fac.ds[self.fac_name]).rename(self.u_name)
+                v = (v*ds_fac.ds[self.fac_name]).rename(self.v_name)
+            if not set_fac:
+                del ds_fac
                 ds_fac = None
-            self.vert_velocity = False
-            ds_wwind = None
-            if len(data_nc_w) > 0:
-                ds_wwind = mp.MultiPressureLevelDataset(data_nc=data_nc_w,
-                                                        plevels=plevels,
-                                                        can=False,
-                                                        **w_kwargs)
-                self.w_name = kwargs.pop('w_name', 'OMEGA')
-                if 'w' in ds_wwind.get_vars() and convention_labelling:
-                    w = ds_wwind.ds['w'].rename('OMEGA')
-                else:
-                    w = ds_wwind.ds['OMEGA']
-                reverse_w = kwargs.pop('reverse_w', False)
-                gut.myprint(f'Multiply w by factor {-1}!', verbose=reverse_w)
-                w = -1*w if reverse_w else w
-                self.vert_velocity = True
-            else:
-                w = None
+        else:
+            ds_fac = None
+        self.vert_velocity = False
 
-            windspeed = None
-            if compute_ws and len(data_nc_u) > 0 and len(data_nc_v) > 0:
-                windspeed = self.compute_windspeed(u=u, v=v)
+        self.w_name = kwargs.pop('w_name', 'OMEGA')
+        if 'w' in ds_wind.get_vars() and convention_labelling:
+            w = ds_wind.ds['w'].rename('OMEGA')
 
-            self.ds = self.get_ds(u=u, v=v, w=w,
-                                  fac=ds_fac.ds[self.fac_name] if ds_fac is not None else None,
-                                  windspeed=windspeed)
+        if 'OMEGA' in ds_wind.get_vars():
+            w = ds_wind.ds['OMEGA']
+            reverse_w = kwargs.pop('reverse_w', False)
+            gut.myprint(f'Multiply w by factor {-1}!', verbose=reverse_w)
+            w = -1*w if reverse_w else w
+            self.vert_velocity = True
 
-            self.vars = self.get_vars()
-            self.set_var()  # sets the variable name to the first variable in the dataset
-            self.can = can
-            self.compute_all_anomalies(**kwargs)
+        windspeed = None
+        if compute_ws and len(data_nc_u) > 0 and len(data_nc_v) > 0:
+            windspeed = self.compute_windspeed(u=u, v=v)
+        ds_wind.ds['windspeed'] = windspeed
+        self.ds = ds_wind.ds
+        self.vars = self.get_vars()
+        self.set_var()  # sets the variable name to the first variable in the dataset
+        self.can = can
+        self.compute_all_anomalies(**kwargs)
 
         if read_into_memory:
             self.ds = self.read_data_into_memory()
 
-            del u, v, w, windspeed, ds_uwind, ds_vwind, ds_wwind
         else:
             gut.myprint('Only Init the Wind Dataset object without data!')
-
-    def get_ds(self, u=None, v=None, w=None, windspeed=None, fac=None):
-        if u is not None and v is not None:
-            ds = xr.Dataset({self.u_name: u,
-                            self.v_name: v})
-            gut.myprint(f'Merge u, v')
-        if u is not None and v is None:
-            ds = xr.Dataset({self.u_name: u})
-            gut.myprint('Only u component available!')
-        elif u is None and v is not None:
-            ds = xr.Dataset({self.v_name: v})
-            gut.myprint('Only v component available!')
-        if windspeed is not None:
-            gut.myprint(f'Merge u, v, windspeed')
-            ds[self.ws_name] = windspeed
-        if w is not None:
-            gut.myprint(f'Merge u, v, omega')
-            ds[self.w_name] = w
-        if fac is not None:
-            gut.myprint(f'Merge u, v, fac')
-            ds[self.fac_name] = fac
-        return ds
 
     def compute_windspeed(self, u, v, ws_name='windspeed'):
         windspeed = np.sqrt(u ** 2 + v ** 2)

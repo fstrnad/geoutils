@@ -218,8 +218,7 @@ def get_netcdf_encoding(ds,
 
     time = time.convert_calendar(calendar=calendar)
     gut.myprint('Set time to np.datetime[ns] time format!', verbose=verbose)
-    ds = ds.assign_coords(
-        time=time.data.astype('datetime64[ns]'))
+    ds['time'] = time.data.astype('datetime64[ns]')
     freq = get_frequency(ds)
     if freq != 'hour':
         gut.myprint('set hours to 0', verbose=verbose)
@@ -1547,28 +1546,56 @@ def compute_anomalies_ds(ds, var_name=None,
     return ds
 
 
-def get_ee_ds(dataarray, q=0.95, min_threshold=None,
-              th_eev=None):
+def get_ee_ds(dataarray, q=0.95,
+              threshold=None,
+              min_threshold=None,
+              reverse_threshold=False,
+              th_eev=None, verbose=True):
+    if threshold is not None:
+        gut.myprint(f"Threshold is set to {threshold}")
+        q_val_map = xr.where(~np.isnan(dataarray), threshold, np.nan)
+    elif q is not None:
+        if q > 1 or q < 0:
+            raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
+    else:
+        raise ValueError("ERROR! Either q or threshold has to be provided!")
     if min_threshold is not None:
         # Remove days without rain
         dataarray = dataarray.where(dataarray > min_threshold)
-    # Gives the quanile value for each cell
-    q_val_map = dataarray.quantile(q, dim="time")
-
-    # Set values below quantile to 0
-    data_above_quantile = xr.where(
-        dataarray > q_val_map[:], dataarray, np.nan)
+    if threshold is not None:
+        if reverse_threshold:
+            data_quantile = xr.where(
+                dataarray < threshold, dataarray, np.nan)
+        else:
+            data_quantile = xr.where(
+                dataarray > threshold, dataarray, np.nan)
+    else:
+        # Gives the quanile value for each cell
+        q_val_map = dataarray.quantile(q, dim="time")
+        # Set values below quantile to 0
+        if q > 0.5:
+            data_quantile = xr.where(
+                dataarray > q_val_map, dataarray, np.nan)
+        elif q <= 0.5:
+            data_quantile = xr.where(
+                dataarray < q_val_map, dataarray, np.nan)
+        else:
+            raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
     if th_eev is not None:
         # Set values to 0 that have not at least the value th_eev
-        data_above_quantile = xr.where(
-            data_above_quantile > th_eev, data_above_quantile, np.nan
+        data_quantile = xr.where(
+            data_quantile > th_eev, data_quantile, np.nan
         )
-    ee_map = data_above_quantile.count(dim="time")
+    ee_map = data_quantile.count(dim="time")
 
-    rel_frac_q_map = data_above_quantile.sum(
+    if verbose:
+        tot_frac_events = float(ee_map.sum()) / dataarray.size
+        gut.myprint(f"Number of events: {tot_frac_events} (if q given: ~{q})!")
+
+    rel_frac_q_map = data_quantile.sum(
         dim="time") / dataarray.sum(dim="time")
 
-    return q_val_map, ee_map, data_above_quantile, rel_frac_q_map
+    return q_val_map, ee_map, data_quantile, rel_frac_q_map
 
 
 def get_ee_count_ds(ds, q=0.95):
@@ -1583,9 +1610,12 @@ def get_ee_count_ds(ds, q=0.95):
 
 def compute_evs(dataarray,
                 q=0.9,
+                threshold=None,
+                reverse_treshold=False,
                 min_threshold=None,
                 th_eev=None,
-                min_evs=1):
+                min_evs=1,
+                verbose=True):
     """Creates an event series from an input time series.
 
     Args:
@@ -1604,21 +1634,24 @@ def compute_evs(dataarray,
         event_series (xr.Dataarray): Event time series of 0 and 1 (1=event). mask
         (xr.dataarray): Gives out which values are masked out.
     """
-    if q > 1 or q < 0:
-        raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
-
-    # Compute percentile data, remove all values below percentile, but with a minimum of
+     # Compute percentile data, remove all values below percentile, but with a minimum of
     # threshold q
-    _, ee_map, data_above_quantile, _ = get_ee_ds(
-        dataarray=dataarray, q=q, min_threshold=min_threshold, th_eev=th_eev
+    _, ee_map, data_quantile, _ = get_ee_ds(
+        dataarray=dataarray,
+        q=q,
+        threshold=threshold,
+        reverse_threshold=reverse_treshold,
+        min_threshold=min_threshold,
+        th_eev=th_eev,
+        verbose=verbose,
     )
     # Create mask for which cells are left out
     gut.myprint(f"Remove cells without min number of events: {min_evs}")
     mask = ee_map > min_evs
-    final_data = data_above_quantile.where(mask, np.nan)
+    final_data = data_quantile.where(mask, np.nan)
 
     gut.myprint("Now create binary event series!")
-    event_series = xr.where(final_data[:] > 0, 1, 0)
+    event_series = xr.where(~np.isnan(final_data[:]), 1, 0)
     gut.myprint("Done!")
     event_series = event_series.rename("evs")
 
@@ -1712,8 +1745,9 @@ def tp2str(tp, m=True, d=True):
 
 
 def tps2str(tps, m=True, d=True):
-    if gut.is_single_tp(tps=tps):
-        return tp2str(tp=tps, m=m, d=d)
+    if isinstance(tps, (xr.DataArray, xr.Dataset)):
+        if gut.is_single_tp(tps=tps):
+            return tp2str(tp=tps, m=m, d=d)
     else:
         tps_str = []
         for tp in tps:

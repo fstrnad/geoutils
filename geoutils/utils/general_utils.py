@@ -100,9 +100,23 @@ def get_vars(ds):
     return vars
 
 
-def get_dims(ds):
-    vars = list(ds.dims)  # works for xr.dataset and xr.dataarray
-    return vars
+def get_dims(ds=None):
+
+    if isinstance(ds, xr.Dataset):
+        # check if xarray version is new
+        if xr.__version__ != '2024.9.0':
+            dims = list(ds.dims.keys())
+        else:
+            dims = list(ds.dims)  # new in xarray 2023.06.
+
+    elif isinstance(ds, xr.DataArray):
+        dims = ds.dims
+    else:
+        dtype = type(ds)
+        raise ValueError(
+            f'ds needs to be of type xr.DataArray but is of type {dtype}!')
+
+    return dims
 
 
 @contextlib.contextmanager

@@ -36,17 +36,10 @@ class MultiPressureLevelDataset(bds.BaseDataset):
 
         if isinstance(data_nc, str):
             data_nc = [data_nc]
-        if plevels is None:
-            gut.myprint(
-                'No Plevel provided! Assuming variable is vertically integrated!')
-            plevels = [0]
-        if len(plevels) != len(data_nc):
-            raise ValueError("The length of plevels must be the same as the length of data_nc.")
 
         for file in data_nc:
-            fut.print_file_location_and_size(filepath=file, verbose=False)
-        gut.myprint(f'All files are available! Loading {data_nc}...',
-                    lines=True, verbose=verbose)
+            fut.print_file_location_and_size(filepath=file, verbose=verbose)
+
         time_range = kwargs.pop('time_range',
                                 fut.get_file_time_range(data_nc, verbose=False))
         fut.check_file_time_equity(file_arr=data_nc)
@@ -59,15 +52,14 @@ class MultiPressureLevelDataset(bds.BaseDataset):
                          verbose=verbose,
                          **kwargs)
         # self.plevel_name is set in super().__init__()
-        gut.myprint(
-            f'Loaded Pressure levels {plevels} as dimension {self.plevel_name}!')
-
-        self.set_plevel_attrs()
+        if plevels is not None:
+            self.set_plevel_attrs()
         if set_metpy_labels:
             self.set_metpy_labels()
 
     def load_dataset_attributes(self, base_ds, **kwargs):
 
+        self.verbose = base_ds.verbose
         self.grid_step = base_ds.grid_step
         self.var_name = base_ds.var_name
         self.grid_type = base_ds.grid_type
@@ -87,6 +79,8 @@ class MultiPressureLevelDataset(bds.BaseDataset):
         self.lat_name = base_ds.lat_name
 
     def set_plevel_attrs(self):
+        gut.myprint(
+            f'Loaded Pressure levels {plevels} as dimension {self.plevel_name}!')
         self.plevel_attrs = self.ds[self.plevel_name].attrs
         self.plevel_attrs['standard_name'] = 'air_pressure'
         self.plevel_attrs['long_name'] = 'pressure_level'

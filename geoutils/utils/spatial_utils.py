@@ -1263,19 +1263,19 @@ def check_dimensions(ds, ts_days=True,
 
     gut.myprint(
         f'Checked labelling according to netcdf conventions!', verbose=verbose)
-
+    dims = gut.get_dims(ds)
     if transpose_dims:
-        gut.myprint('Transpose dimensions...', verbose=verbose)
+        gut.myprint(f'Transpose dimensions {dims}', verbose=verbose)
         if numdims == 4:
             # Actually change location in memory if necessary!
-            ds = ds.transpose("lat", "lon", "lev", "time").compute()
-            gut.myprint('object transposed to lat-lon-lev-time!',
+            ds = ds.transpose("lev", "time", "lat", "lon").compute()
+            gut.myprint('object transposed to lev-time-lat-lon!',
                         verbose=verbose)
 
         elif numdims == 3:
             # Actually change location in memory if necessary!
-            ds = ds.transpose("lat", "lon", "time").compute()
-            gut.myprint('3d object transposed to lat-lon-time!',
+            ds = ds.transpose("time", "lat", "lon").compute()
+            gut.myprint('3d object transposed to time-lat-lon!',
                         verbose=verbose)
         elif numdims == 2:
             if 'lon' in dims:
@@ -1283,8 +1283,6 @@ def check_dimensions(ds, ts_days=True,
             gut.myprint('2d oject transposed to lat-lon!', verbose=verbose)
         elif numdims == 1:
             gut.myprint('1d oject only!', verbose=verbose)
-
-    gut.myprint(f'Checked order of dimensions!', verbose=verbose)
 
     if numdims >= 2 and 'lon' in dims:
         # If lon from 0 to 360 shift to -180 to 180
@@ -1309,7 +1307,6 @@ def check_dimensions(ds, ts_days=True,
             if gut.is_datetime360(time=ds.time.data[0]) or keep_time:
                 ds = ds
             else:
-                reload(tu)
                 ds = tu.get_netcdf_encoding(ds=ds,
                                             calendar='gregorian',
                                             verbose=verbose
@@ -1586,3 +1583,26 @@ def unstack_lat_lon(da, dim='z'):
     da_unstacked = da.unstack(dim)
 
     return da_unstacked
+
+
+def get_defined_lon_lat_range(dataarray):
+    """
+    Returns the range of latitudes and longitudes within which values are defined (not NaN).
+
+    Parameters:
+    - dataarray (xr.DataArray): An xarray DataArray with coordinates 'lat' and 'lon'.
+
+    Returns:
+    - lat_range (tuple): Min and max latitude where data is defined.
+    - lon_range (tuple): Min and max longitude where data is defined.
+    """
+    # Mask to find locations with non-NaN values
+    non_nan_data = dataarray.where(~np.isnan(dataarray), drop=True)
+
+    # Get min and max of latitude and longitude where data is not NaN
+    lat_range = np.array([non_nan_data.lat.min().item(),
+                         non_nan_data.lat.max().item()])
+    lon_range = np.array([non_nan_data.lon.min().item(),
+                         non_nan_data.lon.max().item()])
+
+    return lon_range, lat_range

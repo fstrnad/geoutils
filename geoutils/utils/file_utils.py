@@ -277,7 +277,8 @@ def get_file_time_range(file_arr, round_hour=True, verbose=True):
         time_arr.append(file.time)
 
     tr = tu.find_common_time_range(time_arr, round_hour=round_hour)
-    gut.myprint(f'Load time_range:{tr}', verbose=verbose)
+    tr_str = tu.tps2str(tr)
+    gut.myprint(f'Load time_range:{tr_str}', verbose=verbose)
 
     return tr
 

@@ -1,3 +1,4 @@
+import numpy as np
 import time
 import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
@@ -6,7 +7,7 @@ from datetime import datetime
 from importlib import reload
 import xarray as xr
 reload(sput)
-
+reload(gut)
 
 def open_nc_file(
         nc_files,
@@ -26,13 +27,11 @@ def open_nc_file(
 
     if var_name is not None:
         ds = ds[var_name]
-    dims = gut.get_dims(ds=ds)
-    gut.myprint(f'Read data from store', verbose=verbose)
     ds, dims = check_dimensions(
         ds, ts_days=decode_times, verbose=verbose,
         **kwargs)
+    dims = gut.get_dims(ds=ds)
     ds = gut.rename_var_era5(ds=ds, verbose=verbose, **kwargs)
-
     gut.myprint(f"End processing data! Dimensions: {dims}", verbose=verbose)
 
     return ds
@@ -41,26 +40,105 @@ def open_nc_file(
 def open_ds(nc_files, plevels=None,
             decode_times=True, **kwargs):
     plevel_name = kwargs.pop('plevel_name', 'lev')
-    gut.myprint(f'Open files: {nc_files}')
-    if plevels is None:
-        ds = xr.open_mfdataset(nc_files,
-                               decode_times=decode_times,
-                               parallel=True,
-                            #    chunks={'time': -1}
-                               )
-    else:
-        chunks = kwargs.pop('chunks', {'time': 1000})
-        gut.myprint(f'Open files with chunks: {chunks}')
-        ds = xr.open_mfdataset(nc_files,
-                               decode_times=decode_times,
-                               preprocess=add_dummy_dim,
-                               #    chunks=chunks,
-                               )
 
-        ds = ds.rename({'dummy': plevel_name})
-        ds[plevel_name] = plevels
+    if plevels is None:
+        ds = my_open_mfdataset(nc_files, decode_times)
+    else:
+        if not check_mva(files=nc_files):
+            ds = open_plevels(nc_files,
+                              decode_times=decode_times,
+                              plevels=plevels,
+                              plevel_name=plevel_name)
+        else:
+            var_file_dict = get_files_same_vars(files=nc_files)
+            ds_array = []
+            for var, files in var_file_dict.items():
+                if len(files) != len(plevels):
+                    raise ValueError(
+                        f'Number of files {files} and pressure levels {plevels} do not match!')
+                this_ds = open_plevels(files,
+                                       decode_times=decode_times,
+                                       plevels=plevels,
+                                       plevel_name=plevel_name)
+                ds_array.append(this_ds)
+            ds = xr.merge(ds_array)
 
     return ds
+
+
+def open_plevels(nc_files, decode_times, plevels, plevel_name):
+    da_arrays = []
+    for file in nc_files:
+        gut.myprint(f'Open file: {file}')
+        da_arrays.append(my_open_mfdataset(nc_files=file,
+                                           decode_times=decode_times))
+    ds = xr.concat(da_arrays, dim=plevel_name)
+    ds.coords[plevel_name] = plevels
+    return ds
+
+
+def my_open_mfdataset(nc_files, decode_times=True):
+    if isinstance(nc_files, str):
+        nc_files = [nc_files]
+    if len(nc_files) == 1:
+        print(nc_files)
+        ds = xr.open_dataset(nc_files[0],
+                             decode_times=decode_times,
+                             )
+    else:
+        data_array = []
+        for file in nc_files:
+            print(f'Open file: {file}')
+            data_array.append(xr.open_dataarray(file,
+                                                decode_times=decode_times,
+                                                )
+                              )
+        ds = xr.merge(data_array, join='exact')
+    return ds
+
+
+def check_mva(files):
+    """Checks whether the variables are the same in the files!
+
+    Args:
+        files (list): list of file names
+    """
+    if isinstance(files, str):
+        files = [files]
+    var_list = []
+    for file in files:
+        da = xr.open_dataarray(file)
+        var_list.append(da.name)
+    vars = np.unique(var_list)
+    if len(vars) > 1:
+        return True
+    elif len(vars) == 1:
+        return False
+    else:
+        raise ValueError('No variable found!')
+
+
+def get_files_same_vars(files):
+    """Returns the files with the same variables!
+
+    Args:
+        files (list): list of file names
+
+    Returns:
+        list: list of file names
+    """
+    if isinstance(files, str):
+        files = [files]
+    files = np.array(files)
+    var_list = []
+    for file in files:
+        da = xr.open_dataarray(file)
+        var_list.append(da.name)
+    vars, indices = np.unique(var_list, return_inverse=True)
+    # Create a dictionary to hold the indices for each unique value
+    indices_dict = {val: np.where(indices == i)[
+        0] for i, val in enumerate(vars)}
+    return {var: files[i] for var, i in indices_dict.items()}
 
 
 def add_dummy_dim(xda, set_hours_zero=True):
@@ -83,40 +161,23 @@ def check_dimensions(ds, verbose=True, **kwargs):
     ts_days = kwargs.pop('ts_days', True)
     keep_time = kwargs.pop('keep_time', False)
     freq = kwargs.pop('freq', 'D')
+    transpose = kwargs.pop('transpose_dims', True)
     ds = sput.check_dimensions(ds=ds,
                                ts_days=ts_days,
                                lon360=lon360,
                                sort=sort,
                                keep_time=keep_time,
                                freq=freq,
+                               transpose_dims=transpose,
                                verbose=verbose)
     # Set time series to days
-    dims = get_dims(ds=ds)
+    dims = gut.get_dims(ds=ds)
 
     if len(dims) > 2:
         if 'time' in dims:
             t360 = check_time(ds, **kwargs)
 
     return ds, dims
-
-
-def get_dims(ds=None):
-
-    if isinstance(ds, xr.Dataset):
-        # check if xarray version is new
-        if xr.__version__ != '2024.6.0':
-            dims = list(ds.dims.keys())
-        else:
-            dims = list(ds.dims)  # new in xarray 2023.06.
-
-    elif isinstance(ds, xr.DataArray):
-        dims = ds.dims
-    else:
-        dtype = type(ds)
-        raise ValueError(
-            f'ds needs to be of type xr.DataArray but is of type {dtype}!')
-
-    return dims
 
 
 def check_time(ds, **kwargs):
