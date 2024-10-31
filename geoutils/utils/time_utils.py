@@ -14,45 +14,49 @@ import cftime
 from importlib import reload
 import geoutils.utils.statistic_utils as sut
 import geoutils.utils.general_utils as gut
+
 reload(gut)
 reload(sut)
 
-months = np.array([
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-])
+months = np.array(
+    [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+    ]
+)
 
-jjas_months = np.array([
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-])
+jjas_months = np.array(
+    [
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+    ]
+)
 
 
 def get_time_dim(da):
     dims = gut.get_dimensions(da)
-    if 'time' in dims:
-        return 'time'
+    if "time" in dims:
+        return "time"
     else:
-        spatial_dims = ['lat', 'lon']
+        spatial_dims = ["lat", "lon"]
         if len(dims) == 3:
             time_dim = [dim for dim in dims if dim not in spatial_dims]
             if len(time_dim) == 1:
                 return time_dim[0]
         else:
-            raise ValueError(
-                f"Time dimension not found in {dims}!")
+            raise ValueError(f"Time dimension not found in {dims}!")
 
 
 def assert_has_time_dimension(da):
@@ -70,15 +74,15 @@ def assert_has_time_dimension(da):
         If the input DataArray does not have a time dimension.
     """
     if not isinstance(da, xr.DataArray) and not isinstance(da, xr.Dataset):
+        raise ValueError(f"Data has to be of xarray type but is type {type(da)}")
+
+    if "time" not in da.dims:
         raise ValueError(
-            f'Data has to be of xarray type but is type {type(da)}')
-
-    if 'time' not in da.dims:
-        raise ValueError(
-            f"The input DataArray '{da.name}' does not have a time dimension.")
+            f"The input DataArray '{da.name}' does not have a time dimension."
+        )
 
 
-def reset_time(dataset, time_dim='time'):
+def reset_time(dataset, time_dim="time"):
     """
     Resets the time dimension of an xarray dataset to always have 0 hours.
 
@@ -93,9 +97,9 @@ def reset_time(dataset, time_dim='time'):
         The dataset with the time dimension reset.
     """
     # Set the hour of each time value to 0
-    time_values = dataset.time.values.astype('M8[s]').astype(datetime.datetime)
+    time_values = dataset.time.values.astype("M8[s]").astype(datetime.datetime)
     time_values = np.array([dt.replace(hour=0) for dt in time_values])
-    time_values = time_values.astype('M8[s]')
+    time_values = time_values.astype("M8[s]")
 
     # Update the dataset with the new time dimension
     dataset = dataset.assign_coords({time_dim: time_values})
@@ -135,7 +139,7 @@ def check_timepoints_in_dataarray(dataarray, timepoints, verbose=True):
     for time in timepoints_times:
         if time.data not in dataarray_times.data:
             tpstr = tp2str(time)
-            gut.myprint(f'{tpstr} not in dataset!', verbose=verbose)
+            gut.myprint(f"{tpstr} not in dataset!", verbose=verbose)
             points_in_array = False
 
     return points_in_array
@@ -163,6 +167,7 @@ def days_in_month(month):
 
 # def get_month_number(month): return int(get_index_of_month(month) + 1)
 
+
 def get_month_number(*month_list):
     idx_lst = []
     for month in month_list:
@@ -182,11 +187,10 @@ def num2str_list(num_list):
 
 def num2str(mi):
     if isinstance(mi, int) or isinstance(mi, np.int64):
-        mstr = f'{mi}' if mi > 9 else f'0{mi}'
+        mstr = f"{mi}" if mi > 9 else f"0{mi}"
     else:
         print(type(mi))
-        raise ValueError(
-            f'Month number should be integer but is of type {type(mi)}!')
+        raise ValueError(f"Month number should be integer but is of type {type(mi)}!")
 
     return mstr
 
@@ -199,40 +203,37 @@ def month2str(month):
 
 def get_month_name(month_number):
     if not isinstance(month_number, int):
-        raise ValueError(
-            f'Month should be integer but is {type(month_number)}!')
+        raise ValueError(f"Month should be integer but is {type(month_number)}!")
     if month_number < 1 or month_number > 12:
-        raise ValueError(
-            f'Month should be in range 1-12 but is {month_number}!')
-    return months[month_number-1]
+        raise ValueError(f"Month should be in range 1-12 but is {month_number}!")
+    return months[month_number - 1]
 
 
-def get_netcdf_encoding(ds,
-                        calendar='gregorian',
-                        units='hours since 1900-01-01T00:00',
-                        verbose=True):
+def get_netcdf_encoding(
+    ds, calendar="gregorian", units="hours since 1900-01-01T00:00", verbose=True
+):
 
     time = ds.time
     if check_AR_strings(da=time):
         time = convert_AR_xarray_to_timepoints(da=time)
 
     time = time.convert_calendar(calendar=calendar)
-    gut.myprint('Set time to np.datetime[ns] time format!', verbose=verbose)
-    ds['time'] = time.data.astype('datetime64[ns]')
+    gut.myprint("Set time to np.datetime[ns] time format!", verbose=verbose)
+    ds["time"] = time.data.astype("datetime64[ns]")
     freq = get_frequency(ds)
-    if freq != 'hour':
-        gut.myprint('set hours to 0', verbose=verbose)
+    if freq != "hour":
+        gut.myprint("set hours to 0", verbose=verbose)
         # This avoids problems with time encoding at 0h and 11h!
         ds = set_hours_to_zero(x=ds)
 
     # ds = ds.transpose('time', 'lat', 'lon
-    ds.time.attrs.pop('calendar', None)
+    ds.time.attrs.pop("calendar", None)
     # ds.time.attrs.update({'calendar': '365_day'})
-    ds.time.encoding['calendar'] = calendar
-    ds.time.encoding['units'] = units
-    ds.time.attrs['standard_name'] = 'time'
-    ds.time.attrs['long_name'] = 'time'
-    ds.time.attrs['axis'] = 'T'
+    ds.time.encoding["calendar"] = calendar
+    ds.time.encoding["units"] = units
+    ds.time.attrs["standard_name"] = "time"
+    ds.time.attrs["long_name"] = "time"
+    ds.time.attrs["axis"] = "T"
 
     return ds
 
@@ -246,15 +247,14 @@ def get_ts_arr_ds(da):
     Returns:
         np.array: 2d np.array of time series.
     """
-    if da.dims == ('time', 'points'):
+    if da.dims == ("time", "points"):
         time_series_arr = da.data.T
-    elif da.dims == ('points', 'time'):
+    elif da.dims == ("points", "time"):
         time_series_arr = da.data
-    elif da.dims == ('lat', 'lon', 'time'):
-        time_series_arr = da.data.reshape(
-            (da.shape[0]*da.shape[1], da.shape[2]))
+    elif da.dims == ("lat", "lon", "time"):
+        time_series_arr = da.data.reshape((da.shape[0] * da.shape[1], da.shape[2]))
     else:
-        raise ValueError(f'this dimension is unknown: {da.dims}!')
+        raise ValueError(f"this dimension is unknown: {da.dims}!")
     return time_series_arr
 
 
@@ -270,13 +270,15 @@ def get_max_num_tps(ds, q=None):
     return max_num_events
 
 
-def get_sel_tps_ds(ds, tps, remove_tp=False,
-                   drop_dim=True,
-                   verbose=False,
-                   ):
+def get_sel_tps_ds(
+    ds,
+    tps,
+    remove_tp=False,
+    drop_dim=True,
+    verbose=False,
+):
     if not isinstance(ds, xr.DataArray) and not isinstance(ds, xr.Dataset):
-        raise ValueError(
-            f'Data has to be of xarray type but is type {type(ds)}')
+        raise ValueError(f"Data has to be of xarray type but is type {type(ds)}")
 
     if isinstance(tps, xr.DataArray):
         tps = tps.time
@@ -287,14 +289,14 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
         start_month, end_month = get_month_range(tps)
     if not stp:
         if len(tps) == 0:
-            gut.myprint(f'Empty list of time points')
+            gut.myprint(f"Empty list of time points")
             return []
     if gut.is_datetime360(tps):
         tps_sel = tps
-        ds_sel = ds.sel(time=tps_sel, method='nearest')
+        ds_sel = ds.sel(time=tps_sel, method="nearest")
     else:
         if remove_tp:
-            ds_sel = ds.sel(time=tps, method='nearest')
+            ds_sel = ds.sel(time=tps, method="nearest")
         else:
             # ds_max = compute_timemax(ds=ds, timemean=timemean) tps_max =
             # compute_timemax(ds=tps, timemean=timemean)
@@ -303,39 +305,47 @@ def get_sel_tps_ds(ds, tps, remove_tp=False,
             if not stp:
                 tps_sel = np.intersect1d(ds.time, tps)
                 if len(tps_sel) == 0:
-                    gut.myprint('No tps in intersection of dataset!')
+                    gut.myprint("No tps in intersection of dataset!")
                     return []
             else:
-                if not check_timepoints_in_dataarray(dataarray=ds, timepoints=tps, verbose=verbose):
-                    gut.myprint(f'WARNING: Single {tps} not in dataset!')
+                if not check_timepoints_in_dataarray(
+                    dataarray=ds, timepoints=tps, verbose=verbose
+                ):
+                    gut.myprint(f"WARNING: Single {tps} not in dataset!")
                     return []
                 else:
                     tps_sel = tps
 
             # Attention for time points out of range!
-            ds_sel = ds.sel(time=tps_sel, method='nearest')
+            ds_sel = ds.sel(time=tps_sel, method="nearest")
             # Remove duplicates
             if not stp:
                 ds_sel = remove_duplicate_times(da=ds_sel)
                 # restrict to month range
-                ds_sel = get_month_range_data(dataset=ds_sel,
-                                              start_month=start_month,
-                                              end_month=end_month,
-                                              verbose=False)
+                ds_sel = get_month_range_data(
+                    dataset=ds_sel,
+                    start_month=start_month,
+                    end_month=end_month,
+                    verbose=False,
+                )
             else:
                 if drop_dim:
-                    if 'time' in list(ds_sel.dims):
-                        ds_sel = ds_sel.mean(dim='time')
+                    if "time" in list(ds_sel.dims):
+                        ds_sel = ds_sel.mean(dim="time")
 
     return ds_sel
 
 
-def get_mean_tps(da, tps, varname=None,
-                 sig_test=True,
-                 #  corr_type='dunn',
-                 corr_type=None,
-                 first_dim='lev',
-                 alpha=0.05,):
+def get_mean_tps(
+    da,
+    tps,
+    varname=None,
+    sig_test=True,
+    #  corr_type='dunn',
+    corr_type=None,
+    first_dim="lev",
+    alpha=0.05,
+):
     """Get mean of dataarray for specific time points."""
 
     this_comp = get_sel_tps_ds(ds=da, tps=tps)
@@ -345,13 +355,13 @@ def get_mean_tps(da, tps, varname=None,
         if varname is None and isinstance(this_comp, xr.Dataset):
             raise ValueError(
                 """Significance test can only be applied on specific dataarray.
-                Please specify varname!""")
-        dims = gut.delete_element_from_arr(dims, 'time')
-        mean, pvalues_ttest = sut.ttest_field(
-            this_comp, da, zdim=dims)
+                Please specify varname!"""
+            )
+        dims = gut.delete_element_from_arr(dims, "time")
+        mean, pvalues_ttest = sut.ttest_field(this_comp, da, zdim=dims)
         mask = sut.field_significance_mask(
-            pvalues_ttest, alpha=alpha,
-            corr_type=corr_type)
+            pvalues_ttest, alpha=alpha, corr_type=corr_type
+        )
 
         if first_dim in dims:
             dims = gut.set_first_element(dims, first_dim)
@@ -359,7 +369,7 @@ def get_mean_tps(da, tps, varname=None,
             mask = mask.transpose(*dims)
         return mean, mask
     else:
-        mean = this_comp.mean(dim='time')
+        mean = this_comp.mean(dim="time")
         if first_dim in dims:
             dims = gut.set_first_element(dims, first_dim)
             mean = mean.transpose(*dims)
@@ -371,65 +381,71 @@ def normlize_time_slides(data, min=0, max=1):
     times = data.time
     for i, (tp) in enumerate(times):
         mean_data = get_sel_tps_ds(ds=data, tps=[tp.data]).mean(
-            dim='time')  # get single time steps
+            dim="time"
+        )  # get single time steps
         res_ds = sut.normalize(data=mean_data, min=min, max=max)
-        mean_data_arr.append(res_ds.to_dataset(name='norm'))
+        mean_data_arr.append(res_ds.to_dataset(name="norm"))
     xr_new = xr.concat(mean_data_arr, times)
 
     return xr_new
 
 
-def get_sel_tps_lst(ds, tps_lst, remove_tp=False,
-                    drop_dim=True,
-                    verbose=False):
+def get_sel_tps_lst(ds, tps_lst, remove_tp=False, drop_dim=True, verbose=False):
     ds_sel = ds
     for tps in tps_lst:
-        ds_sel = get_sel_tps_ds(ds=ds_sel, tps=tps, remove_tp=remove_tp,
-                                drop_dim=drop_dim,
-                                verbose=verbose)
+        ds_sel = get_sel_tps_ds(
+            ds=ds_sel, tps=tps, remove_tp=remove_tp, drop_dim=drop_dim, verbose=verbose
+        )
 
     return ds_sel
 
 
-def get_sel_years_data(ds, years,
-                       start_day=None,
-                       start_month=None,
-                       end_day=None,
-                       end_month=None,
-                       include_last=True):
-    ds_range = select_month_day_range(da=ds,
-                                      start_day=start_day,
-                                      end_day=end_day,
-                                      start_month=start_month,
-                                      end_month=end_month,
-                                      include_last=include_last,)
-    ds_range_years = get_values_by_year(dataarray=ds_range,
-                                        years=years)
+def get_sel_years_data(
+    ds,
+    years,
+    start_day=None,
+    start_month=None,
+    end_day=None,
+    end_month=None,
+    include_last=True,
+):
+    ds_range = select_month_day_range(
+        da=ds,
+        start_day=start_day,
+        end_day=end_day,
+        start_month=start_month,
+        end_month=end_month,
+        include_last=include_last,
+    )
+    ds_range_years = get_values_by_year(dataarray=ds_range, years=years)
     return ds_range_years
 
 
-def get_sel_years_dates(years,
-                        start_day=None,
-                        start_month=None,
-                        end_day=None,
-                        end_month=None,
-                        freq='D',
-                        include_last=True):
+def get_sel_years_dates(
+    years,
+    start_day=None,
+    start_month=None,
+    end_day=None,
+    end_month=None,
+    freq="D",
+    include_last=True,
+):
     if isinstance(years[0], str):
         years = str2datetime(years)
     if isinstance(years, list) and isinstance(years[0], xr.DataArray):
         years = merge_time_arrays(years)
     sd, ed = get_start_end_date(data=years)
     if include_last:
-        ed = add_time_window(ed, time_step=1, freq='Y')
-    all_dates = get_dates_in_range(start_date=sd,
-                                   end_date=ed,
-                                   freq=freq)
-    sel_dates = get_sel_years_data(ds=all_dates, years=years,
-                                   start_day=start_day,
-                                   end_day=end_day,
-                                   start_month=start_month,
-                                   end_month=end_month)
+        ed = add_time_window(ed, time_step=1, freq="Y")
+    all_dates = get_dates_in_range(start_date=sd, end_date=ed, freq=freq)
+    sel_dates = get_sel_years_data(
+        ds=all_dates,
+        years=years,
+        start_day=start_day,
+        end_day=end_day,
+        start_month=start_month,
+        end_month=end_month,
+    )
 
     return sel_dates
 
@@ -452,18 +468,16 @@ def remove_time_points(dataset, time_points, verbose=False):
 
     # Convert time_points to a set for faster lookups
     rem_tps = get_intersect_tps(dataset.time, time_points)
-    gut.myprint(f'Remove {len(rem_tps)} time points!', verbose=verbose)
+    gut.myprint(f"Remove {len(rem_tps)} time points!", verbose=verbose)
     # Select time points that are not in the time_points_set
     filtered_dataset = dataset.drop_sel(time=rem_tps)
 
     return filtered_dataset
 
 
-def remove_consecutive_tps(tps, steps=0,
-                           start=1,
-                           remove_last=True,
-                           nneighbours=False,
-                           verbose=False):
+def remove_consecutive_tps(
+    tps, steps=0, start=1, remove_last=True, nneighbours=False, verbose=False
+):
     """Removes consecutive steps in a set of time points until steps after.
 
     Args:
@@ -473,11 +487,11 @@ def remove_consecutive_tps(tps, steps=0,
     """
     if start < 1 or steps < 1:
         gut.myprint(
-            f'WARNING! Start/Steps has to be at least 1 but is {start}/{steps}! Nothing removed!')
+            f"WARNING! Start/Steps has to be at least 1 but is {start}/{steps}! Nothing removed!"
+        )
         return tps
     if start > steps:
-        raise ValueError(
-            f'Start has to be smaller than steps {steps} but is {start}!')
+        raise ValueError(f"Start has to be smaller than steps {steps} but is {start}!")
     num_init_tps = len(tps)
     rem_tps = copy.deepcopy(tps)
     common_tps = []
@@ -493,11 +507,11 @@ def remove_consecutive_tps(tps, steps=0,
 
     # Consecutive to consecutive time points are not deleted!
     if nneighbours:
-        for this_step in range(1, steps+1):
+        for this_step in range(1, steps + 1):
             cons_common_tps = get_common_tps(
                 tps1=common_tps,
-                tps2=add_time_step_tps(tps=common_tps,
-                                       time_step=this_step))
+                tps2=add_time_step_tps(tps=common_tps, time_step=this_step),
+            )
             if len(cons_common_tps) > 0:
                 common_tps = common_tps.drop_sel(time=cons_common_tps)
 
@@ -508,8 +522,7 @@ def remove_consecutive_tps(tps, steps=0,
         else:
             first_tps = add_time_step_tps(common_tps, time_step=-step)
             rem_tps = rem_tps.drop_sel(time=first_tps)
-    gut.myprint(f'Removed {num_init_tps - len(rem_tps)} time points!',
-                verbose=verbose)
+    gut.myprint(f"Removed {num_init_tps - len(rem_tps)} time points!", verbose=verbose)
 
     return rem_tps
 
@@ -537,29 +550,32 @@ def get_common_tps(tps1, tps2, offset=0, delay=0, step=1):
     if delay == 0:
         tps = np.sort(np.intersect1d(tps1, tps2))
     elif delay < 0:
-        raise ValueError('Only positive delay allowed!')
+        raise ValueError("Only positive delay allowed!")
     else:
         common_tps = []
-        for offset in np.arange(offset, delay+1, step):
+        for offset in np.arange(offset, delay + 1, step):
             # tps2 that have a delay are shifted by this delay backward
-            tps2_tmp = add_time_step_tps(tps2.time, time_step=-1*offset)
+            tps2_tmp = add_time_step_tps(tps2.time, time_step=-1 * offset)
             tps = np.sort(np.intersect1d(tps1, tps2_tmp))
             common_tps.append(tps)
 
         tps = np.sort(np.unique(np.concatenate(common_tps, axis=0)))
 
-    tps = gut.create_xr_ds(data=tps, dims=['time'], coords={'time': tps})
+    tps = gut.create_xr_ds(data=tps, dims=["time"], coords={"time": tps})
 
     return tps
 
 
-def get_tps_month(ds, month, ):
+def get_tps_month(
+    ds,
+    month,
+):
 
     times = ds.time
     tps_month = get_month_range_data(times, start_month=month, end_month=month)
 
     if len(tps_month) == 0:
-        raise ValueError('Tps not in dataset!')
+        raise ValueError("Tps not in dataset!")
 
     return tps_month
 
@@ -629,16 +645,14 @@ def is_larger_as(t1, t2):
     if isinstance(t2, str):
         t2 = str2datetime(t2)
     if gut.check_any_type([t1, t2], float):
-        raise ValueError('Time points must not be floats!')
+        raise ValueError("Time points must not be floats!")
 
     return t1 > t2
 
 
-def get_time_range_data(ds, time_range,
-                        start_month='Jan',
-                        end_month='Dec',
-                        freq='D',
-                        verbose=False):
+def get_time_range_data(
+    ds, time_range, start_month="Jan", end_month="Dec", freq="D", verbose=False
+):
     if time_range is not None:
         sd, ed = get_time_range(ds)
         if isinstance(time_range[0], str):
@@ -651,32 +665,33 @@ def get_time_range_data(ds, time_range,
             time_range_1 = time_range[-1]
         if time_range_0 < sd:
             gut.myprint(
-                f'WARNING: Selected {time_range_0} smaller dataset {sd}',
-                verbose=verbose)
+                f"WARNING: Selected {time_range_0} smaller dataset {sd}",
+                verbose=verbose,
+            )
             time_range_0 = sd
         if time_range_1 > ed:
             gut.myprint(
-                f'WARNING: Selected {time_range_1} larger dataset {ed}',
-                verbose=verbose)
+                f"WARNING: Selected {time_range_1} larger dataset {ed}", verbose=verbose
+            )
             time_range_1 = ed
 
         if gut.is_datetime360(time_range_0):
             time_range_1 = add_time_window(time_range_1, freq=freq)
 
         tps = get_dates_of_time_range(
-            time_range=[time_range_0, time_range_1], freq=freq)
+            time_range=[time_range_0, time_range_1], freq=freq
+        )
         ds_sel = ds.sel(time=slice(tps[0], tps[-1]))
         # ds_sel = ds.sel(time=tps, method='bfill')  # always that one that is closest to
         # last
 
-        if start_month != 'Jan' or end_month != 'Dec':
-            ds_sel = get_month_range_data(dataset=ds_sel,
-                                          start_month=start_month,
-                                          end_month=end_month)
+        if start_month != "Jan" or end_month != "Dec":
+            ds_sel = get_month_range_data(
+                dataset=ds_sel, start_month=start_month, end_month=end_month
+            )
     else:
         ds_sel = ds
     return ds_sel
-
 
 
 def get_data_timerange(data, time_range=None, verbose=True):
@@ -703,7 +718,8 @@ def get_data_timerange(data, time_range=None, verbose=True):
             is_larger_as(time_range[1], td[-1])
         ):
             raise ValueError(
-                f"Chosen time {time_range} out of range. Please select times within {td[0]} - {td[-1]}!")
+                f"Chosen time {time_range} out of range. Please select times within {td[0]} - {td[-1]}!"
+            )
         else:
             sd = tp2str(time_range[0])
             ed = tp2str(time_range[-1])
@@ -713,12 +729,11 @@ def get_data_timerange(data, time_range=None, verbose=True):
     else:
         da = data
     tr = get_time_range(ds=da)
-    gut.myprint(f'Load data in time range {tr}!',
-                verbose=verbose)
+    gut.myprint(f"Load data in time range {tr}!", verbose=verbose)
     return da
 
 
-def split_by_year(ds, start_month='Jan', end_month='Dec'):
+def split_by_year(ds, start_month="Jan", end_month="Dec"):
     """
     Splits an xarray object with a time dimension spanning multiple years into individual
     datasets for each year.
@@ -729,12 +744,13 @@ def split_by_year(ds, start_month='Jan', end_month='Dec'):
     Returns:
         list: A list of xarray datasets, with each dataset representing one year.
     """
-    if start_month != 'Jan' or end_month != 'Dec':
-        ds = get_month_range_data(dataset=ds, start_month=start_month,
-                                  end_month=end_month)
+    if start_month != "Jan" or end_month != "Dec":
+        ds = get_month_range_data(
+            dataset=ds, start_month=start_month, end_month=end_month
+        )
 
     time_dim = ds.time.dims[0]
-    grouped = ds.groupby(time_dim + '.year')
+    grouped = ds.groupby(time_dim + ".year")
     return [group for _, group in grouped]
 
 
@@ -768,7 +784,7 @@ def get_month_range_data(dataset, start_month="Jan", end_month="Dec", verbose=Fa
 
     """
     if verbose:
-        gut.myprint(f'Select data from {start_month} - {end_month}!')
+        gut.myprint(f"Select data from {start_month} - {end_month}!")
     seasonal_data = dataset.sel(
         time=is_in_month_range(dataset["time.month"], start_month, end_month)
     )
@@ -777,13 +793,18 @@ def get_month_range_data(dataset, start_month="Jan", end_month="Dec", verbose=Fa
 
 
 def number2str(day):
-    day = str(int(day)) if day >= 10 else f'0{int(day)}'
+    day = str(int(day)) if day >= 10 else f"0{int(day)}"
     return day
 
 
-def select_month_day_range(da, start_month=None, start_day=None,
-                           end_month=None, end_day=None,
-                           include_last=False):
+def select_month_day_range(
+    da,
+    start_month=None,
+    start_day=None,
+    end_month=None,
+    end_day=None,
+    include_last=False,
+):
     """
     Selects all values of an xarray DataArray that fall within a specified range of months
     and days, across all years.
@@ -816,23 +837,29 @@ def select_month_day_range(da, start_month=None, start_day=None,
         if include_last:
             ey += 1
             num_years += 1
-        start_month = start_month if start_month is not None else 'Jan'
-        start_month = get_month_number(start_month) if isinstance(
-            start_month, str) else start_month
-        end_month = end_month if end_month is not None else 'Dec'
+        start_month = start_month if start_month is not None else "Jan"
+        start_month = (
+            get_month_number(start_month)
+            if isinstance(start_month, str)
+            else start_month
+        )
+        end_month = end_month if end_month is not None else "Dec"
 
-        end_month = get_month_number(end_month) if isinstance(
-            end_month, str) else end_month
-        start_day = number2str(
-            start_day) if start_day is not None else number2str(1)
-        end_day = number2str(end_day) if end_day is not None else number2str(
-            days_in_month(end_month))
+        end_month = (
+            get_month_number(end_month) if isinstance(end_month, str) else end_month
+        )
+        start_day = number2str(start_day) if start_day is not None else number2str(1)
+        end_day = (
+            number2str(end_day)
+            if end_day is not None
+            else number2str(days_in_month(end_month))
+        )
         smi = number2str(start_month)
         emi = number2str(end_month)
         ranges = []
-        for year in range(sy, ey+1, 1):
-            sd = str2datetime(f'{year}-{smi}-{start_day}')
-            ed = str2datetime(f'{year}-{emi}-{end_day}')
+        for year in range(sy, ey + 1, 1):
+            sd = str2datetime(f"{year}-{smi}-{start_day}")
+            ed = str2datetime(f"{year}-{emi}-{end_day}")
             ranges.append([sd, ed])
         dates = get_dates_of_time_ranges(ranges)
         selected_data = get_sel_tps_ds(ds=da, tps=dates)
@@ -912,7 +939,7 @@ def set_hours_to_zero(x):
         0.
     """
     # Set hours to 0 using the dt accessor
-    x['time'] = x['time'].dt.floor('D')
+    x["time"] = x["time"].dt.floor("D")
 
     return x
 
@@ -1011,13 +1038,10 @@ def get_sy_ey_time(times, sy=None, ey=None, sm=None, em=None):
 
 
 def get_start_end_date(data):
-    base_period = np.array(
-        [data.time.data.min(), data.time.data.max()])
+    base_period = np.array([data.time.data.min(), data.time.data.max()])
 
-    sd = xr.DataArray(base_period[0],
-                      coords={'time': base_period[0]})
-    ed = xr.DataArray(base_period[1],
-                      coords={'time': base_period[1]})
+    sd = xr.DataArray(base_period[0], coords={"time": base_period[0]})
+    ed = xr.DataArray(base_period[1], coords={"time": base_period[1]})
     return sd, ed
 
 
@@ -1065,25 +1089,22 @@ def get_time_range(ds):
     return sd, ed
 
 
-
 def get_dates_of_ds(ds):
     sd, ed = get_time_range(ds=ds)
     tps = get_dates_of_time_range(time_range=[sd, ed])
     return tps
 
 
-def str2datetime(string, numpy=True,
-                 verbose=False):
+def str2datetime(string, numpy=True, verbose=False):
     if type(string) is str:
         date = np.datetime64(string)
         if not numpy:
             y, m, d, h = get_date2ymdh(date=date)
             date = datetime.datetime(year=y, month=m, day=d, hour=h)
-        date = xr.DataArray(date,
-                            coords={'time': date})
+        date = xr.DataArray(date, coords={"time": date})
     else:
         date = string
-        gut.myprint(f'WARNING {string} is not string!', verbose=verbose)
+        gut.myprint(f"WARNING {string} is not string!", verbose=verbose)
     return date
 
 
@@ -1122,13 +1143,16 @@ def get_frequency(x):
 
     # Determine the frequency based on the most common time difference
     if pd.Timedelta(days=1) == most_common_diff:
-        return 'day'
-    elif pd.Timedelta(days=30) == most_common_diff or pd.Timedelta(days=31) == most_common_diff:
-        return 'month'
+        return "day"
+    elif (
+        pd.Timedelta(days=30) == most_common_diff
+        or pd.Timedelta(days=31) == most_common_diff
+    ):
+        return "month"
     elif pd.Timedelta(hours=1) == most_common_diff:
-        return 'hour'
+        return "hour"
     else:
-        return 'none'
+        return "none"
 
 
 def check_hour_equality(da1, da2):
@@ -1144,7 +1168,7 @@ def check_hour_equality(da1, da2):
     """
 
     # Ensure both DataArrays have a time dimension
-    if 'time' not in da1.dims or 'time' not in da2.dims:
+    if "time" not in da1.dims or "time" not in da2.dims:
         raise ValueError("Both DataArrays must have a 'time' dimension.")
 
     # Extract time coordinates
@@ -1153,13 +1177,14 @@ def check_hour_equality(da1, da2):
 
     if len(time1) != len(time2):
         if len(time1) < len(time2):
-            time2 = time2[0:len(time1)]
+            time2 = time2[0 : len(time1)]
         elif len(time2) < len(time1):
-            time1 = time1[0:len(time2)]
+            time1 = time1[0 : len(time2)]
     # Check if the length of time dimensions is the same
     if len(time1) != len(time2):
         raise ValueError(
-            f'Length of time dimensions is not equal: {len(time1)} != {len(time2)}')
+            f"Length of time dimensions is not equal: {len(time1)} != {len(time2)}"
+        )
 
     # Check hour equality for each timestamp
     for t1, t2 in zip(time1, time2):
@@ -1174,7 +1199,7 @@ def check_hour_equality(da1, da2):
 def check_hour_occurrence(da):
 
     # Ensure both DataArrays have a time dimension
-    if 'time' not in da.dims:
+    if "time" not in da.dims:
         raise ValueError("DataArrays must have a 'time' dimension.")
 
     # Extract time coordinates
@@ -1197,24 +1222,25 @@ def get_tm_name(timemean):
         tm = "1W"
     elif timemean == "month":
         tm = "1MS"
-    elif timemean == "season":  # This is not just 3MS!  found here: https://github.com/pydata/xarray/issues/810
+    elif (
+        timemean == "season"
+    ):  # This is not just 3MS!  found here: https://github.com/pydata/xarray/issues/810
         tm = "Q-FEB"
     elif timemean == "year":
         tm = "1Y"
-    elif timemean == 'pentad' or timemean == '5D' or timemean == '5d':
+    elif timemean == "pentad" or timemean == "5D" or timemean == "5d":
         tm = "5D"
-    elif timemean == '3D' or timemean == '3d':
+    elif timemean == "3D" or timemean == "3d":
         tm = "3D"
-    elif timemean == '2D' or timemean == '2d':
+    elif timemean == "2D" or timemean == "2d":
         tm = "2D"
     elif timemean in ["1D", "1W", "1MS", "Q-FEB", "1Y", "5D", "3D", "2D"]:
         tm = timemean
-    elif timemean == 'all':
+    elif timemean == "all":
         tm = None
     else:
         raise ValueError(
-            f"This time mean {
-                timemean} does not exist! Please choose week, month, season or year!"
+            f"This time mean {timemean} does not exist! Please choose week, month, season or year!"
         )
 
     return tm
@@ -1232,13 +1258,12 @@ def get_mean_time_series(da, lon_range, lat_range, time_roll=0, q=None):
     lat_range: list
         [min, max] of latiduninal range
     """
-    da_area = sput.cut_map(da, lon_range=lon_range,
-                           lat_range=lat_range)
+    da_area = sput.cut_map(da, lon_range=lon_range, lat_range=lat_range)
     if q is None:
-        ts_mean = da_area.mean(dim=('lon', 'lat'), skipna=True)
+        ts_mean = da_area.mean(dim=("lon", "lat"), skipna=True)
     else:
-        ts_mean = da_area.quantile(q=q, dim=('lon', 'lat'), skipna=True)
-    ts_std = da_area.std(dim=('lon', 'lat'), skipna=True)
+        ts_mean = da_area.quantile(q=q, dim=("lon", "lat"), skipna=True)
+    ts_std = da_area.std(dim=("lon", "lat"), skipna=True)
     if time_roll > 0:
         ts_mean = ts_mean.rolling(time=time_roll, center=True).mean()
         ts_std = ts_std.rolling(time=time_roll, center=True).mean()
@@ -1246,9 +1271,9 @@ def get_mean_time_series(da, lon_range, lat_range, time_roll=0, q=None):
     return ts_mean, ts_std
 
 
-def compute_timemean(ds, timemean, dropna=True,
-                     groupby=False, verbose=True,
-                     reset_time=False):
+def compute_timemean(
+    ds, timemean, dropna=True, groupby=False, verbose=True, reset_time=False
+):
     """Computes the monmean average on a given xr.dataset
 
     Args:
@@ -1259,22 +1284,20 @@ def compute_timemean(ds, timemean, dropna=True,
     """
 
     if groupby:
-        ds = ds.groupby(f'time.{timemean}').mean(dim='time')
+        ds = ds.groupby(f"time.{timemean}").mean(dim="time")
         if reset_time:
-            ds = gut.rename_dim(ds, timemean, name='time')
+            ds = gut.rename_dim(ds, timemean, name="time")
     else:
         if timemean is None:
             return ds
         tm = get_tm_name(timemean)
 
         if tm is None:
-            return ds.mean(dim='time')
+            return ds.mean(dim="time")
 
-        gut.myprint(
-            f"Compute {timemean}ly means of all variables!", verbose=verbose)
+        gut.myprint(f"Compute {timemean}ly means of all variables!", verbose=verbose)
         if dropna:
-            ds = ds.resample(time=tm).mean(
-                dim="time", skipna=True).dropna(dim="time")
+            ds = ds.resample(time=tm).mean(dim="time", skipna=True).dropna(dim="time")
         else:
             ds = ds.resample(time=tm).mean(dim="time", skipna=True)
 
@@ -1292,13 +1315,12 @@ def compute_mean(ds, dropna=True, verbose=False):
     """
     tps = ds.time
     if gut.is_single_tp(tps=tps):
-        gut.myprint('Single time point selected!', verbose=verbose)
+        gut.myprint("Single time point selected!", verbose=verbose)
         return ds
     else:
-        gut.myprint(
-            f"Compute mean of all variables!", verbose=verbose)
+        gut.myprint(f"Compute mean of all variables!", verbose=verbose)
         if dropna:
-            ds = ds.dropna(dim='time').mean("time")
+            ds = ds.dropna(dim="time").mean("time")
         else:
             ds = ds.mean(dim="time")
     return ds
@@ -1315,13 +1337,12 @@ def compute_quantile(ds, q, dropna=True, verbose=False):
     """
     tps = ds.time
     if gut.is_single_tp(tps=tps):
-        gut.myprint('Single time point selected!', verbose=verbose)
+        gut.myprint("Single time point selected!", verbose=verbose)
         return ds
     else:
-        gut.myprint(
-            f"Compute quantile of all variables!", verbose=verbose)
+        gut.myprint(f"Compute quantile of all variables!", verbose=verbose)
         if dropna:
-            ds = ds.dropna(dim='time').quantile(q, dim="time")
+            ds = ds.dropna(dim="time").quantile(q, dim="time")
         else:
             ds = ds.quantile(q, dim="time")
     return ds
@@ -1330,9 +1351,10 @@ def compute_quantile(ds, q, dropna=True, verbose=False):
 def get_extremes(ds, q=0.9, dropna=True, verbose=False):
     quantile_val = compute_quantile(ds=ds, q=q, dropna=dropna, verbose=verbose)
     quantile_val_below = compute_quantile(
-        ds=ds, q=1-q, dropna=dropna, verbose=verbose)
-    above_q = ds.where(ds > quantile_val).dropna(dim='time')
-    below_q = ds.where(ds < quantile_val_below).dropna(dim='time')
+        ds=ds, q=1 - q, dropna=dropna, verbose=verbose
+    )
+    above_q = ds.where(ds > quantile_val).dropna(dim="time")
+    below_q = ds.where(ds < quantile_val_below).dropna(dim="time")
 
     return above_q, below_q
 
@@ -1348,19 +1370,18 @@ def compute_sum(ds, dropna=True, verbose=False):
     """
     tps = ds.time
     if gut.is_single_tp(tps=tps):
-        gut.myprint('Single time point selected!', verbose=verbose)
+        gut.myprint("Single time point selected!", verbose=verbose)
         return ds
     else:
-        gut.myprint(
-            f"Compute sum of all variables!", verbose=verbose)
+        gut.myprint(f"Compute sum of all variables!", verbose=verbose)
         if dropna:
-            ds = ds.dropna(dim='time').sum("time")
+            ds = ds.dropna(dim="time").sum("time")
         else:
             ds = ds.sum(dim="time")
     return ds
 
 
-def compute_timemax(ds, timemean,  dropna=True, verbose=True):
+def compute_timemax(ds, timemean, dropna=True, verbose=True):
     """Computes the monmax on a given xr.dataset
 
     Args:
@@ -1371,11 +1392,9 @@ def compute_timemax(ds, timemean,  dropna=True, verbose=True):
     """
     tm = get_tm_name(timemean)
 
-    gut.myprint(
-        f"Compute {timemean}ly maximum of all variables!", verbose=verbose)
+    gut.myprint(f"Compute {timemean}ly maximum of all variables!", verbose=verbose)
     if dropna:
-        ds = ds.resample(time=tm).max(
-            dim="time", skipna=True).dropna(dim="time")
+        ds = ds.resample(time=tm).max(dim="time", skipna=True).dropna(dim="time")
     else:
         ds = ds.resample(time=tm).max(dim="time", skipna=True)
 
@@ -1395,8 +1414,7 @@ def apply_timesum(ds, timemean, sm=None, em=None, dropna=True):
 
     gut.myprint(f"Compute {timemean}ly means of all variables!")
     if dropna:
-        ds = ds.resample(time=tm).sum(
-            dim="time", skipna=True).dropna(dim="time")
+        ds = ds.resample(time=tm).sum(dim="time", skipna=True).dropna(dim="time")
     else:
         ds = ds.resample(time=tm).sum(dim="time", skipna=True)
     if sm is not None or em is not None:
@@ -1419,7 +1437,7 @@ def averge_out_nans_ts(ts, av_range=1):
             if idx == 0:
                 ts[0] = np.nanmean(ts[:10])
             else:
-                ts[idx] = np.mean(ts[idx - av_range: idx])
+                ts[idx] = np.mean(ts[idx - av_range : idx])
 
         num_nans = np.count_nonzero(np.isnan(ts) == True)
         if num_nans > 0:
@@ -1447,11 +1465,15 @@ def remove_duplicate_times(da):
     return da.isel(time=index)
 
 
-def compute_anomalies(dataarray, climatology_array=None,
-                      group=None, base_period=None,
-                      chunk_data=False,
-                      normalize=False,
-                      verbose=True):
+def compute_anomalies(
+    dataarray,
+    climatology_array=None,
+    group=None,
+    base_period=None,
+    chunk_data=False,
+    normalize=False,
+    verbose=True,
+):
     """Calculate anomalies.
 
     Parameters:
@@ -1470,10 +1492,10 @@ def compute_anomalies(dataarray, climatology_array=None,
     """
     if group is None and climatology_array is None:
         raise ValueError(
-            "ERROR! If climatology_array is None, group has to be specified!")
+            "ERROR! If climatology_array is None, group has to be specified!"
+        )
     if base_period is None:
-        base_period = np.array(
-            [dataarray.time.data.min(), dataarray.time.data.max()])
+        base_period = np.array([dataarray.time.data.min(), dataarray.time.data.max()])
 
     if group in ["dayofyear", "month", "season"]:
         if climatology_array is None:
@@ -1490,11 +1512,11 @@ def compute_anomalies(dataarray, climatology_array=None,
         )
         if normalize:
             gut.myprint(f"Normalize {group}ly anomalies!")
-            anomalies = dataarray.groupby(
-                f"time.{group}") / std_climatology
+            anomalies = dataarray.groupby(f"time.{group}") / std_climatology
             # Needs to be done in a two-step process, because the mean and std are calculated
-            anomalies = anomalies.groupby(
-                f"time.{group}") - climatology / std_climatology
+            anomalies = (
+                anomalies.groupby(f"time.{group}") - climatology / std_climatology
+            )
         else:
             anomalies = dataarray.groupby(f"time.{group}") - climatology
 
@@ -1507,15 +1529,15 @@ def compute_anomalies(dataarray, climatology_array=None,
             if group == "JJAS":
                 for month in ["Jun", "Jul", "Aug", "Sep"]:
                     month_ids.append(get_month_number(month))
-            elif group == 'DJFM':  # here it is important to include the December of the previous year
+            elif (
+                group == "DJFM"
+            ):  # here it is important to include the December of the previous year
                 for month in ["Dec", "Jan", "Feb", "Mar"]:
                     month_ids.append(get_month_number(month))
             else:
-                raise ValueError(
-                    f"ERROR! {group} is not a valid group for anomalies!")
+                raise ValueError(f"ERROR! {group} is not a valid group for anomalies!")
             climatology = (
-                monthly_groups.mean(dim="time").sel(
-                    month=month_ids).mean(dim="month")
+                monthly_groups.mean(dim="time").sel(month=month_ids).mean(dim="month")
             )
         else:
             climatology = climatology_array
@@ -1524,33 +1546,37 @@ def compute_anomalies(dataarray, climatology_array=None,
         gut.myprint(f"Created {group}ly anomalies!")
 
     var_name = anomalies.name
-    anomalies = gut.rename_da(da=anomalies, name=f'{var_name}_an_{group}')
+    anomalies = gut.rename_da(da=anomalies, name=f"{var_name}_an_{group}")
 
     return anomalies
 
 
-def compute_anomalies_ds(ds, var_name=None,
-                         an_types=['month', 'JJAS'],
-                         #  an_types=['dayofyear', 'month', 'JJAS'],
-                         verbose=True):
+def compute_anomalies_ds(
+    ds,
+    var_name=None,
+    an_types=["month", "JJAS"],
+    #  an_types=['dayofyear', 'month', 'JJAS'],
+    verbose=True,
+):
     vars = gut.get_vars(ds=ds)
     an_vars = [var_name] if var_name in vars else vars
     for var_name in an_vars:
         for an_type in an_types:
             if not gut.check_contains_substring(var_name, an_type):
-                da_an = compute_anomalies(
-                    ds[var_name], group=an_type,
-                    verbose=verbose
-                )
+                da_an = compute_anomalies(ds[var_name], group=an_type, verbose=verbose)
                 ds[da_an.name] = da_an
     return ds
 
 
-def get_ee_ds(dataarray, q=0.95,
-              threshold=None,
-              min_threshold=None,
-              reverse_threshold=False,
-              th_eev=None, verbose=True):
+def get_ee_ds(
+    dataarray,
+    q=0.95,
+    threshold=None,
+    min_threshold=None,
+    reverse_threshold=False,
+    th_eev=None,
+    verbose=True,
+):
     if threshold is not None:
         gut.myprint(f"Threshold is set to {threshold}")
         q_val_map = xr.where(~np.isnan(dataarray), threshold, np.nan)
@@ -1564,58 +1590,53 @@ def get_ee_ds(dataarray, q=0.95,
         dataarray = dataarray.where(dataarray > min_threshold)
     if threshold is not None:
         if reverse_threshold:
-            data_quantile = xr.where(
-                dataarray < threshold, dataarray, np.nan)
+            data_quantile = xr.where(dataarray < threshold, dataarray, np.nan)
         else:
-            data_quantile = xr.where(
-                dataarray > threshold, dataarray, np.nan)
+            data_quantile = xr.where(dataarray > threshold, dataarray, np.nan)
     else:
         # Gives the quanile value for each cell
         q_val_map = dataarray.quantile(q, dim="time")
         # Set values below quantile to 0
         if q > 0.5:
-            data_quantile = xr.where(
-                dataarray > q_val_map, dataarray, np.nan)
+            data_quantile = xr.where(dataarray > q_val_map, dataarray, np.nan)
         elif q <= 0.5:
-            data_quantile = xr.where(
-                dataarray < q_val_map, dataarray, np.nan)
+            data_quantile = xr.where(dataarray < q_val_map, dataarray, np.nan)
         else:
             raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
     if th_eev is not None:
         # Set values to 0 that have not at least the value th_eev
-        data_quantile = xr.where(
-            data_quantile > th_eev, data_quantile, np.nan
-        )
+        data_quantile = xr.where(data_quantile > th_eev, data_quantile, np.nan)
     ee_map = data_quantile.count(dim="time")
 
     if verbose:
         tot_frac_events = float(ee_map.sum()) / dataarray.size
         gut.myprint(f"Number of events: {tot_frac_events} (if q given: ~{q})!")
 
-    rel_frac_q_map = data_quantile.sum(
-        dim="time") / dataarray.sum(dim="time")
+    rel_frac_q_map = data_quantile.sum(dim="time") / dataarray.sum(dim="time")
 
     return q_val_map, ee_map, data_quantile, rel_frac_q_map
 
 
 def get_ee_count_ds(ds, q=0.95):
     varnames = gut.get_varnames_ds(ds)
-    if 'evs' in varnames:
-        evs = ds['evs']
-        evs_cnt = evs.sum(dim='time')
+    if "evs" in varnames:
+        evs = ds["evs"]
+        evs_cnt = evs.sum(dim="time")
     else:
-        raise ValueError('No Evs in dataset found!')
+        raise ValueError("No Evs in dataset found!")
     return evs_cnt
 
 
-def compute_evs(dataarray,
-                q=0.9,
-                threshold=None,
-                reverse_treshold=False,
-                min_threshold=None,
-                th_eev=None,
-                min_evs=1,
-                verbose=True):
+def compute_evs(
+    dataarray,
+    q=0.9,
+    threshold=None,
+    reverse_treshold=False,
+    min_threshold=None,
+    th_eev=None,
+    min_evs=1,
+    verbose=True,
+):
     """Creates an event series from an input time series.
 
     Args:
@@ -1634,7 +1655,7 @@ def compute_evs(dataarray,
         event_series (xr.Dataarray): Event time series of 0 and 1 (1=event). mask
         (xr.dataarray): Gives out which values are masked out.
     """
-     # Compute percentile data, remove all values below percentile, but with a minimum of
+    # Compute percentile data, remove all values below percentile, but with a minimum of
     # threshold q
     _, ee_map, data_quantile, _ = get_ee_ds(
         dataarray=dataarray,
@@ -1661,7 +1682,7 @@ def compute_evs(dataarray,
     return event_series, mask
 
 
-def detrend_dim(da, dim="time", deg=1, startyear=None, freq='D'):
+def detrend_dim(da, dim="time", deg=1, startyear=None, freq="D"):
     if startyear is None:
         p = da.polyfit(dim=dim, deg=deg)
         fit = xr.polyval(da[dim], p.polyfit_coefficients)
@@ -1670,27 +1691,26 @@ def detrend_dim(da, dim="time", deg=1, startyear=None, freq='D'):
     else:
         start_date, end_date = get_start_end_date(data=da)
         if gut.is_datetime360(time=da.time.data[0]):
-            date_before_detrend = cftime.Datetime360Day(startyear-1, 12, 30)
+            date_before_detrend = cftime.Datetime360Day(startyear - 1, 12, 30)
             date_start_detrend = cftime.Datetime360Day(startyear, 1, 1)
         else:
-            date_before_detrend = np.datetime64(f'{startyear-1}-12-31')
-            date_start_detrend = np.datetime64(f'{startyear}-01-01')
-        gut.myprint(f'Start detrending from {date_start_detrend}...')
-        da_no_detrend = get_time_range_data(ds=da,
-                                            time_range=[start_date,
-                                                        date_before_detrend],
-                                            freq=freq,
-                                            verbose=False)
-        da_detrend = get_time_range_data(ds=da,
-                                         time_range=[
-                                             date_start_detrend, end_date],
-                                         freq=freq,
-                                         verbose=False)
+            date_before_detrend = np.datetime64(f"{startyear-1}-12-31")
+            date_start_detrend = np.datetime64(f"{startyear}-01-01")
+        gut.myprint(f"Start detrending from {date_start_detrend}...")
+        da_no_detrend = get_time_range_data(
+            ds=da,
+            time_range=[start_date, date_before_detrend],
+            freq=freq,
+            verbose=False,
+        )
+        da_detrend = get_time_range_data(
+            ds=da, time_range=[date_start_detrend, end_date], freq=freq, verbose=False
+        )
         p = da_detrend.polyfit(dim=dim, deg=deg)
         fit = xr.polyval(da_detrend[dim], p.polyfit_coefficients)
         start_val = fit[0]
         detrended_da = da_detrend - fit + start_val
-        detrended_da = xr.concat([da_no_detrend, detrended_da], dim='time')
+        detrended_da = xr.concat([da_no_detrend, detrended_da], dim="time")
 
     return detrended_da
 
@@ -1709,8 +1729,7 @@ def correlation_per_timeperiod(x, y, time_period):
     for tp in time_period:
         corr.append(
             np.corrcoef(
-                x.sel(time=slice(tp[0], tp[1])), y.sel(
-                    time=slice(tp[0], tp[1]))
+                x.sel(time=slice(tp[0], tp[1])), y.sel(time=slice(tp[0], tp[1]))
             )[0, 1]
         )
 
@@ -1733,14 +1752,14 @@ def tp2str(tp, m=True, d=True):
     if isinstance(tp, str):
         return tp
     if gut.is_datetime360(tp):
-        date = f'{tp.year}'
+        date = f"{tp.year}"
     else:
         ts = pd.to_datetime(str(tp))
-        date = ts.strftime('%Y')
+        date = ts.strftime("%Y")
         if m:
-            date = ts.strftime('%Y-%m')
+            date = ts.strftime("%Y-%m")
         if d:
-            date = ts.strftime('%Y-%m-%d')
+            date = ts.strftime("%Y-%m-%d")
     return date
 
 
@@ -1798,13 +1817,14 @@ def date2ymdhstr(date, seperate_hour=True):
     # this object knows what y, m, d, and hours are
     yi, mi, di, hi = get_date2ymdh(date)
 
-    ystr = f'{yi}'
-    mstr = f'{mi}' if mi > 9 else f'0{mi}'
-    dstr = f'{di}' if di > 9 else f'0{di}'
-    hstr = f'{hi}' if hi > 9 else f'0{hi}'
+    ystr = f"{yi}"
+    mstr = f"{mi}" if mi > 9 else f"0{mi}"
+    dstr = f"{di}" if di > 9 else f"0{di}"
+    hstr = f"{hi}" if hi > 9 else f"0{hi}"
 
-    strdate = f'{ystr}{mstr}{dstr}_{
-        hstr}' if seperate_hour else f'{ystr}{mstr}{dstr}{hstr}'
+    strdate = (
+        f"{ystr}{mstr}{dstr}_{hstr}" if seperate_hour else f"{ystr}{mstr}{dstr}{hstr}"
+    )
 
     return strdate
 
@@ -1876,7 +1896,7 @@ def add_time_window_old(date, time_step=1, freq="D"):
     return next_date
 
 
-def add_time_window(date, time_step=1, freq='D'):
+def add_time_window(date, time_step=1, freq="D"):
     """
     Add a specified number of days, months, or years to the time dimension of an xarray
     DataArray.
@@ -1897,38 +1917,44 @@ def add_time_window(date, time_step=1, freq='D'):
         The modified dataarray with the time dimension updated.
     """
     # Define the time delta to add based on the frequency parameter
-    if freq == 'D':
+    if freq == "D":
         tdelta = pd.DateOffset(days=time_step)
-    elif freq == 'M':
+    elif freq == "M":
         tdelta = pd.DateOffset(months=time_step)
-    elif freq == 'Y':
+    elif freq == "Y":
         tdelta = pd.DateOffset(years=time_step)
     else:
-        raise ValueError(
-            f"Invalid frequency '{freq}', must be one of 'D', 'M', or 'Y'")
+        raise ValueError(f"Invalid frequency '{freq}', must be one of 'D', 'M', or 'Y'")
     if isinstance(date, xr.DataArray):
         date = date.time
 
     if gut.is_single_tp(tps=date):
         shifted_time = pd.to_datetime([np.datetime64(date.time.data)]) + tdelta
-        time_xr = xr.DataArray(shifted_time.values[0],
-                               coords={'time': shifted_time[0]})
+        time_xr = xr.DataArray(shifted_time.values[0], coords={"time": shifted_time[0]})
     else:
         shifted_time = pd.to_datetime(date.time.data) + tdelta
         # Convert the modified time dimension back to xarray.DataArray format
-        time_xr = xr.DataArray(shifted_time.values,
-                               dims='time',
-                               coords={'time': shifted_time})
+        time_xr = xr.DataArray(
+            shifted_time.values, dims="time", coords={"time": shifted_time}
+        )
 
     return time_xr
 
 
-def add_time_step_tps(tps, time_step=1, freq="D", ):
-    return add_time_window(date=tps,
-                           time_step=time_step, freq=freq)
+def add_time_step_tps(
+    tps,
+    time_step=1,
+    freq="D",
+):
+    return add_time_window(date=tps, time_step=time_step, freq=freq)
 
 
-def get_tps_range(tps, start=0, time_step=0, freq="D", ):
+def get_tps_range(
+    tps,
+    start=0,
+    time_step=0,
+    freq="D",
+):
     if isinstance(tps, xr.DataArray):
         tps = tps.time
     if len(np.array([tps.time.data]).shape) == 1:
@@ -1942,11 +1968,9 @@ def get_tps_range(tps, start=0, time_step=0, freq="D", ):
             for tp in tps:
                 ntp = add_time_step_tps(tps=tp, time_step=time_step, freq=freq)
                 if time_step > 0:
-                    new_tps = get_dates_in_range(start_date=tp,
-                                                 end_date=ntp, freq=freq)
+                    new_tps = get_dates_in_range(start_date=tp, end_date=ntp, freq=freq)
                 else:
-                    new_tps = get_dates_in_range(start_date=ntp,
-                                                 end_date=tp, freq=freq)
+                    new_tps = get_dates_in_range(start_date=ntp, end_date=tp, freq=freq)
                 ntps.append(new_tps)
         else:
             ntps = tps
@@ -1956,27 +1980,25 @@ def get_tps_range(tps, start=0, time_step=0, freq="D", ):
         return ntps
 
 
-def add_time_step_tps_old(tps, time_step=1, freq="D", ):
+def add_time_step_tps_old(
+    tps,
+    time_step=1,
+    freq="D",
+):
     ntps = []
     if isinstance(tps, xr.DataArray):
         tps = tps.time
     if len(np.array([tps.time.data]).shape) == 1:
         tps = [tps]
     for tp in tps:
-        ntp = add_time_window(
-            date=tp,
-            time_step=time_step,
-            freq=freq)
+        ntp = add_time_window(date=tp, time_step=time_step, freq=freq)
         ntps.append(ntp)
     ntps = merge_time_arrays(ntps, multiple=None)
 
     return xr.DataArray(ntps, dims=["time"], coords={"time": ntps})
 
 
-def merge_time_arrays(time_arrays,
-                      multiple='duplicate',
-                      new_dim=False,
-                      verbose=False):
+def merge_time_arrays(time_arrays, multiple="duplicate", new_dim=False, verbose=False):
     # Combine the time arrays into a single DataArray with a new "time" dimension
     if new_dim:
         combined_data = xr.concat(time_arrays, dim="t")
@@ -1984,18 +2006,19 @@ def merge_time_arrays(time_arrays,
         combined_data = xr.concat(time_arrays, dim="time")
     if multiple is not None:
         gut.myprint(
-            f'Group multiple files by {multiple} if time points occur twice!',
-            verbose=verbose)
-    if multiple == 'duplicate':
+            f"Group multiple files by {multiple} if time points occur twice!",
+            verbose=verbose,
+        )
+    if multiple == "duplicate":
         # Remove duplicate time points
         combined_data = remove_duplicate_times(combined_data)
-    elif multiple == 'max':
+    elif multiple == "max":
         # Group the data by time and take the maximum value for each group
-        combined_data = combined_data.groupby('time').max()
-    elif multiple == 'mean':
-        combined_data = combined_data.groupby('time').mean()
-    elif multiple == 'min':
-        combined_data = combined_data.groupby('time').min()
+        combined_data = combined_data.groupby("time").max()
+    elif multiple == "mean":
+        combined_data = combined_data.groupby("time").mean()
+    elif multiple == "min":
+        combined_data = combined_data.groupby("time").min()
 
     # Sort the new "time" dimension
     combined_data = combined_data.sortby("time")
@@ -2016,35 +2039,29 @@ def get_tw_periods(
             tw_range = get_dates_of_time_range([sd, ep])
             all_time_periods.append(tw_range)
             all_tps.append(ep)
-            sd = add_time_window(
-                sd, time_step=sliding_length, freq=sliding_unit)
+            sd = add_time_window(sd, time_step=sliding_length, freq=sliding_unit)
 
     return {"range": all_time_periods, "tps": np.array(all_tps)}
 
 
-def get_periods_tps(tps, start=0, end=1,
-                    freq="D", include_start=True):
-    """Gives the all time points from tps to end.
-
-    """
+def get_periods_tps(tps, start=0, end=1, freq="D", include_start=True):
+    """Gives the all time points from tps to end."""
     if end == 0:
         return tps
     else:
         if not include_start and start == 0:
             sign = math.copysign(end)
-            tps = add_time_step_tps(tps=tps, time_step=sign*1)
+            tps = add_time_step_tps(tps=tps, time_step=sign * 1)
             end += sign  # because we have shifted the end
         if start != 0:
             if start < 0:
                 if start > end:
                     start, end = end, start  # always start from smaller number
             elif np.abs(start) == np.abs(end):
-                return add_time_step_tps(
-                    tps=tps, time_step=start, freq=freq)
+                return add_time_step_tps(tps=tps, time_step=start, freq=freq)
             else:
-                gut.myprint(f'Warning! Start {start} is > end {end}!')
-            stps = add_time_step_tps(
-                tps=tps, time_step=start, freq=freq)
+                gut.myprint(f"Warning! Start {start} is > end {end}!")
+            stps = add_time_step_tps(tps=tps, time_step=start, freq=freq)
 
         else:
             stps = tps
@@ -2063,24 +2080,24 @@ def get_periods_tps(tps, start=0, end=1,
         all_time_periods = np.concatenate(all_time_periods, axis=0)
         # Removes duplicates of time points
         all_time_periods = np.unique(all_time_periods)
-        all_time_periods = create_xr_ts(
-            data=all_time_periods, times=all_time_periods)
+        all_time_periods = create_xr_ts(data=all_time_periods, times=all_time_periods)
         all_time_periods = remove_duplicate_times(all_time_periods)
 
         return all_time_periods
 
 
-def get_dates_of_time_range(time_range, freq='D',
-                            start_month='Jan', end_month='Dec'):
+def get_dates_of_time_range(time_range, freq="D", start_month="Jan", end_month="Dec"):
     dtype = f"datetime64[{freq}]"
     if type(time_range[0]) is str:
-        gut.myprint('Convert String', verbose=False)
+        gut.myprint("Convert String", verbose=False)
         time_range = np.array(time_range, dtype=dtype)
     if gut.is_datetime360(time=time_range[0]):
-        date_arr = xr.cftime_range(start=time_range[0],
-                                   end=time_range[-1],
-                                   normalize=True,   # Normalize to Midnight
-                                   freq=freq)
+        date_arr = xr.cftime_range(
+            start=time_range[0],
+            end=time_range[-1],
+            normalize=True,  # Normalize to Midnight
+            freq=freq,
+        )
     else:
         sp, ep = time_range[0], time_range[-1]
         if isinstance(sp, xr.DataArray):
@@ -2089,50 +2106,44 @@ def get_dates_of_time_range(time_range, freq='D',
             ep = ep.time.data
 
         sp, ep = np.sort([sp, ep])  # Order in time
-        date_arr = get_dates_in_range(start_date=sp,
-                                      end_date=ep,
-                                      freq=freq,
-                                      make_xr=False)
+        date_arr = get_dates_in_range(
+            start_date=sp, end_date=ep, freq=freq, make_xr=False
+        )
         # Include as well last time point
         date_arr = np.concatenate(
             [date_arr, [date_arr[-1] + np.timedelta64(1, freq)]], axis=0
         )
 
-    date_arr = gut.create_xr_ds(data=date_arr,
-                                dims=['time'],
-                                coords={'time': date_arr})
+    date_arr = gut.create_xr_ds(data=date_arr, dims=["time"], coords={"time": date_arr})
 
-    if start_month != 'Jan' or end_month != 'Dec':
-        date_arr = get_month_range_data(dataset=date_arr,
-                                        start_month=start_month,
-                                        end_month=end_month)
+    if start_month != "Jan" or end_month != "Dec":
+        date_arr = get_month_range_data(
+            dataset=date_arr, start_month=start_month, end_month=end_month
+        )
 
     return date_arr
 
 
-def get_dates_of_time_ranges(time_ranges, freq='D'):
+def get_dates_of_time_ranges(time_ranges, freq="D"):
     dtype = f"datetime64[{freq}]"
     arr = np.array([], dtype=dtype)
     for time_range in time_ranges:
         arr = np.concatenate(
-            [arr, get_dates_of_time_range(
-                time_range, freq=freq).time.data], axis=0
+            [arr, get_dates_of_time_range(time_range, freq=freq).time.data], axis=0
         )
     # Also sort the array
     arr = np.sort(arr)
-    arr = gut.create_xr_ds(data=arr,
-                           dims=['time'],
-                           coords={'time': arr})
+    arr = gut.create_xr_ds(data=arr, dims=["time"], coords={"time": arr})
     return arr
 
 
-def get_dates_in_range(start_date, end_date, freq='D', make_xr=True):
+def get_dates_in_range(start_date, end_date, freq="D", make_xr=True):
 
     if isinstance(start_date, xr.DataArray):
         start_date = np.datetime64(start_date.time.data)
     if isinstance(end_date, xr.DataArray):
         end_date = np.datetime64(end_date.time.data)
-    tps = np.arange(start_date, end_date, dtype=f'datetime64[{freq}]')
+    tps = np.arange(start_date, end_date, dtype=f"datetime64[{freq}]")
 
     if make_xr:
         tps = create_xr_ts(data=tps, times=tps)
@@ -2140,7 +2151,7 @@ def get_dates_in_range(start_date, end_date, freq='D', make_xr=True):
     return tps
 
 
-def get_dates_for_time_steps(start='0-01-01', num_steps=1, freq='D'):
+def get_dates_for_time_steps(start="0-01-01", num_steps=1, freq="D"):
     """Computes an array of time steps for a number of steps starting from a
     specified date.
 
@@ -2151,21 +2162,17 @@ def get_dates_for_time_steps(start='0-01-01', num_steps=1, freq='D'):
     """
     dates = []
     for step in np.arange(num_steps):
-        dates.append(add_time_window(start, time_step=step,
-                                     freq=freq).time.data)
+        dates.append(add_time_window(start, time_step=step, freq=freq).time.data)
     return np.array(dates)
 
 
-def get_dates_arr_for_time_steps(tps, num_steps=1, freq='D'):
-    dates = np.array([], dtype='datetime64')
+def get_dates_arr_for_time_steps(tps, num_steps=1, freq="D"):
+    dates = np.array([], dtype="datetime64")
     for tp in tps:
-        this_dates = get_dates_for_time_steps(
-            start=tp, num_steps=num_steps, freq=freq)
+        this_dates = get_dates_for_time_steps(start=tp, num_steps=num_steps, freq=freq)
         dates = np.concatenate([dates, this_dates], axis=0)
 
-    dates = xr.DataArray(data=dates,
-                         dims=['time'],
-                         coords={'time': dates})
+    dates = xr.DataArray(data=dates, dims=["time"], coords={"time": dates})
 
     return dates
 
@@ -2216,8 +2223,7 @@ def sliding_time_window(
         corr, pvalue = corr_function(data=this_tp_data)
         if corr.shape != (num_nodes, num_nodes):
             raise ValueError(
-                f"Wrong dimension of corr matrix {
-                    corr.shape} != {(num_nodes, num_nodes)}!"
+                f"Wrong dimension of corr matrix {corr.shape} != {(num_nodes, num_nodes)}!"
             )
 
         # Define source - correlations, target correlations and source-target correlations
@@ -2325,8 +2331,7 @@ def get_corr_full_ts(
     corr, pvalue = corr_function(data=this_tp_data)
     if corr.shape != (num_nodes, num_nodes):
         raise ValueError(
-            f"Wrong dimension of corr matrix {
-                corr.shape} != {(num_nodes, num_nodes)}!"
+            f"Wrong dimension of corr matrix {corr.shape} != {(num_nodes, num_nodes)}!"
         )
 
     # Define source - correlations, target correlations and source-target correlations in
@@ -2355,7 +2360,9 @@ def get_rank_ts(ts, tps=None, q=None):
     if q is None:
         ts_source_rk = st.rankdata(ts_source_tps.data, axis=0)
         xr_ts = xr.DataArray(
-            data=ts_source_rk, dims=ts_source_tps.dims, coords=ts_source_tps.coords,
+            data=ts_source_rk,
+            dims=ts_source_tps.dims,
+            coords=ts_source_tps.coords,
         )
     else:
         q_val_map = ts_source_tps.quantile(q, dim="time")
@@ -2368,19 +2375,19 @@ def get_rank_ts(ts, tps=None, q=None):
 def arr_lagged_ts(ts_arr, lag):
     times = ts_arr[0].time
     ntimes = len(times)
-    num_tps = ntimes-lag
+    num_tps = ntimes - lag
     df = pd.DataFrame(index=times[0:num_tps])
     # df = pd.DataFrame(index=times)
     for idx, ts in enumerate(ts_arr):
         data = ts.data
         t_data = np.vstack(data)
-        for tlag in range(0, lag+1, 1):
+        for tlag in range(0, lag + 1, 1):
             # t_data = np.roll(t_data, tlag)  # wrong but somehow predictive...
             # df[f'{idx}_{tlag}'] = t_data
             if lag == tlag:
-                df[f'{idx}_{tlag}'] = t_data[tlag:]
+                df[f"{idx}_{tlag}"] = t_data[tlag:]
             else:
-                df[f'{idx}_{tlag}'] = t_data[tlag:-(lag-tlag)]
+                df[f"{idx}_{tlag}"] = t_data[tlag : -(lag - tlag)]
 
     return df
 
@@ -2389,11 +2396,11 @@ def get_lagged_ts(ts1, ts2=None, lag=0):
     if ts2 is None:
         ts2 = ts1
     if lag > 0:
-        ts1 = ts1[:-np.abs(lag)]
-        ts2 = ts2[np.abs(lag):]
+        ts1 = ts1[: -np.abs(lag)]
+        ts2 = ts2[np.abs(lag) :]
     elif lag < 0:
-        ts1 = ts1[np.abs(lag):]
-        ts2 = ts2[:-np.abs(lag)]
+        ts1 = ts1[np.abs(lag) :]
+        ts2 = ts2[: -np.abs(lag)]
 
     return ts1, ts2
 
@@ -2402,27 +2409,23 @@ def get_lagged_ts_arr(ts1_arr, ts2_arr=None, lag=0):
     if ts2_arr is None:
         ts2_arr = ts1_arr
     if lag > 0:
-        ts1_arr = ts1_arr[:, :-np.abs(lag)]
-        ts2_arr = ts2_arr[:, np.abs(lag):]
+        ts1_arr = ts1_arr[:, : -np.abs(lag)]
+        ts2_arr = ts2_arr[:, np.abs(lag) :]
     elif lag < 0:
-        ts1_arr = ts1_arr[:, np.abs(lag):]
-        ts2_arr = ts2_arr[:, :-np.abs(lag)]
+        ts1_arr = ts1_arr[:, np.abs(lag) :]
+        ts2_arr = ts2_arr[:, : -np.abs(lag)]
 
     return ts1_arr, ts2_arr
 
 
-def lead_lag_corr(ts1, ts2,
-                  maxlags=20,
-                  corr_method='spearman',
-                  cutoff=1,
-                  cutoff_ts=1):
+def lead_lag_corr(ts1, ts2, maxlags=20, corr_method="spearman", cutoff=1, cutoff_ts=1):
     reload(gut)
     reload(flt)
     ts1, ts2 = equalize_time_points(ts1, ts2)
 
     Nx = len(ts1)
     if Nx != len(ts2):
-        raise ValueError('ts1 and ts2 must be equal length')
+        raise ValueError("ts1 and ts2 must be equal length")
     nts1 = sut.standardize(ts1)
     nts2 = sut.standardize(ts2)
 
@@ -2433,11 +2436,11 @@ def lead_lag_corr(ts1, ts2,
     corr_range = []
     p_val_arr = []
 
-    if corr_method == 'spearman':
+    if corr_method == "spearman":
         corr_func = st.stats.spearmanr
-    elif corr_method == 'pearson':
+    elif corr_method == "pearson":
         corr_func = st.stats.pearsonr
-    tau_arr = np.arange(-maxlags, maxlags+1, 1)
+    tau_arr = np.arange(-maxlags, maxlags + 1, 1)
     for lag in tau_arr:
         ts1_lag, ts2_lag = get_lagged_ts(ts1=nts1, ts2=nts2, lag=lag)
         corr, p_val = corr_func(ts1_lag, ts2_lag)
@@ -2450,18 +2453,19 @@ def lead_lag_corr(ts1, ts2,
 
     # abs_max_dict = gut.find_local_max_xy(data=np.abs(corr_range), x=tau_arr)
 
-    ll_dict = {'corr': corr_range,
-               'p_val': np.array(p_val_arr),
-               'tau': tau_arr,
-               'tau_max': min_max_dict['x_max'],
-               'max': min_max_dict['max'],
-               'all_max': min_max_dict['local_maxima'],
-               'all_tau_max': min_max_dict['x_local_max'],
-               'tau_min': min_max_dict['x_min'],
-               'min': min_max_dict['min'],
-               'all_min': min_max_dict['local_minima'],
-               'all_tau_min': min_max_dict['x_local_min']
-               }
+    ll_dict = {
+        "corr": corr_range,
+        "p_val": np.array(p_val_arr),
+        "tau": tau_arr,
+        "tau_max": min_max_dict["x_max"],
+        "max": min_max_dict["max"],
+        "all_max": min_max_dict["local_maxima"],
+        "all_tau_max": min_max_dict["x_local_max"],
+        "tau_min": min_max_dict["x_min"],
+        "min": min_max_dict["min"],
+        "all_min": min_max_dict["local_minima"],
+        "all_tau_min": min_max_dict["x_local_min"],
+    }
 
     return ll_dict
 
@@ -2475,15 +2479,12 @@ def find_idx_tp_in_array(times, tps):
     return np.array(idx_list).flatten()
 
 
-def create_xr_tp(tp, name='time'):
+def create_xr_tp(tp, name="time"):
     return create_xr_ts(data=[tp], times=[tp], name=name)[0]
 
 
-def create_xr_ts(data, times, name='time'):
-    return xr.DataArray(data=data,
-                        dims=[name],
-                        coords={f"{name}": times}
-                        )
+def create_xr_ts(data, times, name="time"):
+    return xr.DataArray(data=data, dims=[name], coords={f"{name}": times})
 
 
 def create_zero_ts(times):
@@ -2495,7 +2496,7 @@ def set_tps_val(ts, tps, val, replace=True):
 
     for x in tps.data:
         if x not in times_ts:
-            gut.myprint(f'WARNING! tp not in ds: {x}')
+            gut.myprint(f"WARNING! tp not in ds: {x}")
     if replace:
         ts.loc[dict(time=tps)] = val
     else:
@@ -2507,10 +2508,7 @@ def get_time_derivative(ts, dx=1):
     dtdx = np.gradient(ts.data, dx)
 
     return gut.create_xr_ds(
-        data=dtdx,
-        dims=ts.dims,
-        coords=ts.coords,
-        name=f'{ts.name}/dt'
+        data=dtdx, dims=ts.dims, coords=ts.coords, name=f"{ts.name}/dt"
     )
 
 
@@ -2528,21 +2526,25 @@ def select_time_snippets(ds, time_snippets):
     ds_lst = []
     for time_range in time_snippets:
         # ds_lst.append(ds.sel(time=slice(time_range[0], time_range[1])))
-        ds_lst.append(get_time_range_data(
-            ds=ds, time_range=time_range, verbose=False))
+        ds_lst.append(get_time_range_data(ds=ds, time_range=time_range, verbose=False))
 
-    ds_snip = xr.concat(ds_lst, dim='time')
+    ds_snip = xr.concat(ds_lst, dim="time")
 
     return ds_snip
 
 
 def convert_datetime64_to_datetime(usert: np.datetime64) -> datetime.datetime:
-    t = np.datetime64(usert, 'us').astype(datetime.datetime)
+    t = np.datetime64(usert, "us").astype(datetime.datetime)
     return t
 
 
-def fill_time_series_val(ts: xr.DataArray, start_month: str = 'Jan', end_month: str = 'Dec',
-                         freq: str = 'D', fill_value: float = 0) -> xr.DataArray:
+def fill_time_series_val(
+    ts: xr.DataArray,
+    start_month: str = "Jan",
+    end_month: str = "Dec",
+    freq: str = "D",
+    fill_value: float = 0,
+) -> xr.DataArray:
     """
     Adds zeros to a time series in an xarray dataarray object.
 
@@ -2578,14 +2580,14 @@ def fill_time_series_val(ts: xr.DataArray, start_month: str = 'Jan', end_month: 
     sm = month2str(start_month)
     em = month2str(end_month)
 
-    sdate = str2datetime(f'{sy}-{sm}-01')
-    edate = str2datetime(f'{ey}-{em}-31')
+    sdate = str2datetime(f"{sy}-{sm}-01")
+    edate = str2datetime(f"{ey}-{em}-31")
     all_dates = get_dates_of_time_range([sdate, edate], freq=freq)
     padded_ts = ts.reindex(time=all_dates, fill_value=fill_value)
 
-    padded_ts = get_month_range_data(dataset=padded_ts,
-                                     start_month=start_month,
-                                     end_month=end_month)
+    padded_ts = get_month_range_data(
+        dataset=padded_ts, start_month=start_month, end_month=end_month
+    )
 
     return padded_ts
 
@@ -2614,10 +2616,12 @@ def get_values_by_year(dataarray, years):
     return data_selected
 
 
-def count_time_points(time_points,
-                      freq='Y',
-                      start_year=None,
-                      end_year=None,):
+def count_time_points(
+    time_points,
+    freq="Y",
+    start_year=None,
+    end_year=None,
+):
     """
     Returns a time series that gives per year (or per month in the year) the number of
     time points.
@@ -2641,72 +2645,72 @@ def count_time_points(time_points,
 
     # Get start and end time points
     if start_year is not None and end_year is not None:
-        start_time = str2datetime(f'{start_year}-01-01')
-        end_time = str2datetime(f'{end_year}-12-31')
+        start_time = str2datetime(f"{start_year}-01-01")
+        end_time = str2datetime(f"{end_year}-12-31")
     else:
         start_time, end_time = get_start_end_date(data=time_points)
 
     # Compute the number of years or months between start and end time points
-    if freq == 'Y':
+    if freq == "Y":
         time_range = pd.date_range(
-            start=start_time.values, end=end_time.values, freq='YS')
-    elif freq == 'M':
+            start=start_time.values, end=end_time.values, freq="YS"
+        )
+    elif freq == "M":
         time_range = pd.date_range(
-            start=start_time.values, end=end_time.values, freq='MS')
+            start=start_time.values, end=end_time.values, freq="MS"
+        )
     else:
         raise ValueError(
-            f"Invalid frequency: {freq}. Valid options are 'Y' (per year) and 'M' (per month in the year).")
+            f"Invalid frequency: {freq}. Valid options are 'Y' (per year) and 'M' (per month in the year)."
+        )
 
     # Count the number of time points per year or month
     counts = []
     for t in time_range:
-        if freq == 'Y':
-            count = np.count_nonzero(
-                (time_points.time.dt.year == t.year).values)
+        if freq == "Y":
+            count = np.count_nonzero((time_points.time.dt.year == t.year).values)
         else:
-            count = np.count_nonzero((time_points.time.dt.year == t.year) & (
-                time_points.time.dt.month == t.month).values)
+            count = np.count_nonzero(
+                (time_points.time.dt.year == t.year)
+                & (time_points.time.dt.month == t.month).values
+            )
         counts.append(count)
 
     # Create output xarray DataArray
-    output = xr.DataArray(counts, dims=('time',), coords={'time': time_range})
+    output = xr.DataArray(counts, dims=("time",), coords={"time": time_range})
     return output
 
 
 def sort_time_points_by_year(tps, val=None, q=None):
 
-    yearly_tps = count_time_points(time_points=tps, freq='Y')
+    yearly_tps = count_time_points(time_points=tps, freq="Y")
 
-    separate_year_arr = sut.get_values_above_val(
-        dataarray=yearly_tps, val=val, q=q)
-    a_ys = separate_year_arr['above'].time.dt.year
-    b_ys = separate_year_arr['below'].time.dt.year
+    separate_year_arr = sut.get_values_above_val(dataarray=yearly_tps, val=val, q=q)
+    a_ys = separate_year_arr["above"].time.dt.year
+    b_ys = separate_year_arr["below"].time.dt.year
 
     a_tps = get_values_by_year(tps, a_ys)
     b_tps = get_values_by_year(tps, b_ys)
 
-    separate_arr = dict(
-        above=a_tps,
-        below=b_tps
-    )
+    separate_arr = dict(above=a_tps, below=b_tps)
     return separate_arr
 
 
-def get_time_count_number(tps, counter='week'):
+def get_time_count_number(tps, counter="week"):
     assert_has_time_dimension(tps)
     times = tps.time
-    if counter == 'year':
+    if counter == "year":
         counts = times.dt.isocalendar().year
-    elif counter == 'month':
+    elif counter == "month":
         counts = times.dt.month
-    elif counter == 'week':
+    elif counter == "week":
         counts = times.dt.isocalendar().week
-    elif counter == 'day':
+    elif counter == "day":
         counts = times.dt.day
-    elif counter == 'hour':
+    elif counter == "hour":
         counts = times.dt.hour
     else:
-        raise ValueError(f'The counter {counter} does not exist!')
+        raise ValueError(f"The counter {counter} does not exist!")
     return counts
 
 
@@ -2732,11 +2736,11 @@ def get_week_dates(weeks):
     start_date = datetime.datetime(year, 1, 1)
     week_dates = []
     for week in weeks:
-        week_start = start_date + datetime.timedelta(days=(week-1)*7)
+        week_start = start_date + datetime.timedelta(days=(week - 1) * 7)
         day_of_month = week_start.day
         month_num = week_start.month
         month_name = get_month_name(month_number=month_num)
-        week_dates.append(f'{day_of_month}\n{month_name}')
+        week_dates.append(f"{day_of_month}\n{month_name}")
     return week_dates
 
 
@@ -2756,10 +2760,10 @@ def daily_max(da):
         values are included and NaNs at the end are excluded.
     """
     # Resample the data to daily frequency, taking the maximum value for each day
-    da_daily = da.resample(time='1D').max(keep_attrs=True)
+    da_daily = da.resample(time="1D").max(keep_attrs=True)
 
     # Exclude NaNs at the end
-    da_daily = da_daily.dropna(dim='time', how='all')
+    da_daily = da_daily.dropna(dim="time", how="all")
 
     return da_daily
 
@@ -2780,7 +2784,7 @@ def parse_AR_date_string(date_string):
         A numpy.datetime64 object representing the date and time in the input string.
 
     """
-    date, _ = date_string.split('_')  # discard the '_x' part
+    date, _ = date_string.split("_")  # discard the '_x' part
     return np.datetime64(date)
 
 
@@ -2804,7 +2808,7 @@ def convert_AR_xarray_to_timepoints(da):
     dates = np.array([parse_AR_date_string(ds) for ds in da.values])
 
     # Create an xarray dataarray of time points
-    time_coords = xr.DataArray(dates, dims='time', coords={'time': dates})
+    time_coords = xr.DataArray(dates, dims="time", coords={"time": dates})
     return time_coords
 
 
@@ -2841,7 +2845,7 @@ def check_AR_string_format(s):
     return bool(re.match(pattern, s))
 
 
-def filter_nan_values(dataarray, dims=['lon', 'lat'], th=1.):
+def filter_nan_values(dataarray, dims=["lon", "lat"], th=1.0):
     """
     Takes an xarray DataArray with dimensions (time, lon, lat) and removes time points
     where the number of NaN values exceeds th.
@@ -2860,7 +2864,8 @@ def filter_nan_values(dataarray, dims=['lon', 'lat'], th=1.):
 
     rem_frac = 100 - np.count_nonzero(time_filter) / len(time_filter) * 100
     gut.myprint(
-        f'Remove {rem_frac:.1f}% of all time points with less than {th} non-nan values!')
+        f"Remove {rem_frac:.1f}% of all time points with less than {th} non-nan values!"
+    )
     # Filter the time dimension using boolean indexing
     filtered_dataarray = dataarray.isel(time=time_filter)
 
@@ -2914,11 +2919,10 @@ def equalize_time_points(ts1, ts2, verbose=True):
         time2 = ts2.time.values
         common_times = np.intersect1d(time1, time2)
         if len(common_times) == 0:
-            gut.myprint(f'No common time points between both datasets!')
+            gut.myprint(f"No common time points between both datasets!")
             return [], []
         else:
-            gut.myprint('Equalize time points of both datasets!',
-                        verbose=verbose)
+            gut.myprint("Equalize time points of both datasets!", verbose=verbose)
             ts1 = get_sel_tps_ds(ts1, tps=ts2.time)
             ts2 = get_sel_tps_ds(ts2, tps=ts1.time)
 
@@ -2981,8 +2985,7 @@ def select_random_timepoints(dataarray, sample_size=1, seed=None):
     time_vals = dataarray.time.values
     if seed is not None:
         np.random.seed(seed)
-    random_sample = np.random.choice(
-        time_vals, size=sample_size, replace=False)
+    random_sample = np.random.choice(time_vals, size=sample_size, replace=False)
     random_sample.sort()
     return dataarray.sel(time=random_sample)
 
@@ -3013,9 +3016,6 @@ def sliding_window_mean(da, length):
         result[t] = window_data.mean()
 
     # Create a new DataArray with the computed means
-    sliding_mean = xr.DataArray(result,
-                                coords=da.coords,
-                                dims=da.dims,
-                                attrs=da.attrs)
+    sliding_mean = xr.DataArray(result, coords=da.coords, dims=da.dims, attrs=da.attrs)
 
     return sliding_mean
