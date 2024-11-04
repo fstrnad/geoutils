@@ -1,0 +1,21 @@
+- jupyter
+- netcdf4
+- pandas
+- ipython
+- xarray
+- numpy
+- tqdm
+- multiprocess
+- metpy
+- pip
+- scipy
+- joblib
+- cartopy=0.22.0
+- matplotlib  #=3.8.2
+- palettable
+- ipywidgets
+- scikit-learn
+# - windspharm
+- statsmodels
+- seaborn
+- dask
