@@ -32,7 +32,8 @@ def bandpass(x, cutoff_low, cutoff_high, order=None, dim="time"):
         dims = gut.get_dims(x)
         if "time" in dims:
             x = x.assign_coords(time=np.arange(len(x.time)))
-    x_filt = dsp_extra.bandpass(x, f_low=cutoff_low, f_high=cutoff_high, dim=dim)
+    x_filt = dsp_extra.bandpass(
+        x, f_low=cutoff_low, f_high=cutoff_high, dim=dim)
     x_filt = x_filt.transpose(*dims)
     if isinstance(x, xr.DataArray):
         x_filt = xr.DataArray(data=x_filt.data, coords=coords, dims=dims)
@@ -56,7 +57,8 @@ def apply_cheby_filter(ts, cutoff=4, order=8, fs=1, rp=0.05):
     fcutoff = 0.95 * 1.0 / cutoff
     ts_lp = cheby_lowpass_filter(ts, fcutoff, fs, order, rp)
     if type(ts) == xr.DataArray:
-        ts_lp = xr.DataArray(data=ts_lp, dims=ts.dims, coords=ts.coords, name=ts.name)
+        ts_lp = xr.DataArray(data=ts_lp, dims=ts.dims,
+                             coords=ts.coords, name=ts.name)
 
     return ts_lp
 
@@ -123,7 +125,8 @@ def compute_lead_lag_corr(ts1, ts2, lag=0, corr_method="spearman"):
     else:
         nts2_shift = ts2
     if corr_method == "spearman":
-        corr, p_val = st.spearmanr(ts1, nts2_shift, axis=0, nan_policy="propagate")
+        corr, p_val = st.spearmanr(
+            ts1, nts2_shift, axis=0, nan_policy="propagate")
     elif corr_method == "pearson":
         corr = np.corrcoef(ts1.T, nts2_shift)
 
