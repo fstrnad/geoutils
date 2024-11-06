@@ -10,7 +10,7 @@ metpy
 pip
 scipy
 joblib
-cartopy=0.22.0
+cartopy==0.22.0
 matplotlib  #=3.8.2
 palettable
 ipywidgets
@@ -19,3 +19,7 @@ scikit-learn
 statsmodels
 seaborn
 dask
+cmocean
+cmweather
+cdo
+python-cdo

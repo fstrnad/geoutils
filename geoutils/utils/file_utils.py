@@ -16,8 +16,9 @@ reload(gut)
 # ##################### Assert functions #####################
 
 def assert_folder_exists(folder_path):
+    folder_path = os.path.dirname(folder_path)
     if not os.path.exists(folder_path):
-        raise ValueError("Folder path does not exist.")
+        raise ValueError(f"Folder {folder_path} does not exist.")
 
 
 def assert_file_exists(filepath):
@@ -320,22 +321,61 @@ def get_filename_path(file_path):
     return os.path.basename(file_path)
 
 
-def sort_filenames_by_number(file_list):
-    def extract_number(filename):
-        # Using regular expression to extract the leading number from the filename
-        match = re.match(r'^(\d+)', filename)
-        if match:
-            return int(match.group(1))
-        # Assign a very large number for filenames without numbers
-        return float('inf')
-
-    # Sort the file paths based on the extracted numbers from filenames
-    sorted_paths = sorted(
-        file_list, key=lambda path: extract_number(os.path.basename(path)))
-    return sorted_paths
+def extract_numbers(s):
+    """Extract all numbers from a string and return as a list of integers."""
+    return [int(num) for num in re.findall(r'\d+', s)]
 
 
-def get_files_in_folder(folder_path: str, verbose: bool = True) -> list:
+def find_common_numbers(arr):
+    """Find numbers that are common across all strings."""
+    all_numbers = [set(extract_numbers(s)) for s in arr if extract_numbers(s)]
+    if not all_numbers:
+        return set()  # No numbers at all in any string
+    common_numbers = set.intersection(*all_numbers)
+    return common_numbers
+
+
+def sort_filenames_by_number(arr):
+    # Get the common numbers across all strings with numbers
+    common_numbers = find_common_numbers(arr)
+
+    # Check if each string has at least one number
+    has_number = any(extract_numbers(s) for s in arr)
+    if not has_number:
+        return arr  # No sorting if no numbers are found in any string
+
+    # Check if all numbers are the same across strings
+    if len(common_numbers) == 1 or not common_numbers:
+        return arr  # Do not sort if all numbers are identical or none are common
+
+    # Define the sorting key function
+    def sort_key(s):
+        numbers = extract_numbers(s)
+        unique_numbers = [num for num in numbers if num not in common_numbers]
+        # Sort by unique number if exists; otherwise, by first common number
+        return unique_numbers[0] if unique_numbers else numbers[0]
+
+    # Sort the array with our custom key
+    return sorted(arr, key=sort_key)
+
+# def sort_filenames_by_number(file_list):
+#     def extract_number(filename):
+#         # Using regular expression to extract the leading number from the filename
+#         match = re.match(r'^(\d+)', filename)
+#         if match:
+#             return int(match.group(1))
+#         # Assign a very large number for filenames without numbers
+#         return float('inf')
+
+#     # Sort the file paths based on the extracted numbers from filenames
+#     sorted_paths = sorted(
+#         file_list, key=lambda path: extract_number(os.path.basename(path)))
+#     return sorted_paths
+
+
+def get_files_in_folder(folder_path: str,
+                        verbose: bool = True,
+                        sort=True) -> list:
     """
     Returns a list of all files in a given folder.
 
@@ -357,6 +397,8 @@ def get_files_in_folder(folder_path: str, verbose: bool = True) -> list:
     # Check that all files in the file list actually exist
     for filepath in file_list:
         assert_file_exists(filepath=filepath)
+    if sort:
+        file_list = sort_filenames_by_number(file_list)
 
     gut.myprint(f'Found {len(file_list)} files!',
                 verbose=verbose)

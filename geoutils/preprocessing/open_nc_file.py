@@ -9,6 +9,7 @@ import xarray as xr
 reload(sput)
 reload(gut)
 
+
 def open_nc_file(
         nc_files,
         plevels=None,
@@ -93,7 +94,7 @@ def my_open_mfdataset(nc_files, decode_times=True):
                                                 decode_times=decode_times,
                                                 )
                               )
-        ds = xr.merge(data_array, join='exact')
+        ds = xr.merge(data_array)
     return ds
 
 
