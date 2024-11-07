@@ -79,6 +79,10 @@ def is_datetime360(time):
     return isinstance(time, cftime._cftime.Datetime360Day)
 
 
+def are_arrays_equal(arr1, arr2):
+    return Counter(arr1) == Counter(arr2)
+
+
 def compare_lists(*lists):
     """Checks if the lists are equal.
 
@@ -757,7 +761,8 @@ def get_job_array_ids(def_id=0):
         num_jobs = int(os.environ['SLURM_ARRAY_TASK_COUNT'])
         num_jobs = max_job_id
         print(
-            f"job_id: {job_id}/{num_jobs}, Min Job ID: {min_job_id}, Max Job ID: {max_job_id}",
+            f"job_id: {
+                job_id}/{num_jobs}, Min Job ID: {min_job_id}, Max Job ID: {max_job_id}",
             flush=True)
 
     except KeyError:

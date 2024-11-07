@@ -240,6 +240,41 @@ def create_random_filename(folder_path='./', k=8,
             return file_path
 
 
+def get_human_readable_size(size_in_bytes):
+    # List of units in order: bytes, KB, MB, GB, TB, etc.
+    units = ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']
+
+    if size_in_bytes == 0:
+        return "0 bytes"
+
+    # Find the appropriate unit
+    unit_index = 0
+    while size_in_bytes >= 1024 and unit_index < len(units) - 1:
+        size_in_bytes /= 1024.0
+        unit_index += 1
+
+    # Format the result to two decimal places
+    return f"{size_in_bytes:.2f} {units[unit_index]}"
+
+
+def get_folder_size(folder_path):
+    total_size = 0
+
+    # Walk through all the files and subdirectories in the given folder
+    for dirpath, dirnames, filenames in os.walk(folder_path):
+        for filename in filenames:
+            # Get the full path to each file
+            file_path = os.path.join(dirpath, filename)
+            # Check the size of each file and add it to the total
+            total_size += os.path.getsize(file_path)
+
+    total_size = get_human_readable_size(total_size)
+
+    gut.myprint(f"Total size of '{folder_path}': {total_size} bytes")
+
+    return total_size
+
+
 def print_file_location_and_size(filepath, verbose=True):
     """
     Prints the location and memory size of a given file.
@@ -250,23 +285,10 @@ def print_file_location_and_size(filepath, verbose=True):
     Returns:
         None
     """
-    assert_file_exists(filepath)
-
-    file_size = os.path.getsize(filepath)
-    size_unit = "bytes"
-    if file_size > 1024:
-        file_size /= 1024
-        size_unit = "KB"
-    if file_size > 1024:
-        file_size /= 1024
-        size_unit = "MB"
-    if file_size > 1024:
-        file_size /= 1024
-        size_unit = "GB"
-
-    gut.myprint(
-        f"File location: {os.path.abspath(filepath)}", verbose=verbose)
-    gut.myprint(f"File size: {file_size:.2f} {size_unit}", verbose=verbose)
+    if isinstance(filepath, str):
+        filepath = [filepath]
+    for file in filepath:
+        get_folder_size(file)
 
     return None
 

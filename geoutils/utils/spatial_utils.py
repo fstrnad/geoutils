@@ -330,7 +330,8 @@ def interp2gaus(dataarray, grid_step=2.5):
 
 def cut_map(ds, lon_range=[-180, 180],
             lat_range=[-90, 90],
-            dateline=False, ):
+            dateline=False,
+            verbose=False):
     """
     Works only for rectangular data!
     Cut an area in the map. Use always smallest range as default.
@@ -354,6 +355,10 @@ def cut_map(ds, lon_range=[-180, 180],
         lon_range = [-180, 180]
     if lat_range is None:
         lat_range = [-90, 90]
+
+    gut.myprint(f'Cut map to lon: {lon_range} lat: {lat_range}',
+                verbose=verbose)
+
     if dateline:
         # To account for areas that lay at the border of -180 to 180
         # ds_cut = ds.sel(
@@ -1103,6 +1108,7 @@ def average_num_eres(data):
 
 
 valid_dims = ['time', 'lat', 'lon', 'plevel', 'lev',
+              'level', 'hour', 'dayofyear',
               'dimx_lon', 'dimy_lon', 'dimz_lon', 'x',
               'Year', 'year', 'month', 'day', 'points']
 
@@ -1201,8 +1207,8 @@ def check_dimensions(ds, ts_days=True,
                      lon_2_180=True,
                      keep_time=False,
                      freq='D',
-                     check_clim_dims=False,
                      transpose_dims=False,
+                     hours_to_zero=False,
                      verbose=True):
     """
     Checks whether the dimensions are the correct ones for xarray!
@@ -1240,46 +1246,27 @@ def check_dimensions(ds, ts_days=True,
     dims = list(ds.dims)
     numdims = len(dims)
 
-    if not 'points' in dims:
-        if numdims == 4:
-            clim_dims = ['time', 'lev', 'lat', 'lon']
-        elif numdims == 3:
-            clim_dims = ['time', 'lat', 'lon']
-        elif numdims == 2:
-            if 'time' in dims:
-                clim_dims = ['time', 'x']
-                sort = False
-            else:
-                clim_dims = ['lat', 'lon']
-        elif numdims == 1:
-            clim_dims = ['time']
-        else:
-            raise ValueError(f'Too many dimensions: {numdims}!')
-        if check_clim_dims:
-            for dim in clim_dims:
-                if dim not in dims:
-                    raise ValueError(
-                        f"The dimension {dims} not consistent with required dims {clim_dims}!")
-
     gut.myprint(
         f'Checked labelling according to netcdf conventions!', verbose=verbose)
     dims = gut.get_dims(ds)
     if transpose_dims:
         gut.myprint(f'Transpose dimensions {dims}', verbose=verbose)
-        if numdims == 4:
+        dims4 = ['lev', 'time', 'lat', 'lon']
+        dims3 = ['time', 'lat', 'lon']
+        dims2 = ['lat', 'lon']
+        if numdims == 4 and gut.are_arrays_equal(dims, dims4):
             # Actually change location in memory if necessary!
-            ds = ds.transpose("lev", "time", "lat", "lon").compute()
+            ds = ds.transpose(*dims4).compute()
             gut.myprint('object transposed to lev-time-lat-lon!',
                         verbose=verbose)
-
-        elif numdims == 3:
+        elif numdims == 3 and gut.are_arrays_equal(dims, dims3):
             # Actually change location in memory if necessary!
-            ds = ds.transpose("time", "lat", "lon").compute()
+            ds = ds.transpose(*dims3).compute()
             gut.myprint('3d object transposed to time-lat-lon!',
                         verbose=verbose)
-        elif numdims == 2:
+        elif numdims == 2 and gut.are_arrays_equal(dims, dims2):
             if 'lon' in dims:
-                ds = ds.transpose('lat', 'lon').compute()
+                ds = ds.transpose(*dims2).compute()
             gut.myprint('2d oject transposed to lat-lon!', verbose=verbose)
         elif numdims == 1:
             gut.myprint('1d oject only!', verbose=verbose)
@@ -1307,9 +1294,11 @@ def check_dimensions(ds, ts_days=True,
             if gut.is_datetime360(time=ds.time.data[0]) or keep_time:
                 ds = ds
             else:
+                # Sets to equal hours. If days sets hours to 0
                 ds = tu.get_netcdf_encoding(ds=ds,
                                             calendar='gregorian',
-                                            verbose=verbose
+                                            verbose=verbose,
+                                            hours_to_zero=hours_to_zero,
                                             )
         else:
             time_ds = ds.time

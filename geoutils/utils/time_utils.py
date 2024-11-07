@@ -210,7 +210,10 @@ def get_month_name(month_number):
 
 
 def get_netcdf_encoding(
-    ds, calendar="gregorian", units="hours since 1900-01-01T00:00", verbose=True
+    ds, calendar="gregorian",
+    units="hours since 1900-01-01T00:00",
+    verbose=True,
+    hours_to_zero=True,
 ):
 
     time = ds.time
@@ -222,9 +225,9 @@ def get_netcdf_encoding(
     ds["time"] = time.data.astype("datetime64[ns]")
     freq = get_frequency(ds)
     if freq != "hour":
-        gut.myprint("set hours to 0", verbose=verbose)
+        gut.myprint("set hours to 0", verbose=hours_to_zero)
         # This avoids problems with time encoding at 0h and 11h!
-        ds = set_hours_to_zero(x=ds)
+        ds = set_hours_to_zero(x=ds) if hours_to_zero else ds
 
     # ds = ds.transpose('time', 'lat', 'lon
     ds.time.attrs.pop("calendar", None)
@@ -1149,7 +1152,9 @@ def get_frequency(x):
         or pd.Timedelta(days=31) == most_common_diff
     ):
         return "month"
-    elif pd.Timedelta(hours=1) == most_common_diff:
+    elif pd.Timedelta(hours=1) >= most_common_diff and pd.Timedelta(hours=24) < most_common_diff:
+        return "hour"
+    elif pd.Timedelta(hours=6) == most_common_diff:
         return "hour"
     else:
         return "none"

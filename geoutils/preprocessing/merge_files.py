@@ -9,7 +9,7 @@ reload(fut)
 reload(gut)
 
 
-def merge_files(input_files, output_file, open_ds=True):
+def merge_files(input_files, output_file, open_ds=True, cdo=False):
     """Merge multiple files into one file.
 
     Args:
@@ -22,14 +22,18 @@ def merge_files(input_files, output_file, open_ds=True):
 
     if isinstance(input_files, np.ndarray):
         input_files = input_files.tolist()
-
-    cdo = Cdo()
-    cdo.mergetime(options='-b F32 -f nc',
-                  input=input_files,
-                  output=output_file)
-    if open_ds:
-        ds = onf.open_nc_file(output_file)
-        return ds
+    if cdo:
+        cdo = Cdo()
+        cdo.mergetime(options='-b F32 -f nc',
+                      input=input_files,
+                      output=output_file)
+        if open_ds:
+            ds = onf.open_nc_file(output_file)
+            return ds
+    else:
+        ds = onf.open_nc_file(input_files)
+        fut.save_ds(ds, output_file)
+        return output_file if open_ds else ds
     return output_file
 
 

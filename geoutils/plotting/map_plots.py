@@ -361,7 +361,7 @@ def plot_map(dmap: xr.DataArray,
              central_longitude: int = None,
              vmin: float = None,
              vmax: float = None,
-             cmap: str = 'coolwarm',
+             cmap: str = 'viridis',
              projection: str = None,
              label: str = None,
              title: str = None,
@@ -396,6 +396,9 @@ def plot_map(dmap: xr.DataArray,
     reload(put)
     reload(sput)
     plt.rcParams["pcolor.shading"] = "nearest"  # For pcolormesh
+    if label is None:
+        unset_label = kwargs.pop('unset_label', False)
+        label = dmap.name if not unset_label else None
 
     hatch_type = kwargs.pop('hatch_type', '..')
     inverse_mask = kwargs.pop('inverse_mask', False)

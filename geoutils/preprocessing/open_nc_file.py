@@ -1,6 +1,7 @@
 import numpy as np
 import time
 import geoutils.utils.general_utils as gut
+import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
 from datetime import datetime
@@ -8,6 +9,8 @@ from importlib import reload
 import xarray as xr
 reload(sput)
 reload(gut)
+reload(fut)
+reload(tu)
 
 
 def open_nc_file(
@@ -16,9 +19,12 @@ def open_nc_file(
         decode_times=True,
         verbose=True,
         var_name=None,
+        lat_range=None,
+        lon_range=None,
+        hours_to_zero=False,
         **kwargs,):
     reload(gut)
-    gut.myprint("Start Loading data...", verbose=verbose)
+    fut.print_file_location_and_size(nc_files)
 
     ds = open_ds(
         nc_files=nc_files,
@@ -26,14 +32,22 @@ def open_nc_file(
         decode_times=decode_times,
         **kwargs)
 
-    if var_name is not None:
-        ds = ds[var_name]
     ds, dims = check_dimensions(
         ds, ts_days=decode_times, verbose=verbose,
-        **kwargs)
+        hours_to_zero=hours_to_zero, **kwargs)
     dims = gut.get_dims(ds=ds)
     ds = gut.rename_var_era5(ds=ds, verbose=verbose, **kwargs)
-    gut.myprint(f"End processing data! Dimensions: {dims}", verbose=verbose)
+    gut.myprint(f"End processing data! Dimensions: {
+                dims}", verbose=verbose)
+
+    if lat_range is not None or lon_range is not None:
+        ds = sput.cut_map(ds=ds,
+                          lat_range=lat_range,
+                          lon_range=lon_range,
+                          verbose=verbose)
+
+    if var_name is not None:
+        ds = ds[var_name]
 
     return ds
 
@@ -78,7 +92,7 @@ def open_plevels(nc_files, decode_times, plevels, plevel_name):
     return ds
 
 
-def my_open_mfdataset(nc_files, decode_times=True):
+def my_open_mfdataset(nc_files, decode_times=True, mfdataset=True):
     if isinstance(nc_files, str):
         nc_files = [nc_files]
     if len(nc_files) == 1:
@@ -87,14 +101,19 @@ def my_open_mfdataset(nc_files, decode_times=True):
                              decode_times=decode_times,
                              )
     else:
-        data_array = []
-        for file in nc_files:
-            print(f'Open file: {file}')
-            data_array.append(xr.open_dataarray(file,
-                                                decode_times=decode_times,
-                                                )
-                              )
-        ds = xr.merge(data_array)
+        if mfdataset:
+            ds = xr.open_mfdataset(nc_files,
+                                   decode_times=decode_times,
+                                   )
+        else:
+            data_array = []
+            for file in nc_files:
+                print(f'Open file: {file}')
+                data_array.append(xr.open_dataarray(file,
+                                                    decode_times=decode_times,
+                                                    )
+                                  )
+            ds = xr.merge(data_array)
     return ds
 
 
@@ -159,10 +178,10 @@ def check_dimensions(ds, verbose=True, **kwargs):
     reload(sput)
     sort = kwargs.pop('sort', True)
     lon360 = kwargs.pop('lon360', False)
-    ts_days = kwargs.pop('ts_days', True)
+    ts_days = kwargs.pop('ts_days', False)
     keep_time = kwargs.pop('keep_time', False)
     freq = kwargs.pop('freq', 'D')
-    transpose = kwargs.pop('transpose_dims', True)
+    transpose = kwargs.pop('transpose_dims', False)
     ds = sput.check_dimensions(ds=ds,
                                ts_days=ts_days,
                                lon360=lon360,

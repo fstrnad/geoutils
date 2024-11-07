@@ -21,5 +21,6 @@ seaborn
 dask
 cmocean
 cmweather
-cdo
-python-cdo
+zarr
+# cdo
+# python-cdo
