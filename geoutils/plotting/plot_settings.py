@@ -7,12 +7,15 @@ BIGGER_SIZE = 18
 MAXIMUM_SIZE = 22
 MAX_ZORDER = 100
 
+set_new_font = False
+
 plt.rcdefaults()
 
 # Choose 'serif', 'sans-serif', or 'monospace'
-plt.rcParams['font.family'] = 'Lato'
-plt.rcParams['font.serif'] = 'Ubuntu'
 plt.style.use('bmh')
+if set_new_font:
+    plt.rcParams['font.family'] = 'Lato'
+    plt.rcParams['font.serif'] = 'Ubuntu'
 plt.rcParams['axes.facecolor'] = 'white'
 plt.rc("font", size=SMALL_SIZE)  # controls default text sizes
 plt.rc("axes", titlesize=BIGGER_SIZE)  # fontsize of the axes title

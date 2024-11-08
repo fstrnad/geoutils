@@ -2,6 +2,7 @@
 *.pyc
 *.sh
 *.npy
+*.nc
 
 # Paths to ignore
 climnet.egg-info/
@@ -11,13 +12,8 @@ geoutils.egg-info/
 .vscode/
 .pytest_cache/
 
-climnet/link_bundles/
-climnet/null_model/
 plots/*
 outputs/*
-
-*.sh
-*.npy
 
 tutorials/test_files/
 /data/

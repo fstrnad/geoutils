@@ -7,7 +7,7 @@ from importlib import reload
 # %%
 reload(d5)
 
-d5.download_era5(variable='pr',
+d5.download_era5(variable='surface_net_solar_radiation',
                  starty=2023,
                  endy=2023,
                  start_month='Jun',

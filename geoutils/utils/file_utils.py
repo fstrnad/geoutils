@@ -55,7 +55,23 @@ def exist_files(filepath_arr, verbose=False):
     return True
 
 
-def exist_folder(filepath, verbose=True):
+def delete_path(filepath):
+    """Delete a file or directory, regardless of type."""
+    try:
+        if os.path.isfile(filepath):  # Check if it's a file
+            os.remove(filepath)  # Delete the file
+            print(f"File '{filepath}' has been deleted.")
+        elif os.path.isdir(filepath):  # Check if it's a directory
+            # Delete the directory and all its contents
+            shutil.rmtree(filepath)
+            print(f"Directory '{filepath}' has been deleted.")
+        else:
+            print(f"Path '{filepath}' does not exist.")
+    except Exception as e:
+        print(f"Error deleting '{filepath}': {e}")
+
+
+def exist_folder(filepath, verbose=False):
     """
     Checks if the folder exists for the given file path.
 
@@ -67,7 +83,7 @@ def exist_folder(filepath, verbose=True):
     """
     folder_path = os.path.dirname(filepath)
     if os.path.isdir(folder_path):
-        gut.myprint(f"File {filepath} exists!", verbose=verbose)
+        gut.myprint(f"Folder {filepath} exists!", verbose=verbose)
         return True
     else:
         return False
@@ -110,12 +126,10 @@ def save_ds(ds, filepath, unlimited_dim=None,
     if os.path.exists(filepath):
         gut.myprint(f"File {filepath} already exists!")
         if backup:
-            bak_file = f"{filepath}_backup"
-            os.rename(filepath, bak_file)
-            gut.myprint(f"Old file stored as {bak_file} as backup written!")
+            backup_file(filepath)
         else:
             gut.myprint(f"File {filepath} will be overwritten!")
-            os.remove(filepath)
+            delete_path(filepath)
     dirname = os.path.dirname(filepath)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
@@ -138,6 +152,25 @@ def save_ds(ds, filepath, unlimited_dim=None,
     gut.myprint(f"File {filepath} written!")
     print_file_location_and_size(filepath=filepath)
     return None
+
+
+def backup_file(filepath):
+    bak_file = f"{filepath}_backup"
+    os.rename(filepath, bak_file)
+    gut.myprint(f"Old file stored as {bak_file} as backup written!")
+
+
+def save_to_zarr(ds, filepath, mode=None, backup=False):
+    if exist_file(filepath):
+        if backup:
+            backup_file(filepath)
+        else:
+            gut.myprint(f"File {filepath} will be overwritten!")
+            delete_path(filepath)
+    if not exist_folder(filepath):
+        dirname = os.path.dirname(filepath)
+        os.makedirs(dirname)
+    ds.to_zarr(filepath, mode=mode)
 
 # ##################### Load functions #####################
 
@@ -270,8 +303,6 @@ def get_folder_size(folder_path):
 
     total_size = get_human_readable_size(total_size)
 
-    gut.myprint(f"Total size of '{folder_path}': {total_size} bytes")
-
     return total_size
 
 
@@ -288,7 +319,14 @@ def print_file_location_and_size(filepath, verbose=True):
     if isinstance(filepath, str):
         filepath = [filepath]
     for file in filepath:
-        get_folder_size(file)
+        if os.path.isfile(file):
+            # If it's a file, return the size in bytes
+            file_size = os.path.getsize(file)
+            total_size = get_human_readable_size(file_size)
+        else:
+            total_size = get_folder_size(file)
+
+        gut.myprint(f"Total size of '{file}':\n   {total_size} bytes")
 
     return None
 

@@ -1,3 +1,4 @@
+import re
 import cdsapi
 import sys
 import geoutils.utils.general_utils as gut
@@ -32,6 +33,36 @@ dict_era5 = {'t2m': '2m_temperature',
              'olr': 'top_net_thermal_radiation',
              'z': 'geopotential',
              }
+times_all = [
+    '00:00', '01:00', '02:00',
+    '03:00', '04:00', '05:00',
+    '06:00', '07:00', '08:00',
+    '09:00', '10:00', '11:00',
+    '12:00', '13:00', '14:00',
+    '15:00', '16:00', '17:00',
+    '18:00', '19:00', '20:00',
+    '21:00', '22:00', '23:00',
+]
+times3h = [
+    '00:00',
+    '03:00',
+    '06:00',
+    '09:00',
+    '12:00',
+    '15:00',
+    '18:00',
+    '21:00',
+]
+times6h = [
+    '00:00',
+    '06:00',
+    '12:00',
+    '18:00',
+]
+times12h = [
+    '00:00',
+    '12:00',
+]
 
 
 def rename_era5(variable):
@@ -45,7 +76,7 @@ def download_era5(variable, plevels=None,
                   starty=1959, endy=2022,
                   start_day=1, end_day=31,
                   start_month='Jan', end_month='Dec',
-                  start_hour=0, end_hour=23,
+                  times='1h',
                   filename=None,
                   folder='./',
                   daymean=False,
@@ -56,6 +87,17 @@ def download_era5(variable, plevels=None,
     Args:
         variable (str): Variable to be downloaded.
     """
+    if times == '1h':
+        times = times_all
+    elif times == '3h':
+        times = times3h
+    elif times == '6h':
+        times = times6h
+    elif times == '12h':
+        times = times12h
+    else:
+        gut.myprint(f"User-defined time resolution {times}")
+
     variable = rename_era5(variable)
     if plevels is not None:
         if plevels == 'all':
@@ -84,16 +126,7 @@ def download_era5(variable, plevels=None,
     months = tu.num2str_list(marray)
     days = np.arange(start_day, end_day+1, 1)
     sdays = tu.num2str_list(days)
-    times = [
-        '00:00', '01:00', '02:00',
-        '03:00', '04:00', '05:00',
-        '06:00', '07:00', '08:00',
-        '09:00', '10:00', '11:00',
-        '12:00', '13:00', '14:00',
-        '15:00', '16:00', '17:00',
-        '18:00', '19:00', '20:00',
-        '21:00', '22:00', '23:00',
-    ]
+
     gut.myprint(f"We use the following variables: {variable}")
     gut.myprint(f'Download pressure levels {plevels}...')
     gut.myprint(f"Download years {years}...")
@@ -110,65 +143,59 @@ def download_era5(variable, plevels=None,
             if filename is None:
                 if not spl:
                     folder += f'/multi_pressure_level/{variable}/{plevel}/'
-                    filename = f'{variable}_{year}_{plevel}_{months[0]}_{months[-1]}.nc'
-                    fname_daymean = f'{variable}_{year}_{plevel}_{months[0]}_{months[-1]}_daymean.nc'
+                    filename = f'{variable}_{year}_{
+                        plevel}_{months[0]}_{months[-1]}.nc'
+                    fname_daymean = f'{variable}_{year}_{plevel}_{
+                        months[0]}_{months[-1]}_daymean.nc'
                 else:
                     folder += f'/single_pressure_level/{variable}/'
                     filename = f'{variable}_{year}_{months[0]}_{months[-1]}.nc'
-                    fname_daymean = f'{variable}_{year}_{months[0]}_{months[-1]}_daymean.nc'
+                    fname_daymean = f'{variable}_{year}_{
+                        months[0]}_{months[-1]}_daymean.nc'
 
             if not os.path.exists(folder):
                 gut.myprint(f"Make Dir: {folder}")
                 os.makedirs(folder)
 
             filename = folder + filename
-            fname_daymean = folder + fname_daymean
             if os.path.exists(filename):
                 gut.myprint(f"File {filename} already exists!")
             else:
                 gut.myprint(f"Download file {filename}...")
                 if run is True:
-                    c = cdsapi.Client()
+                    request = {
+                        'product_type': ['reanalysis'],
+                        'data_format': 'netcdf',
+                        'download_format': 'unarchived',
+                        'variable': [variable],
+                        'year': [str(year)],
+                        'month': months,
+                        'day': sdays,
+                        'time': times,
+                    }
 
                     if not spl:
-                        c.retrieve(
-                            'reanalysis-era5-pressure-levels',
-                            {
-                                'product_type': 'reanalysis',
-                                'format': 'netcdf',
-                                'variable': [variable],
-                                'year': [str(year)],
-                                'pressure_level': plevel,
-                                'month': months,
-                                'day': sdays,
-                                'time': times,
-                            },
-                            filename)
+                        dataset = 'reanalysis-era5-pressure-levels'
+                        request['pressure_level'] = plevel,
                     else:
-                        c.retrieve(
-                            'reanalysis-era5-single-levels',
-                            {
-                                'product_type': 'reanalysis',
-                                'format': 'netcdf',
-                                'variable': [variable],
-                                'year': [str(year)],
-                                'month': months,
-                                'day': sdays,
-                                'time': times,
-                            },
-                            filename)
-                    del c
-            if run:
-                if os.path.exists(fname_daymean):
-                    print(f"File {fname_daymean} already exists!", flush=True)
-                else:
-                    cdo.daymean(input=filename, output=fname_daymean)
+                        dataset = 'reanalysis-era5-single-levels'
 
-            inFiles.append(fname_daymean)
-        if run:
+                    client = cdsapi.Client()
+                    client.retrieve(dataset, request, filename).download()
+
+            fname_daymean = folder + fname_daymean
             if daymean:
-                fname_daymean_yrange = folder + \
-                    f'{variable}_{plevel}_{starty}_{endy}.nc'
+                if os.path.exists(fname_daymean):
+                    print(
+                        f"File {fname_daymean} already exists!", flush=True)
+                else:
+                    if run:
+                        cdo.daymean(input=filename, output=fname_daymean)
+                        inFiles.append(fname_daymean)
+        if daymean:
+            if run:
+                fname_daymean_yrange = f'{
+                    folder}/{variable}_{plevel}_{starty}_{endy}.nc'
                 cdo.mergetime(options='-b F32 -f nc',
                               input=inFiles,
                               output=fname_daymean_yrange)

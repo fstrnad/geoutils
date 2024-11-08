@@ -21,6 +21,7 @@ def open_nc_file(
         var_name=None,
         lat_range=None,
         lon_range=None,
+        time_range=None,
         hours_to_zero=False,
         **kwargs,):
     reload(gut)
@@ -45,6 +46,9 @@ def open_nc_file(
                           lat_range=lat_range,
                           lon_range=lon_range,
                           verbose=verbose)
+    if time_range is not None:
+        ds = tu.get_time_range_data(
+            time_range=time_range, ds=ds, verbose=verbose)
 
     if var_name is not None:
         ds = ds[var_name]
