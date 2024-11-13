@@ -1,5 +1,6 @@
 import geoutils.utils.spatial_utils as sput
 import metpy.calc as metcalc
+import numpy as np
 from metpy.units import units
 from importlib import reload
 import xarray as xr
@@ -25,6 +26,13 @@ def parse_cf(ds):
         raise ValueError('ds must be an xarray.Dataset')
     return ds.metpy.parse_cf().squeeze()
 
+
+def compute_wind_speed(u, v, ws_name='windspeed'):
+    windspeed = np.sqrt(u ** 2 + v ** 2)
+    windspeed = windspeed.rename(ws_name)
+    gut.myprint(
+         f"Computed single components of wind dataset as {ws_name}.")
+    return windspeed
 
 def kelvin_to_degC(temperature):
     """Convert temperature to degC.

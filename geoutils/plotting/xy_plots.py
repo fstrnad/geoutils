@@ -167,9 +167,18 @@ def plot_xy(
                     y_ub_arr[idx] = sut.standardize(
                         y_ub_arr[idx]) if y_lb_arr[idx] is not None else None
 
-            lw = lw_arr[idx] if idx < len(lw_arr) else lw_arr[-1]
-            mk = mk_arr[idx] if idx < len(mk_arr) else mk_arr[-1]
-            ls = ls_arr[idx] if idx < len(ls_arr) else ls_arr[-1]
+            lw = kwargs.pop('lw', None)
+            if lw is None:
+                lw = lw_arr[idx] if idx < len(lw_arr) else lw_arr[-1]
+
+            mk = kwargs.pop('marker', None)
+            if mk is None:
+                mk = mk_arr[idx] if idx < len(mk_arr) else mk_arr[-1]
+
+            ls = kwargs.pop('ls', None)
+            if ls is None:
+                ls = ls_arr[idx] if idx < len(ls_arr) else ls_arr[-1]
+
             label = label_arr[idx] if idx < len(label_arr) else None
             if lcmap is None:
                 if color is None:

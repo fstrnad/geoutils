@@ -20,7 +20,8 @@ reload(pst)
 reload(gut)
 
 
-def estimate_distance(minimum_value, maximum_value, min_dist_val=5, multiple=10):
+def estimate_distance(minimum_value, maximum_value, min_dist_val=1,
+                      multiple=2):
     # Calculate the range between minimum and maximum value
     value_range = maximum_value - minimum_value
 
@@ -80,7 +81,7 @@ def get_grid_steps(grid_step, min_value=-90, max_value=90):
     return np.array(steps)
 
 
-def get_grid_dist(ext_dict, min_dist_val_lon=10, min_dist_val_lat=5):
+def get_grid_dist(ext_dict, min_dist_val_lon=1, min_dist_val_lat=1):
     min_lon = ext_dict['min_lon']
     max_lon = ext_dict['max_lon']
     min_lat = ext_dict['min_lat']
@@ -89,6 +90,7 @@ def get_grid_dist(ext_dict, min_dist_val_lon=10, min_dist_val_lat=5):
     gs_lon = estimate_distance(min_lon, max_lon, min_dist_val=min_dist_val_lon)
     gs_lat = estimate_distance(min_lat, max_lat, min_dist_val=min_dist_val_lat)
 
+    # print(f'Grid steps for longitude: {gs_lon}, latitude: {gs_lat}')
     return gs_lon, gs_lat
 
 
@@ -299,10 +301,12 @@ def create_map(
         ax.coastlines(alpha=alpha,
                       #   color=coast_color
                       )
-        # ax.add_feature(ctp.feature.BORDERS,
-        #                linestyle=":",
-        #                #    color="grey",
-        #                alpha=alpha)
+        set_borders = kwargs.pop("set_borders", False)
+        if set_borders:
+            ax.add_feature(ctp.feature.BORDERS,
+                           linestyle="--",
+                           #    color="grey",
+                           alpha=alpha)
         land_ocean = kwargs.pop("land_ocean", False)
         if land_ocean:
             # ax.add_feature(ctp.feature.OCEAN, alpha=.4, zorder=-1)
@@ -555,12 +559,12 @@ def plot_map(dmap: xr.DataArray,
 
 
 def plot_2D(
-    x,
-    y,
     z=None,  # Not required for points
+    x=None,
+    y=None,
     fig=None,
     ax=None,
-    plot_type="contourf",
+    plot_type="colormesh",
     projection=None,
     vmin=None,
     vmax=None,
@@ -573,7 +577,14 @@ def plot_2D(
 ):
     reload(put)
     reload(sput)
-
+    if x is None and y is None and z is None:
+        raise ValueError(
+            'Please provide at least z')
+    if x is None and y is None:
+        dims = gut.get_dims(z)
+        # for plotting dimensions are transposed
+        x = z.coords[dims[1]]
+        y = z.coords[dims[0]]
     # plotting
     color = kwargs.pop("color", None)
     cmap = None if color is not None else cmap
@@ -654,8 +665,10 @@ def plot_2D(
             if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
                 # norm = mpl.colors.LogNorm(levels=levels)
                 centercolor = kwargs.pop('centercolor', None)
+                leftcolor = kwargs.pop('leftcolor', None)
                 cmap, norm = put.create_cmap(cmap, levels,
                                              centercolor=centercolor,
+                                             leftcolor=leftcolor,
                                              **kwargs)
             else:
                 if isinstance(cmap, str):
@@ -702,8 +715,8 @@ def plot_2D(
             y,
             z,
             cmap=cmap,
-            # vmin=vmin,
-            # vmax=vmax,
+            vmin=vmin,
+            vmax=vmax,
             shading="auto",
             norm=norm,
             zorder=zorder,
@@ -1151,7 +1164,7 @@ def create_multi_plot(nrows, ncols, projection=None,
     reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
-        figsize = (9*ncols, 5*nrows)
+        figsize = (5*ncols, 5*nrows)
 
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx

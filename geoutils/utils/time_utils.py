@@ -663,7 +663,7 @@ def is_larger_as(t1, t2):
 
 
 def get_time_range_data(
-    ds, time_range, start_month="Jan", end_month="Dec",
+    ds, time_range, start_month=None, end_month=None,
     freq="D", verbose=False, check=False,
 ):
     if check:
@@ -698,11 +698,11 @@ def get_time_range_data(
     print(time_range)
     ds_sel = ds.sel(time=slice(*time_range))
 
-    if start_month != "Jan" or end_month != "Dec":
+    if start_month is not None or end_month is not None:
         ds_sel = get_month_range_data(
             dataset=ds_sel, start_month=start_month, end_month=end_month
         )
-    
+
     return ds_sel
 
 
@@ -778,7 +778,9 @@ def is_in_month_range(month, start_month, end_month):
     return mask
 
 
-def get_month_range_data(dataset, start_month="Jan", end_month="Dec", verbose=False):
+def get_month_range_data(dataset,
+                         start_month="Jan",
+                         end_month="Dec", verbose=False):
     """
     This function generates data within a given month range. It can be from smaller month
     to higher (eg. Jul-Sep) but as well from higher month to smaller month (eg. Dec-Feb)
@@ -796,6 +798,8 @@ def get_month_range_data(dataset, start_month="Jan", end_month="Dec", verbose=Fa
         array that contains only data within month-range.
 
     """
+    if start_month is None or end_month is None:
+        raise ValueError("Please specify start and end month!")
     if verbose:
         gut.myprint(f"Select data from {start_month} - {end_month}!")
     seasonal_data = dataset.sel(
@@ -1767,7 +1771,7 @@ def correlation_per_timeperiod(x, y, time_period):
     return xr.DataArray(corr, dims=["time"], coords={"time": time_period[:, 0]})
 
 
-def tp2str(tp, m=True, d=True):
+def tp2str(tp, m=True, d=True, h=False):
     """Returns the string for np.datetime(64) object.
 
     Args:
@@ -1791,17 +1795,19 @@ def tp2str(tp, m=True, d=True):
             date = ts.strftime("%Y-%m")
         if d:
             date = ts.strftime("%Y-%m-%d")
+        if h:
+            date = ts.strftime("%Y-%m-%d-%H:00")
     return date
 
 
-def tps2str(tps, m=True, d=True):
+def tps2str(tps, m=True, d=True, h=False):
     if isinstance(tps, (xr.DataArray, xr.Dataset)):
         if gut.is_single_tp(tps=tps):
-            return tp2str(tp=tps, m=m, d=d)
+            return tp2str(tp=tps, m=m, d=d, h=h)
     else:
         tps_str = []
         for tp in tps:
-            tps_str.append(tp2str(tp=tp, m=m, d=d))
+            tps_str.append(tp2str(tp=tp, m=m, d=d, h=h))
         return tps_str
 
 

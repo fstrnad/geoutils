@@ -141,11 +141,8 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             gut.myprint('Only Init the Wind Dataset object without data!')
 
     def compute_windspeed(self, u, v, ws_name='windspeed'):
-        windspeed = np.sqrt(u ** 2 + v ** 2)
-        self.ws_name = ws_name
-        windspeed = windspeed.rename(self.ws_name)
-        gut.myprint(
-            "Computed single components of wind dataset. Now compute windspeed!")
+        import geoutils.utils.met_utils as metu
+        windspeed = metu.compute_windspeed(u, v, ws_name=ws_name)
         return windspeed
 
     def compute_vertical_shear(self, plevel_up=200, plevel_low=850,

@@ -1,3 +1,4 @@
+from turtle import left
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.offsetbox import AnchoredText
 import matplotlib as mpl
@@ -108,7 +109,7 @@ def get_cmap(cmap, levels=None):
 def set_title(title, ax=None, fig=None, **kwargs):
     y_title = kwargs.pop('y_title', 1.05)
     vertical_title = kwargs.pop('vertical_title', None)
-    x_title_offset = kwargs.pop('x_title_offset', -0.2)
+    x_title_offset = kwargs.pop('x_title_offset', -0.33)
     title_color = kwargs.pop('title_color', 'black')
     # fw = kwargs.pop('title_fontweight', "normal")
     fw = kwargs.pop('title_fontweight', "bold")
@@ -347,6 +348,7 @@ def create_cmap(cmap, levels=None, **kwargs):
         n_colors = len(levels)
         # Set center of colormap to specific color
         centercolor = kwargs.pop('centercolor', None)
+        leftcolor = kwargs.pop('leftcolor', None)
         if centercolor is not None:
             colors = np.array([mpl.colors.rgb2hex(cmap(i))
                                for i in range(n_colors)])
@@ -355,6 +357,13 @@ def create_cmap(cmap, levels=None, **kwargs):
             idx = [len(colors) // 2 - 1, len(colors) // 2]
             colors[idx] = centercolor
             cmap = mpl.colors.ListedColormap(colors)
+        if leftcolor is not None:
+            colors = np.array([mpl.colors.rgb2hex(cmap(i))
+                               for i in range(n_colors)])
+            leftcolor = '#FFFFFF' if leftcolor == 'white' else leftcolor
+            colors[0] = leftcolor
+            cmap = mpl.colors.ListedColormap(colors)
+            print(colors)
         norm = mpl.colors.BoundaryNorm(
             levels, ncolors=cmap.N, clip=True)
     else:
@@ -559,7 +568,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
         elif orientation == "horizontal":
             loc = "lower center"
             # defines distance to lower y-range (different for maps and xy-plots) is passed to make_colorbar
-            pad = kwargs.pop('pad', -2.5)
+            pad = kwargs.pop('pad', -4.5)
             cax = inset_axes(ax,
                              width="100%",
                              height="5%",

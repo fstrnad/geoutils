@@ -22,6 +22,7 @@ def open_nc_file(
         lat_range=None,
         lon_range=None,
         time_range=None,
+        month_range=None,
         hours_to_zero=False,
         **kwargs,):
     reload(gut)
@@ -47,8 +48,12 @@ def open_nc_file(
                           lon_range=lon_range,
                           verbose=verbose)
     if time_range is not None:
+        start_month = month_range[0] if month_range is not None else None
+        end_month = month_range[-1] if month_range is not None else None
         ds = tu.get_time_range_data(
-            time_range=time_range, ds=ds, verbose=verbose)
+            time_range=time_range, ds=ds,
+            start_month=start_month, end_month=end_month,
+            verbose=verbose)
 
     if var_name is not None:
         ds = ds[var_name]

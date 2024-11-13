@@ -28,9 +28,10 @@ def assert_file_exists(filepath):
 
 def exist_file(filepath, verbose=False):
     if os.path.exists(filepath):
-        gut.myprint(f"File {filepath} exists!", verbose=verbose)
+        gut.myprint(f"File {filepath}\n exists!", verbose=verbose)
         return True
     else:
+        gut.myprint(f"File {filepath}\n does not exist!", verbose=verbose)
         return False
 
 
@@ -89,19 +90,18 @@ def exist_folder(filepath, verbose=False):
         return False
 
 
-def create_folders(filepath):
+def create_folder(filepath, verbose=True):
     directory = os.path.dirname(filepath)
     if not exist_folder(filepath=filepath):
         os.makedirs(directory)
-        gut.myprint(f"Created folders for path: {filepath}")
-    else:
-        gut.myprint(f"Folders already exist for path: {filepath}")
+        gut.myprint(f"Created folders for path: {filepath}",
+                    verbose=verbose)
 
 
 # ##################### Save functions #####################
 def save_np_dict(arr_dict, sp, verbose=True):
     gut.myprint(f'Store to {sp}', verbose=verbose)
-    create_folders(filepath=sp)
+    create_folder(filepath=sp)
     np.save(sp, arr_dict, allow_pickle=True)
     print_file_location_and_size(filepath=sp)
 
