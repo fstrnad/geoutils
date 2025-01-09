@@ -75,9 +75,6 @@ class BaseDataset():
         else:
             raise ValueError(
                 f'Provide single or multiple files as strings but data_nc = {data_nc}!')
-        # initialize dataset
-        for file in data_nc_arr:
-            fut.print_file_location_and_size(filepath=file, verbose=verbose)
 
         self.grid_step = grid_step
         ds = self.open_ds(

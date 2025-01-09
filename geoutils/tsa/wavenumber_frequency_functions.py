@@ -7,7 +7,7 @@ import xarray as xr
 import numpy as np
 from scipy.signal import convolve2d, detrend
 import logging
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 
 def helper():
@@ -242,11 +242,11 @@ def resolveWavesHayashi(varfft: xr.DataArray, nDayWin: int, spd: int) -> xr.Data
     N = len(varfft['frequency'])
     k_dim_index = dimnames.index('wavenumber')
     f_dim_index = dimnames.index('frequency')
-    logging.info(f"[Hayashi] input dims is {dimnames}, {
-                 dimvf} || Input dtype: {varfft.dtype=}")
+    logging.info(
+        f"[Hayashi] input dims is {dimnames}, {dimvf} || Input dtype: {varfft.dtype=}")
     logging.info(f"[Hayashi] input coords is {varfft.coords}")
-    logging.debug(f"[Hayashi] wavenumber axis is {
-                  k_dim_index}, frequency axis is {f_dim_index}")
+    logging.debug(
+        f"[Hayashi] wavenumber axis is {k_dim_index}, frequency axis is {f_dim_index}")
     if len(dimnames) != len(varfft.coords):
         logging.error("The size of varfft.coords is incorrect.")
         raise ValueError("STOP")
@@ -278,8 +278,8 @@ def resolveWavesHayashi(varfft: xr.DataArray, nDayWin: int, spd: int) -> xr.Data
     logging.debug(
         f"[Hayashi] calculate power by absolute value (i.e. sqrt(real**2 + imag**2))and squaring.")
     pee = (np.abs(varspacetime))**2
-    logging.debug(f"[Hayashi] sum of pee {pee.sum()}. Type of pee: {
-                  type(pee)} Dtype: {pee.dtype}")
+    logging.debug(
+        f"[Hayashi] sum of pee {pee.sum()}. Type of pee: {type(pee)} Dtype: {pee.dtype}")
     logging.debug(f"[Hayashi] put into DataArray")
     # add meta data for use upon return
     wave = np.arange(-mlon // 2, (mlon // 2) + 1, 1, dtype=int)
@@ -302,8 +302,8 @@ def resolveWavesHayashi(varfft: xr.DataArray, nDayWin: int, spd: int) -> xr.Data
     pee = xr.DataArray(pee, dims=odims, coords=ocoords)
     z = pee.copy()
     z.loc[{'frequency': 0}] = np.nan
-    logging.debug(f"[Hayashi] Sum at the end (removing zero freq): {
-                  z.sum().item()}")
+    logging.debug(
+        f"[Hayashi] Sum at the end (removing zero freq): {z.sum().item()}")
     return pee
 
 
@@ -405,16 +405,15 @@ def spacetime_power(data, segsize=96, noverlap=60, spd=1, latitude_bounds=None, 
     # testing: pass -- Gets the same result as NCL.
     logging.debug(
         f"[spacetime_power] data shape after removing low frequencies: {data.shape}")
-    logging.debug(f"[spacetime_power] variance of data before windowing: {
-                  np.var(data).item()}")
+    logging.debug(
+        f"[spacetime_power] variance of data before windowing: {np.var(data).item()}")
 
     # 2. Windowing with the xarray "rolling" operation, and then limit overlap with `construct` to produce a new dataArray.
     # WK99 recommend "2-month" overlap
     # Shape of x_win: (_, lat, lon, segments: spd*segsize)
     # WK99 use 96-day window
     x_roll = data.rolling(time=segsize, min_periods=segsize)
-    assert segsize-noverlap > 0, f"Error, inconsistent specification of segsize and noverlap results in stride of {
-        segsize-noverlap}, but must be > 0."
+    assert segsize-noverlap > 0, f"Error, inconsistent specification of segsize and noverlap results in stride of {segsize-noverlap}, but must be > 0."
     x_win = x_roll.construct("segments")
     x_win = x_win.isel(time=slice(segsize-1, None, segsize-noverlap))
 
@@ -431,21 +430,20 @@ def spacetime_power(data, segsize=96, noverlap=60, spd=1, latitude_bounds=None, 
         logging.warning(
             "There are missing data in x_win, so have to try to detrend around them.")
         x_win_cp = x_win.values.copy()
-        logging.info(f"[spacetime_power] x_win_cp windowed data has shape {x_win_cp.shape} \n \t It is a numpy array, copied from x_win which has dims: {
-                     x_win.sizes} \n \t ** about to detrend this in the rightmost dimension.")
+        logging.info(f"[spacetime_power] x_win_cp windowed data has shape {x_win_cp.shape} \n \t It is a numpy array, copied from x_win which has dims: {x_win.sizes} \n \t ** about to detrend this in the rightmost dimension.")
         x_win_cp[np.logical_not(np.isnan(x_win_cp))] = detrend(
             x_win_cp[np.logical_not(np.isnan(x_win_cp))])
         x_win = xr.DataArray(x_win_cp, dims=x_win.dims, coords=x_win.coords)
-    logging.debug(f"[spacetime_power] x_win variance of segments: {
-                  np.var(x_win, axis=(1, 2, 3)).values}")
+    logging.debug(
+        f"[spacetime_power] x_win variance of segments: {np.var(x_win, axis=(1, 2, 3)).values}")
     # 3. Taper in time to make the signal periodic, as required for FFT.
     # taper = np.hanning(segsize)  # WK seem to use some kind of stretched out hanning window; unclear if it matters
     taper = split_hann_taper(segsize, 0.1)  # try to replicate NCL's
     # would do XTAPER = (X - X.mean())*series_taper + X.mean()
     x_wintap = x_win*taper
     # But since we have removed the mean, taper going to 0 is equivalent to taper going to the mean.
-    logging.debug(f"[spacetime_power] x_wintap variance of segments: {
-                  np.var(x_wintap, axis=(1, 2, 3)).values}")
+    logging.debug(
+        f"[spacetime_power] x_wintap variance of segments: {np.var(x_wintap, axis=(1, 2, 3)).values}")
 
     # Do the transform using 2D FFT
     # - normalize by dimension sizes
@@ -544,7 +542,8 @@ def spacetime_power(data, segsize=96, noverlap=60, spd=1, latitude_bounds=None, 
     return z_final
 
 
-def genDispersionCurves(nWaveType=6, nPlanetaryWave=50, rlat=0, Ahe=[50, 25, 12]):
+def genDispersionCurves(nWaveType=6, nPlanetaryWave=50, rlat=0,
+                        Ahe=[100, 50, 25, 12]):
     """
     Function to derive the shallow water dispersion curves. Closely follows NCL version.
 

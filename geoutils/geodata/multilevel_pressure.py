@@ -37,9 +37,6 @@ class MultiPressureLevelDataset(bds.BaseDataset):
         if isinstance(data_nc, str):
             data_nc = [data_nc]
 
-        for file in data_nc:
-            fut.print_file_location_and_size(filepath=file, verbose=verbose)
-
         time_range = kwargs.pop('time_range',
                                 fut.get_file_time_range(data_nc, verbose=False))
         fut.check_file_time_equity(file_arr=data_nc)
@@ -51,8 +48,9 @@ class MultiPressureLevelDataset(bds.BaseDataset):
                          time_range=time_range,
                          verbose=verbose,
                          **kwargs)
-        # self.plevel_name is set in super().__init__()
+
         if plevels is not None:
+            self.plevels = plevels
             self.set_plevel_attrs()
         if set_metpy_labels:
             self.set_metpy_labels()
@@ -80,7 +78,7 @@ class MultiPressureLevelDataset(bds.BaseDataset):
 
     def set_plevel_attrs(self):
         gut.myprint(
-            f'Loaded Pressure levels {plevels} as dimension {self.plevel_name}!')
+            f'Loaded Pressure levels {self.plevels} as dimension {self.plevel_name}!')
         self.plevel_attrs = self.ds[self.plevel_name].attrs
         self.plevel_attrs['standard_name'] = 'air_pressure'
         self.plevel_attrs['long_name'] = 'pressure_level'

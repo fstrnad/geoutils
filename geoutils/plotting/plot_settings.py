@@ -18,7 +18,7 @@ if set_new_font:
     plt.rcParams['font.serif'] = 'Ubuntu'
 plt.rcParams['axes.facecolor'] = 'white'
 plt.rc("font", size=SMALL_SIZE)  # controls default text sizes
-plt.rc("axes", titlesize=BIGGER_SIZE)  # fontsize of the axes title
+plt.rc("axes", titlesize=MEDIUM_SIZE)  # fontsize of the axes title
 # fontsize of the x and y labels
 plt.rc("axes", labelsize=MEDIUM_SIZE)
 plt.rc("xtick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
@@ -29,6 +29,7 @@ plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 # plt.rcParams['pcolor.shading'] ='nearest' # For pcolormesh
 colors = [
+    'dimgray',
     "steelblue",
     'firebrick',
     "tab:green",
@@ -37,7 +38,6 @@ colors = [
     "c",
     "tab:orange",
     "tab:purple",
-    'darkgray',
     "y",
     "slategray",
     "darkviolet",
@@ -55,3 +55,25 @@ def list_available_fonts():
 def list_available_styles():
     print(plt.style.available)
     return plt.style.available
+
+
+def change_fsize(fsize):
+    plt.rc("font", size=fsize)  # controls default text sizes
+    plt.rc("axes", titlesize=fsize+4)  # fontsize of the axes title
+    # fontsize of the x and y labels
+    plt.rc("axes", labelsize=fsize)
+    plt.rc("xtick", labelsize=fsize)  # fontsize of the tick labels
+    plt.rc("ytick", labelsize=fsize)  # fontsize of the tick labels
+    plt.rc("legend", fontsize=fsize)  # legend fontsize
+    plt.rc("figure", titlesize=fsize)  # fontsize of the figure title
+
+
+def reset_fsize():
+    plt.rc("font", size=SMALL_SIZE)  # controls default text sizes
+    plt.rc("axes", titlesize=BIGGER_SIZE)  # fontsize of the axes title
+    # fontsize of the x and y labels
+    plt.rc("axes", labelsize=MEDIUM_SIZE)
+    plt.rc("xtick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
+    plt.rc("ytick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
+    plt.rc("legend", fontsize=MEDIUM_SIZE)  # legend fontsize
+    plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title

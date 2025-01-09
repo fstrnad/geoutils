@@ -1,17 +1,16 @@
 """Basic plotting functions for maps"""
 # import matplotlib.cm as cm
 import copy
+from turtle import color
 import xarray as xr
 import pandas as pd
 import geoutils.utils.time_utils as tu
-import seaborn as sns
 import geoutils.utils.statistic_utils as sut
 import geoutils.utils.general_utils as gut
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-# plt.style.use('./src/matplotlib_style.py')
 import matplotlib.dates as mdates
 from matplotlib.ticker import FuncFormatter
 import geoutils.plotting.plotting_utils as put
@@ -78,8 +77,10 @@ def set_legend(ax,
     return ax
 
 
-def plot_xy(
-    y_arr,
+def plot_2d(
+    y=None,
+    x=None,
+    y_arr=None,
     x_arr=None,
     z_arr=[],
     x_err_arr=[],
@@ -104,9 +105,17 @@ def plot_xy(
 ):
     reload(sut)
     reload(gut)
-    if not isinstance(y_arr[0], (list, np.ndarray, xr.DataArray, xr.Dataset)):
+    if y is None and y_arr is None:
+        raise ValueError("y_arr or y must be provided!")
+    if y_arr is None and y is not None:
+        y_arr = [y]
+
+    if not isinstance(y_arr[0], (list, np.ndarray)):
         y_arr = [y_arr]
-    if x_arr is not None and isinstance(x_arr[0], (list, np.ndarray, xr.DataArray, xr.Dataset)):
+
+    if x is not None and x_arr is None:
+        x_arr = [x]
+    if x_arr is not None and isinstance(x_arr[0], (list, np.ndarray)):
         if len(y_arr) != len(x_arr):
             raise ValueError(
                 f"x and y arrays must have the same length, but are {len(x_arr)} and {len(y_arr)}!")
@@ -122,7 +131,6 @@ def plot_xy(
     else:
         fig = ax.get_figure()
     zorder = kwargs.pop('zorder', 0)
-    filled = kwargs.pop('filled', False)
     kwargs_init = copy.deepcopy(kwargs)
     if set_axis:
         if ts_axis:
@@ -144,11 +152,12 @@ def plot_xy(
 
         for idx in range(num_items):
             if x_arr is None:
-                x_arr = [np.arange(len(y_arr[idx]))]
-            if isinstance(x_arr[0], (list, np.ndarray, xr.DataArray)):
-                x = x_arr[idx]
+                x = np.arange(len(y_arr[idx]))
             else:
-                x = x_arr
+                if isinstance(x_arr[0], (list, np.ndarray, xr.DataArray)):
+                    x = x_arr[idx]
+                else:
+                    x = x_arr
             if linearize_xaxis:
                 x = np.arange(0, len(x))
 
@@ -167,15 +176,20 @@ def plot_xy(
                     y_ub_arr[idx] = sut.standardize(
                         y_ub_arr[idx]) if y_lb_arr[idx] is not None else None
 
-            lw = kwargs.pop('lw', None)
+            lw = kwargs.get('lw', None)
             if lw is None:
                 lw = lw_arr[idx] if idx < len(lw_arr) else lw_arr[-1]
 
-            mk = kwargs.pop('marker', None)
+            mk = kwargs.get('marker', None)
             if mk is None:
                 mk = mk_arr[idx] if idx < len(mk_arr) else mk_arr[-1]
 
-            ls = kwargs.pop('ls', None)
+            mk_size = kwargs.get('marker_size', 1)
+            mk_size_arr = kwargs.get('mk_size_arr', None)
+            if mk_size_arr is not None:
+                mk_size = mk_size_arr[idx] if idx < len(mk_size_arr) else mk_size_arr[-1]
+
+            ls = kwargs.get('ls', None)
             if ls is None:
                 ls = ls_arr[idx] if idx < len(ls_arr) else ls_arr[-1]
 
@@ -219,6 +233,7 @@ def plot_xy(
                                     label=label,
                                     lw=lw,
                                     marker=mk,
+                                    markersize=mk_size,
                                     cmap=cm,
                                     vmin=vmin, vmax=vmax,
                                     alpha=alpha
@@ -228,24 +243,13 @@ def plot_xy(
                     im = ax.plot(x, y,
                                  lw=lw,
                                  marker=mk,
+                                 markersize=mk_size,
                                  ls=ls,
                                  color=c,
                                  zorder=zorder,
                                  alpha=alpha,
                                  label=label
                                  )
-                    if filled:
-                        alpha_fill = kwargs.get('alpha_fill', 1)
-                        offset_fill = kwargs.get('offset_fill', 0)
-                        if offset_fill == 0:
-                            ax.fill_between(
-                                x, y, color=c, alpha=alpha_fill, zorder=zorder)
-                        else:
-                            y_linear = np.full_like(x, offset_fill)
-
-                            ax.fill_between(x, y, y_linear, where=(y <= y_linear),
-                                            color=c, alpha=alpha_fill,
-                                            zorder=zorder)
 
                 if len(y_lb_arr) > idx:
                     y_lb = y_lb_arr[idx] if y_lb_arr[idx] is not None else None
@@ -280,6 +284,8 @@ def plot_xy(
 
     # ############# Plotting  bar ################
     elif plot_type == 'bar':
+        import seaborn as sns
+
         # Bar plot
         stacked = kwargs.pop('stacked', False)
         df = pd.DataFrame(dict(
@@ -352,45 +358,19 @@ def plot_xy(
     return {"ax": ax, "im": im, "fig": fig}
 
 
-def bar_plot_xy(x_arr, y_arr, label_arr,
-                ax=None,  fig=None, log=False, color_arr=None, **kwargs):
-    if ax is None:
-        figsize = kwargs.pop("figsize", (6, 4))
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-
-    df = pd.DataFrame(dict(
-        X=x_arr
-    ))
-    for idx, arr in enumerate(y_arr):
-        df[label_arr[idx]] = arr
-
-    mk_legend = kwargs.pop('set_legend', True)
-
-    if color_arr is None:
-        color_arr = sns.color_palette('hls', len(y_arr))
-
-    tidy = df.melt(id_vars='X').rename(columns=str.title)
-    ax = sns.barplot(x='X', y='Value',
-                     hue='Variable',
-                     data=tidy,
-                     palette=color_arr,
-                     ax=ax,
-                     )
-    ax, kwargs = put.prepare_axis(ax, log=log, **kwargs)
-
-    # ax.set_xticks(np.arange(len(x_arr)))
-    # ax.set_xticklabels(x_arr)
-    if mk_legend:
-        ax = set_legend(ax, label_arr=label_arr, **kwargs)
+def fill_between(ax, x, y, y2, thresh=0, larger=True,
+                 **kwargs):
+    if larger:
+        ax.fill_between(x, y, y2=y2,
+                        where=(y >= y2 + thresh),
+                        **kwargs)
     else:
-        ax.legend_.remove()
+        ax.fill_between(x, y, y2=y2,
+                        where=(y <= y2 + thresh),
+                        **kwargs)
+    return ax
 
-    sci = kwargs.pop("sci", None)
-    if sci is not None:
-        ax.ticklabel_format(style="sci", axis="x", scilimits=(sci, sci))
-    return {'ax': ax,
-            'fig': fig,
-            }
+
 
 
 def plot_lines(ax, te, color="Turquoise"):

@@ -8,7 +8,6 @@ import geoutils.utils.time_utils as tu
 import geoutils.utils.file_utils as fut
 import geoutils.plotting.plots as cplt
 import xarray as xr
-
 import cv2
 
 reload(fut)
@@ -42,13 +41,14 @@ def create_video(input_frames,
     output_video = output_name
     cplt.mk_plot_dir(output_video)
     video_frames = fut.find_files_with_string(input_folder,
+                                              sort='Number',
                                               search_string=input_frames,
                                               verbose=verbose)
     if len(video_frames) == 0:
         gut.myprint("No frames found!")
         return None
     # Get image shape from the first frame
-    img = cv2.imread(video_frames[0])
+    img = imageio.imread(video_frames[0])
     height, width, layers = img.shape
 
     if format == 'mp4':
@@ -61,17 +61,20 @@ def create_video(input_frames,
                                 (width, height))
 
     frames = []
-    for frame in video_frames:  # Change range if the number of frames is different
-        if format == 'gif':
-            frames.append(cv2.imread(frame))
-        else:
-            video.write(cv2.imread(frame))
-
     if format == 'gif':
-        # Save frames as a GIF using imageio
-        # Adjust duration as needed
-        imageio.mimsave(output_video, frames, format='GIF',
-                        fps=frame_rate)
+        with imageio.get_writer(output_video, fps=frame_rate, loop=0) as writer:
+            for path in video_frames:  # Change range if the number of frames is different
+                print(path)
+                if format == 'gif':
+                    frame = imageio.imread(path)
+                    writer.append_data(frame)
+                else:
+                    video.write(cv2.imread(frame))
+
+    #     # Save frames as a GIF using imageio
+    #     # Adjust duration as needed
+    #     imageio.imwrite(output_video, video_frames, format='GIF',
+    #                     fps=frame_rate, loop=0)
     else:
         # Release the video if it was created
         cv2.destroyAllWindows()
@@ -120,8 +123,8 @@ def create_video_map(
     dateline = kwargs.pop("dateline", False)
     dpi = kwargs.pop("dpi", 'figure')
     an_type = kwargs.pop("an_type", 'JJAS')
-    var_type_u = kwargs.pop("uvar", f'U_an_{an_type}')
-    var_type_v = kwargs.pop("vvar", f'V_an_{an_type}')
+    var_type_u = kwargs.pop("uvar", f'u_an_{an_type}')
+    var_type_v = kwargs.pop("vvar", f'v_an_{an_type}')
     lev = kwargs.pop("lev", 200)
     steps = gut.crange(start, end, step)
     wind_scale = kwargs.pop("wind_scale", 100)
@@ -130,9 +133,10 @@ def create_video_map(
     wind_unit = kwargs.pop("wind_unit", rf'm$s^{{-1}}$ ({lev}hPa)')
     wsteps = kwargs.pop("wsteps", 2)
     for d, step in enumerate(steps):
-        tmp_file_name = fut.create_random_filename(folder_path=tmp_folder,
-                                                   extension=extension,
-                                                   startstring=f'{d}')
+        tmp_file_name = fut.create_filename(folder_path=tmp_folder,
+                                            file_string='vid_frame',
+                                            extension=extension,
+                                            startstring=f'{d}')
         if time_dim == 'time':
             sel_tps = tu.add_time_step_tps(tps,
                                            time_step=step)
@@ -162,7 +166,7 @@ def create_video_map(
                            lat_range=lat_range,
                            dateline=dateline,
                            central_longitude=central_longitude,
-                           unset_grid=True,
+                           plot_grid=plot_grid,
                            **kwargs
                            )
         if ds_wind is not None:
@@ -190,7 +194,6 @@ def create_video_map(
         cplt.save_fig(savepath=tmp_file_name,
                       fig=im['fig'],
                       dpi=dpi)
-
     # This creates the final video
     create_video(input_frames=extension,
                  input_folder=tmp_folder,

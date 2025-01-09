@@ -26,7 +26,7 @@ def open_nc_file(
         hours_to_zero=False,
         **kwargs,):
     reload(gut)
-    fut.print_file_location_and_size(nc_files)
+    fut.print_file_location_and_size(nc_files, verbose=verbose)
 
     ds = open_ds(
         nc_files=nc_files,
@@ -39,8 +39,7 @@ def open_nc_file(
         hours_to_zero=hours_to_zero, **kwargs)
     dims = gut.get_dims(ds=ds)
     ds = gut.rename_var_era5(ds=ds, verbose=verbose, **kwargs)
-    gut.myprint(f"End processing data! Dimensions: {
-                dims}", verbose=verbose)
+    gut.myprint(f"End processing data! Dimensions: {dims}", verbose=verbose)
 
     if lat_range is not None or lon_range is not None:
         ds = sput.cut_map(ds=ds,

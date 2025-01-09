@@ -1,7 +1,4 @@
 from scipy.signal import find_peaks
-import statsmodels.stats as sm
-from statsmodels.tsa.ar_model import AutoReg
-import geoutils.utils.time_utils as tu
 from sklearn.preprocessing import minmax_scale
 from importlib import reload
 from scipy.stats import norm, percentileofscore
@@ -11,7 +8,6 @@ import scipy.stats as st
 import numpy as np
 import xarray as xr
 import copy
-from tqdm import tqdm
 from joblib import Parallel, delayed
 import geoutils.utils.general_utils as gut
 
@@ -60,6 +56,8 @@ def norths_rule_of_thumb(pca_eigval, n_samples):
 
 
 def correct_p_values(pvals, alpha=0.05, method="fdr_bh"):
+    import statsmodels.stats as sm
+
     if isinstance(pvals, xr.DataArray):
         pvals = pvals.data
     p_data_shape = pvals.shape
@@ -578,10 +576,11 @@ def effective_sample_size(X, zdim=('lat', 'lon')):
         nobs_eff (xr.Dataarray): Effective sample size.
     """
     X = X.stack(z=zdim)
+    from statsmodels.tsa.ar_model import AutoReg
 
     print("Fit AR1-process to each location to obtain the effective sample size.")
     arcoeff = []
-    for loc in tqdm(X['z']):
+    for loc in X['z']:
         x_loc = X.sel(z=loc)
 
         if np.isnan(x_loc[0]):
@@ -599,6 +598,8 @@ def effective_sample_size(X, zdim=('lat', 'lon')):
 
 
 def fit_ar1(X, i):
+    from statsmodels.tsa.ar_model import AutoReg
+
     x_loc = X.sel(z=X['z'][i])
     if np.isnan(x_loc[0]):
         arcoeff = np.nan
@@ -627,7 +628,7 @@ def effective_sample_size_parallel(X, zdim=('lat', 'lon')):
     n_processes = len(X['z'])
     results = Parallel(n_jobs=8)(
         delayed(fit_ar1)(X, i)
-        for i in tqdm(range(n_processes))
+        for i in range(n_processes)
     )
     # Read results
     arcoeff = []
@@ -819,8 +820,8 @@ def get_values_above_val(dataarray, val=None, q=None, dim='time'):
         val = val_ = dataarray.mean(dim=dim)
     elif q is not None:
         if q < 1 and q > 0.5:
-            val = dataarray.quantile(q=q, method='lower')
-            val_ = dataarray.quantile(q=(1-q), method='higher')
+            val = dataarray.quantile(q=q)
+            val_ = dataarray.quantile(q=(1-q))
         else:
             raise ValueError(f'q={q} has to be between 0.5 and 1')
     else:

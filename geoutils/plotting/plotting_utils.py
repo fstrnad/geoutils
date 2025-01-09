@@ -1,4 +1,3 @@
-from turtle import left
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.offsetbox import AnchoredText
 import matplotlib as mpl
@@ -12,9 +11,6 @@ import cartopy as ctp
 import cartopy.mpl as cmpl
 import geoutils.plotting.plot_settings as pst
 from importlib import reload
-import palettable as pt
-import cmocean as cmo
-import cmweather
 
 
 def get_available_mpl_colormaps():
@@ -35,7 +31,9 @@ def get_available_palettable_colormaps():
     Returns:
         list: A list of strings containing the names of available colormaps.
     """
-
+    import palettable as pt
+    import cmocean as cmo
+    import cmweather
     diverging_lst = [cmap for cmap in dir(
         pt.colorbrewer.diverging) if not cmap.startswith("__")]
     qualitative_lst = [cmap for cmap in dir(
@@ -63,43 +61,48 @@ def get_available_palettable_colormaps():
             scientific_div)
 
 
-def get_cmap(cmap, levels=None):
+def get_cmap(cmap, all=False, levels=None):
+
     mpl_cmaps = get_available_mpl_colormaps()
-    pt_cmaps, d_cmaps, q_cmaps, s_cmaps, cmocean_div, cmocean_seq, scientific_seq, scientific_div = get_available_palettable_colormaps()
     if cmap in mpl_cmaps:
         colormap = cmap
-    elif cmap in pt_cmaps:
-        cmap_strs = cmap.split("_")
-        reverse = True if 'r' in cmap_strs else False
-        if cmap in d_cmaps:
-            colormap = pt.colorbrewer.get_map(
-                cmap_strs[0], 'diverging',  number=int(cmap_strs[1]),
-                reverse=reverse)
-        elif cmap in s_cmaps:
-            colormap = pt.colorbrewer.get_map(
-                cmap_strs[0], 'sequential',  number=int(cmap_strs[1]), reverse=reverse)
-        elif cmap in q_cmaps:
-            colormap = pt.colorbrewer.get_map(
-                cmap_strs[0], 'qualitative',  number=int(cmap_strs[1]), reverse=reverse)
-        elif cmap in cmocean_div:
-            colormap = pt.cmocean.diverging.get_map(
-                name=cmap, reverse=reverse)
-        elif cmap in cmocean_seq:
-            colormap = pt.cmocean.sequential.get_map(
-                cmap, reverse=reverse)
-        elif cmap in scientific_seq:
-            colormap = pt.scientific.sequential.get_map(
-                cmap, reverse=reverse)
-        elif cmap in scientific_div:
-            colormap = pt.scientific.diverging.get_map(
-                cmap, reverse=reverse)
+    else:
+        raise ValueError(
+            f'Colormap {cmap} not found. Please choose from {mpl_cmaps}!')
+    if all:
+        import palettable as pt
+        pt_cmaps, d_cmaps, q_cmaps, s_cmaps, cmocean_div, cmocean_seq, scientific_seq, scientific_div = get_available_palettable_colormaps()
+
+        if cmap in pt_cmaps:
+            cmap_strs = cmap.split("_")
+            reverse = True if 'r' in cmap_strs else False
+            if cmap in d_cmaps:
+                colormap = pt.colorbrewer.get_map(
+                    cmap_strs[0], 'diverging',  number=int(cmap_strs[1]),
+                    reverse=reverse)
+            elif cmap in s_cmaps:
+                colormap = pt.colorbrewer.get_map(
+                    cmap_strs[0], 'sequential',  number=int(cmap_strs[1]), reverse=reverse)
+            elif cmap in q_cmaps:
+                colormap = pt.colorbrewer.get_map(
+                    cmap_strs[0], 'qualitative',  number=int(cmap_strs[1]), reverse=reverse)
+            elif cmap in cmocean_div:
+                colormap = pt.cmocean.diverging.get_map(
+                    name=cmap, reverse=reverse)
+            elif cmap in cmocean_seq:
+                colormap = pt.cmocean.sequential.get_map(
+                    cmap, reverse=reverse)
+            elif cmap in scientific_seq:
+                colormap = pt.scientific.sequential.get_map(
+                    cmap, reverse=reverse)
+            elif cmap in scientific_div:
+                colormap = pt.scientific.diverging.get_map(
+                    cmap, reverse=reverse)
         else:
             raise ValueError(
                 f'Colormap {cmap} not found. Please choose from {mpl_cmaps} or {pt_cmaps}')
         colormap = colormap.mpl_colormap
-    else:
-        raise ValueError(
-            f'Colormap {cmap} not found. Please choose from {mpl_cmaps} or {pt_cmaps}')
+
     n_colors = len(levels) if levels is not None else None
     cmap = plt.get_cmap(colormap, n_colors)
 
@@ -363,7 +366,6 @@ def create_cmap(cmap, levels=None, **kwargs):
             leftcolor = '#FFFFFF' if leftcolor == 'white' else leftcolor
             colors[0] = leftcolor
             cmap = mpl.colors.ListedColormap(colors)
-            print(colors)
         norm = mpl.colors.BoundaryNorm(
             levels, ncolors=cmap.N, clip=True)
     else:
@@ -595,7 +597,6 @@ def make_colorbar(ax, im, fig=None, **kwargs):
     else:
         norm = kwargs.pop('norm', None)
         if norm == 'log':
-            print(norm)
             fmt = mpl.ticker.FuncFormatter(cbarfmt)
         else:
             fmt = None
@@ -720,7 +721,8 @@ def plot_arrow(ax, x1, y1, x2, y2, **kwargs):
                                     linestyle=ls,
                                     ),
                     fontsize=kwargs.pop('fontsize', pst.BIGGER_SIZE),
-                    weight=kwargs.pop('weight', 'normal'),
+                    weight=kwargs.pop('weight', 'bold'),
+                    color=color,
                     zorder=zorder,)
     else:
         ax.arrow(x1, y1, x2-x1, y2-y1,
@@ -777,12 +779,13 @@ def enumerate_subplots(axs, pos_x=-0.12,
     for n, ax in enumerate(axs.flatten()):
         li = n % 26  # letter index
         fac = n // 26  # factor
+        lw_case = f"{string.ascii_lowercase[li]}."
+        up_case = f"{string.ascii_uppercase[li]}{fac}."
         plt_text(
             ax=ax,
             xpos=pos_x[n],
             ypos=pos_y[n],
-            text=f"{string.ascii_lowercase[li]}." if n < 26 else f"{
-                string.ascii_uppercase[li]}{fac}.",
+            text=lw_case if n < 26 else up_case,
             size=fontsize,
             weight="bold",
             transform=True,

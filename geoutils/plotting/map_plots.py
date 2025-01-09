@@ -22,6 +22,8 @@ reload(gut)
 
 def estimate_distance(minimum_value, maximum_value, min_dist_val=1,
                       multiple=2):
+    if maximum_value - minimum_value > 20:
+        multiple = 5
     # Calculate the range between minimum and maximum value
     value_range = maximum_value - minimum_value
 
@@ -159,7 +161,6 @@ def set_extent(da, ax,
     if not isinstance(ax, ctp.mpl.geoaxes.GeoAxesSubplot) and not isinstance(ax, ctp.mpl.geoaxes.GeoAxes):
         raise ValueError(
             f'Axis is not of type Geoaxis, but of type {type(ax)}!')
-
     verbose = kwargs.get('verbose', False)
     min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat = ax.get_extent()
     if dateline:
@@ -172,12 +173,10 @@ def set_extent(da, ax,
         min_ext_lon += 180
         max_ext_lon += 180
         gut.myprint(
-            f'Dateline: Set min_ext_lon to {
-                min_ext_lon} and max_ext_lon to {max_ext_lon}!',
+            f'Dateline: Set extend {min_ext_lon} - {max_ext_lon}!',
             verbose=verbose)
     else:
         projection = ccrs.PlateCarree(central_longitude=0)
-
     if not isinstance(da, xr.DataArray):
         if da is not None:
             if [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
@@ -194,7 +193,12 @@ def set_extent(da, ax,
         else:
             # expect DataArray with lon and lat coordinates
             # If condition is true, the extent is not set yet and is defined by data coordinates
-            if [min_ext_lon, max_ext_lon] == [-180, 180] and [min_ext_lat, max_ext_lat] == [-90, 90]:
+            if [min_ext_lat, max_ext_lat] == [-90, 90]:
+                min_ext_lat = float(
+                    np.min(da.coords["lat"])) if da is not None else min_ext_lat
+                max_ext_lat = float(
+                    np.max(da.coords["lat"])) if da is not None else max_ext_lat
+            if [min_ext_lon, max_ext_lon] == [-180, 180] or dateline:
                 min_ext_lon = float(
                     np.min(da.coords["lon"])) if da is not None else min_ext_lon
                 max_ext_lon = float(
@@ -219,8 +223,7 @@ def set_extent(da, ax,
             abs(min_ext_lat) > 89 and
                 abs(max_ext_lat) > 89):
             set_global = True
-            if lon_range is not None or lat_range is not None:
-                gut.myprint('WARNING! Set global map!')
+            gut.myprint('WARNING! Set global map!')
     final_extent = [min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat]
     if set_global:
         ax.set_global()
@@ -236,6 +239,71 @@ def set_extent(da, ax,
     )
 
     return ext_dict
+
+
+def utm_from_lon(lon):
+    """
+    utm_from_lon - UTM zone for a longitude
+
+    Not right for some polar regions (Norway, Svalbard, Antartica)
+
+    :param float lon: longitude
+    :return: UTM zone number
+    :rtype: int
+    """
+    from math import floor
+    return floor((lon + 180) / 6) + 1
+
+
+def scale_bar(ax, proj='PlateCarree',
+              length=1000, location=(0.5, 0.05),
+              linewidth=3,
+              units='km',
+              m_per_unit=1000):
+    """
+
+    http://stackoverflow.com/a/35705477/1072212
+    ax is the axes to draw the scalebar on.
+    proj is the projection the axes are in
+    location is center of the scalebar in axis coordinates ie. 0.5 is the middle of the plot
+    length is the length of the scalebar in km.
+    linewidth is the thickness of the scalebar.
+    units is the name of the unit
+    m_per_unit is the number of meters in a unit
+    """
+    from matplotlib import patheffects
+
+    proj = get_projection(projection=proj)
+
+    # find lat/lon center to find best UTM zone
+    x0, x1, y0, y1 = ax.get_extent(proj.as_geodetic())
+    # Projection in metres
+    utm = ccrs.UTM(utm_from_lon((x0+x1)/2))
+    # Get the extent of the plotted area in coordinates in metres
+    x0, x1, y0, y1 = ax.get_extent(utm)
+    # Turn the specified scalebar location into coordinates in metres
+    sbcx, sbcy = x0 + (x1 - x0) * location[0], y0 + (y1 - y0) * location[1]
+    # Generate the x coordinate for the ends of the scalebar
+    bar_xs = [sbcx - length * m_per_unit/2, sbcx + length * m_per_unit/2]
+    # buffer for scalebar
+    buffer = [patheffects.withStroke(linewidth=5, foreground="w")]
+    # Plot the scalebar with buffer
+    ax.plot(bar_xs, [sbcy, sbcy], transform=utm, color='k',
+            linewidth=linewidth, path_effects=buffer)
+    # buffer for text
+    buffer = [patheffects.withStroke(linewidth=3, foreground="w")]
+    # Plot the scalebar label
+    t0 = ax.text(sbcx, sbcy, str(length) + ' ' + units, transform=utm,
+                 horizontalalignment='center', verticalalignment='bottom',
+                 path_effects=buffer, zorder=2)
+    left = x0+(x1-x0)*0.05
+    # # Plot the N arrow
+    # t1 = ax.text(left, sbcy, u'\u25B2\nN', transform=utm,
+    #              horizontalalignment='center', verticalalignment='bottom',
+    #              path_effects=buffer, zorder=2)
+    # Plot the scalebar without buffer, in case covered by text buffer
+    ax.plot(bar_xs, [sbcy, sbcy], transform=utm, color='k',
+            linewidth=linewidth, zorder=3)
 
 
 def create_map(
@@ -254,10 +322,6 @@ def create_map(
 ):
     projection = 'PlateCarree' if lon_range is not None else projection
     central_latitude = kwargs.pop("central_latitude", 0)
-    if isinstance(da, xr.DataArray):
-        # To ensure shift for plot over dateline
-        if float(da.coords["lon"].max()) > 180:
-            central_longitude = 180
 
     proj = get_projection(projection=projection,
                           central_longitude=central_longitude,
@@ -335,8 +399,7 @@ def get_projection(projection, central_longitude=None, central_latitude=None,
 
     if not isinstance(central_longitude, float) and not isinstance(central_longitude, int):
         raise ValueError(
-            f'central_longitude is not of type int or float, but of type {
-                type(central_longitude)}!'
+            f'central_longitude is not of type{type(central_longitude)}!'
         )
     if projection == "Mollweide":
         proj = ccrs.Mollweide(central_longitude=central_longitude)
@@ -373,7 +436,6 @@ def plot_map(dmap: xr.DataArray,
              lat_range: tuple[float, float] = None,
              lon_range: tuple[float, float] = None,
              dateline: bool = False,
-             verbose=False,
              **kwargs):
     """
     This function plots a map of a given xr.DataArray.
@@ -400,7 +462,7 @@ def plot_map(dmap: xr.DataArray,
     reload(put)
     reload(sput)
     plt.rcParams["pcolor.shading"] = "nearest"  # For pcolormesh
-    if label is None:
+    if label is None and isinstance(dmap, xr.DataArray):
         unset_label = kwargs.pop('unset_label', False)
         label = dmap.name if not unset_label else None
 
@@ -411,9 +473,17 @@ def plot_map(dmap: xr.DataArray,
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
     if plot_type != 'points':
+        if not sput.check_full_globe_coverage(dmap):
+            dateline = True
+            trafo_lon = sput.check_if_crosses_dateline(dmap)
+        else:
+            trafo_lon = True
         dmap = sput.check_dimensions(dmap,
                                      transpose_dims=True,
-                                     verbose=verbose)
+                                     verbose=False,
+                                     lon_2_180=not trafo_lon,
+                                     lon360=trafo_lon)
+
     put.check_plot_type(plot_type)
     projection = put.check_projection(ax=ax, projection=projection)
 
@@ -494,11 +564,12 @@ def plot_map(dmap: xr.DataArray,
         plot_type += '_map'
 
     # not to run into conflicts with significance mask
-    im = plot_2D(x=x, y=y, z=z,
-                 fig=fig, ax=ax, plot_type=plot_type, projection=projection,
-                 vmin=vmin, vmax=vmax, cmap=cmap, label=label, title=title,
-                 alpha=alpha,
-                 **kwargs)
+    pad = kwargs.pop('pad', -2.5)  # for maps
+    im = plot_array(x=x, y=y, z=z,
+                    fig=fig, ax=ax, plot_type=plot_type, projection=projection,
+                    vmin=vmin, vmax=vmax, cmap=cmap, label=label, title=title,
+                    alpha=alpha, pad=pad,
+                    **kwargs)
 
     # areas which are dotted are mask
     if significance_mask is not None:
@@ -537,28 +608,28 @@ def plot_map(dmap: xr.DataArray,
                     'Significance mask not of same dimension as data input dimension!')
 
             if sig_plot_type == 'hatch':
-                plot_2D(x=x, y=y, z=mask, ax=im['ax'],
-                        plot_type=sig_plot_type, alpha=0.0,
-                        projection=projection,
-                        hatch_type=hatch_type,
-                        **kwargs)
+                plot_array(x=x, y=y, z=mask, ax=im['ax'],
+                           plot_type=sig_plot_type, alpha=0.0,
+                           projection=projection,
+                           hatch_type=hatch_type,
+                           **kwargs)
             elif sig_plot_type == 'contour':
                 color = kwargs.pop('color', 'black')
                 levels = kwargs.pop('levels', 1)
-                plot_2D(x=x, y=y, z=mask, ax=im['ax'],
-                        plot_type='contour',
-                        levels=1,
-                        vmin=0, vmax=1,
-                        color='black',
-                        projection=projection,
-                        lw=2,
-                        **kwargs)
+                plot_array(x=x, y=y, z=mask, ax=im['ax'],
+                           plot_type='contour',
+                           levels=1,
+                           vmin=0, vmax=1,
+                           color='black',
+                           projection=projection,
+                           lw=2,
+                           **kwargs)
     return im
 
 # Plotting of 2D data (not necessary a map)
 
 
-def plot_2D(
+def plot_array(
     z=None,  # Not required for points
     x=None,
     y=None,
@@ -715,8 +786,8 @@ def plot_2D(
             y,
             z,
             cmap=cmap,
-            vmin=vmin,
-            vmax=vmax,
+            # vmin=vmin,  # Is directly passed by the norm! Otherwise warning will arise!
+            # vmax=vmax,
             shading="auto",
             norm=norm,
             zorder=zorder,
@@ -862,7 +933,7 @@ def plot_2D(
     # else:
     #     raise ValueError(f"Plot type {plot_type} does not exist!")
     if put.check_geoaxis(ax):
-        y_title = kwargs.pop('y_title', 1.1)
+        y_title = kwargs.pop('y_title', 1.2)
     else:
         y_title = kwargs.pop('y_title', 1.05)
     kwargs = put.set_title(title=title, ax=ax,

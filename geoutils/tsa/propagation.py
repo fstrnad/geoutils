@@ -187,6 +187,12 @@ def get_hovmoeller_single_tps(ds, tps, num_days,
         gut.myprint(f'Apply Gaussian Filter with sigma = {gf}!')
         sigma = [gf[1], gf[0]]  # sigma_y, sigma_x
 
+    if gut.is_single_tp(tps):
+        tps = [tps]
+        stp = True
+    else:
+        stp = False
+
     for tp in tqdm(tps):
         this_hov_data = get_hovmoeller_prop(ds=ds, tps=tp,
                                             num_days=num_days,
@@ -210,7 +216,10 @@ def get_hovmoeller_single_tps(ds, tps, num_days,
         gut.myprint(f'No data for {var} found!', verbose=True)
         return None
     else:
-        single_hov_dates = xr.concat(hov_data, tps.time)
+        if stp:
+            single_hov_dates = this_hov_data
+        else:
+            single_hov_dates = xr.concat(hov_data, tps.time)
         return single_hov_dates
 
 

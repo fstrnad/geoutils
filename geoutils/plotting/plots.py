@@ -47,7 +47,11 @@ def save_fig(savepath, fig=None,
         sub_string=['png', 'pdf', 'jpg', 'jpeg', 'svg']
     ):
         savepath += f".{extension}"
+
+    gut.myprint(f'Saving figure to {savepath}')
     if fig is None:
+        if extension == 'png':
+            dpi = 300
         plt.savefig(savepath,
                     bbox_inches='tight',
                     dpi=dpi)

@@ -27,12 +27,13 @@ def parse_cf(ds):
     return ds.metpy.parse_cf().squeeze()
 
 
-def compute_wind_speed(u, v, ws_name='windspeed'):
+def compute_windspeed(u, v, ws_name='windspeed'):
     windspeed = np.sqrt(u ** 2 + v ** 2)
     windspeed = windspeed.rename(ws_name)
     gut.myprint(
-         f"Computed single components of wind dataset as {ws_name}.")
+        f"Computed windspeed of wind dataset as {ws_name}.")
     return windspeed
+
 
 def kelvin_to_degC(temperature):
     """Convert temperature to degC.

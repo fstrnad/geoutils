@@ -1,9 +1,6 @@
 """General Util functions."""
 from collections import Counter
 from pprint import pprint
-import cftime
-from itertools import combinations_with_replacement
-from scipy.signal import find_peaks
 import contextlib
 import os
 import numpy as np
@@ -74,6 +71,8 @@ def is_single_tp(tps):
 
 
 def is_datetime360(time):
+    import cftime
+
     if not is_single_tp(tps=time):
         time = time[0]
     return isinstance(time, cftime._cftime.Datetime360Day)
@@ -120,7 +119,12 @@ def get_dims(ds=None):
         raise ValueError(
             f'ds needs to be of type xr.DataArray but is of type {dtype}!')
 
-    return dims
+    return list(dims)
+
+
+def get_coords(xarray_obj):
+    dims = get_dims(xarray_obj)
+    return {coord: xarray_obj.coords[coord].values for coord in dims}
 
 
 @contextlib.contextmanager
@@ -145,6 +149,8 @@ def temp_seed(seed=SEED):
 
 
 def get_all_combs(arr):
+    from itertools import combinations_with_replacement
+
     return list(combinations_with_replacement(arr, r=2))
 
 
@@ -230,6 +236,7 @@ def get_range_ds(ds, min_val, max_val):
 
 
 def find_local_max(data):
+    from scipy.signal import find_peaks
 
     peak_idx, _ = find_peaks(data)
     peak_idx = np.array(peak_idx, dtype=int)
@@ -249,6 +256,8 @@ def find_local_max(data):
 
 
 def find_local_min(data):
+    from scipy.signal import find_peaks
+
     # same as local max but *-1
     peak_idx, _ = find_peaks(-1*data)
     peak_idx = np.array(peak_idx, dtype=int)
@@ -341,6 +350,8 @@ def find_local_min_xy(data, x):
 
 
 def get_locmax_of_score(ts, q=0.95):
+    from scipy.signal import find_peaks
+
     q_value = np.quantile(ts, q)
     peak_idx, _ = find_peaks(ts, height=q_value, distance=1, prominence=1)
     peak_val = ts[peak_idx]
@@ -357,6 +368,8 @@ def get_locmax_of_ts(ts, q=0.95):
     Returns:
         xr.Dataarray: returns the time points as np.datetime64
     """
+    from scipy.signal import find_peaks
+
     q_value = np.quantile(ts, q)
     peak_idx, _ = find_peaks(ts, height=q_value,
                              distance=1,
@@ -381,6 +394,8 @@ def get_locmax_composite_tps(ts, q=0.95, distance=3,
     q_value = np.quantile(ts, q)
     if np.isnan(q_value):
         raise ValueError(f'Quantile {q} is NaN!')
+    from scipy.signal import find_peaks
+
     peak_idx, _ = find_peaks(ts, height=q_value,
                              # Minimum distance of peaks (to avoid problems in composites)
                              distance=distance,
@@ -760,16 +775,13 @@ def get_job_array_ids(def_id=0):
         job_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
         num_jobs = int(os.environ['SLURM_ARRAY_TASK_COUNT'])
         num_jobs = max_job_id
-        print(
-            f"job_id: {
-                job_id}/{num_jobs}, Min Job ID: {min_job_id}, Max Job ID: {max_job_id}",
-            flush=True)
+        myprint(f"{job_id}/{num_jobs}")
+        myprint(f"Min Job ID: {min_job_id}, Max Job ID: {max_job_id}")
 
     except KeyError:
         job_id = 0
         num_jobs = 1
-        print("Not running with SLURM job arrays, but with manual id: ", job_id,
-              flush=True)
+        myprint(f"Not running with SLURM job arrays, but with {job_id}")
 
     return job_id, num_jobs
 
@@ -787,6 +799,10 @@ def mk_dict_2_lists(key_lst, val_lst):
 
 def zip_2_lists(list1, list2):
     return np.array(list(zip(list1, list2)))
+
+
+def zip_3_lists(list1, list2, list3):
+    return np.array(list(zip(list1, list2, list3)))
 
 
 def create_xr_ds(data, dims, coords, name=None):

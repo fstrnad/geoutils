@@ -63,8 +63,6 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         data_nc_v = gut.process_object(data_nc_v) if len(data_nc_v) > 0 else []
         data_nc_w = gut.process_object(data_nc_w) if len(data_nc_w) > 0 else []
         all_files = data_nc_u + data_nc_v + data_nc_w
-        for file in all_files:
-            fut.print_file_location_and_size(filepath=file, verbose=False)
         time_range = fut.get_file_time_range(all_files, verbose=verbose)
 
         ds_wind = mp.MultiPressureLevelDataset(data_nc=all_files,
@@ -72,6 +70,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                                                can=False,  # Anomalies are computed later all together
                                                time_range=time_range,
                                                read_into_memory=False,
+                                               verbose=verbose,
                                                **u_kwargs)
         u = ds_wind.ds[self.u_name]
         if self.u_name == 'u' and convention_labelling:
@@ -84,6 +83,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         if self.v_name == 'v' and convention_labelling:
             v = v.rename('V')
             self.v_name = 'V'
+
         if data_nc_fac is not None:
             ds_fac = mp.MultiPressureLevelDataset(data_nc=data_nc_fac,
                                                   plevels=plevels,
@@ -118,31 +118,34 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
             w = ds_wind.ds['w'].rename('OMEGA')
 
         if 'OMEGA' in ds_wind.get_vars():
-            w = ds_wind.ds['OMEGA']
             reverse_w = kwargs.pop('reverse_w', False)
             gut.myprint(f'Multiply w by factor {-1}!', verbose=reverse_w)
-            w = -1*w if reverse_w else w
+            ds_wind.ds['OMEGA'] = -1*ds_wind.ds['OMEGA'] if reverse_w else ds_wind.ds['OMEGA']
             self.vert_velocity = True
 
-        windspeed = None
-        if compute_ws and len(data_nc_u) > 0 and len(data_nc_v) > 0:
-            windspeed = self.compute_windspeed(u=u, v=v)
-        ds_wind.ds['windspeed'] = windspeed
         self.ds = ds_wind.ds
+        if read_into_memory:
+            self.ds = self.read_data_into_memory()
+
+        if compute_ws and len(data_nc_u) > 0 and len(data_nc_v) > 0:
+            ws_name = kwargs.pop('ws_name', 'windspeed')
+            self.compute_windspeed(ws_name=ws_name)
+
         self.vars = self.get_vars()
         self.set_var()  # sets the variable name to the first variable in the dataset
         self.can = can
         self.compute_all_anomalies(**kwargs)
 
-        if read_into_memory:
-            self.ds = self.read_data_into_memory()
-
-        else:
-            gut.myprint('Only Init the Wind Dataset object without data!')
-
-    def compute_windspeed(self, u, v, ws_name='windspeed'):
+    def compute_windspeed(self, u=None, v=None, ws_name='windspeed'):
         import geoutils.utils.met_utils as metu
+        reload(metu)
+        if u is None:
+            u = self.ds[self.u_name]
+        if v is None:
+            v = self.ds[self.v_name]
+        gut.myprint(f'Compute windspeed from {self.u_name} and {self.v_name}...')
         windspeed = metu.compute_windspeed(u, v, ws_name=ws_name)
+        self.ds[ws_name] = windspeed
         return windspeed
 
     def compute_vertical_shear(self, plevel_up=200, plevel_low=850,

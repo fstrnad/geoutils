@@ -41,8 +41,8 @@ def get_air_strength(start_month='Jun', end_month='Sep',
                               end_month=end_month,
                               time_range=time_range)
     if definition == 'std':
-        std = float(air_index.std()['air'])
-        mean = float(air_index.mean()['air'])
+        std = float(air_index.std())
+        mean = float(air_index.mean())
         gut.myprint(f'mean {mean}, std: {std}', verbose=verbose)
         reduced_air_index = air_index.where(air_index < mean-std,
                                             drop=True)

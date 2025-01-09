@@ -1,5 +1,4 @@
 from typing import List, Tuple
-from tqdm import tqdm
 from sklearn.neighbors import KernelDensity
 import scipy.stats as st
 import numpy as np
@@ -161,7 +160,6 @@ def compute_rm(da, rm_val, dim='time', sm='Jan', em='Dec'):
         start_year, end_year = tu.get_sy_ey_time(times)
         all_year_arr = []
         for idx, year in enumerate(np.arange(start_year, end_year)):
-            print(f'Compute RM Year {year}')
             start_date, end_date = tu.get_start_end_date(
                 sy=year,
                 ey=year,
@@ -780,98 +778,8 @@ def get_mask_for_nan_array(arr, var_name=None):
     return mask
 
 
-def get_LR_map(ds, var, method='standardize', sids=None, deg=1):
-    reload(sut)
-    if sids is None:
-        sids = ds.indices_flat
-
-    pids = ds.get_points_for_idx(sids)
-
-    arr = np.zeros((len(sids), ds.mask.shape[0]))
-    if method == 'standardize':
-        y_data = sut.standardize(ds.ds[var])
-    elif method == 'normalize':
-        y_data = sut.normalize(ds.ds[var])
-    elif method == 'rank':
-        y_data = sut.rank_data(ds.ds[var])
-    else:
-        print('No Normalization on time series performed!')
-        y_data = ds.ds[var]
-    for idx, pid in enumerate(tqdm(pids)):
-        ts = y_data.sel(points=pid)
-        poly_coeff = np.polyfit(
-            x=ts, y=y_data, full=False, deg=deg)
-        arr[idx, :], _ = poly_coeff
-
-    da_LR = xr.DataArray(
-        data=arr,
-        dims=['sids', 'points'],
-        coords=dict(
-            sids=sids,
-            points=ds.ds.points,
-            lon=ds.ds.lon,
-            lat=ds.ds.lat,
-        ),
-        name='LR'
-    )
-
-    return da_LR
 
 
-def get_corr_map(ds, var, sids=None, method='spearman', p_value_test='twosided'):
-    """Generate a map of correlations to all points in a dataarray for a set of ids.
-
-    Args:
-        ds (climnet.BaseDataset): BaseDataset class
-        var (string): Variable name on which to apply the correlations
-        sids (int, optional): List of int ids of (defined) data points. Defaults to None.
-        method (str, optional): Correlation method. Defaults to 'spearman'.
-        p_value_test (str, optional): selected p-value test. Defaults to 'twosided'.
-
-    Returns:
-        xr.DataSet: Dataset that as as variables corr, pvalue and dimension is len(sids).
-    """
-    if sids is None:
-        sids = ds.indices_flat
-
-    pids = ds.get_points_for_idx(sids)
-    if method == 'pearson':
-        corr, p = sut.calc_pearson(data=ds.ds[var].data)
-    elif method == 'spearman':
-        corr, p = sut.calc_spearman(data=ds.ds[var].data, test=p_value_test)
-
-    arr = np.zeros((len(sids), ds.mask.shape[0]))
-    p_arr = np.zeros((len(sids), ds.mask.shape[0]))
-    for idx, pid in enumerate(tqdm(pids)):
-        arr[idx, :] = corr[pid, :]
-        p_arr[idx, :] = p[pid, :]
-
-    da_corr = xr.DataArray(
-        data=arr,
-        dims=['sids', 'points'],
-        coords=dict(
-            sids=sids,
-            points=ds.ds.points,
-            lon=ds.ds.lon,
-            lat=ds.ds.lat,
-        ),
-        name='corr'
-    )
-    da_p = xr.DataArray(
-        data=p_arr,
-        dims=['sids', 'points'],
-        coords=dict(
-            sids=sids,
-            points=ds.ds.points,
-            lon=ds.ds.lon,
-            lat=ds.ds.lat,
-        ),
-        name='p'
-    )
-    da_corr = da_corr.to_dataset()
-    da_corr['p'] = da_p
-
-    return da_corr
 
 
 def compute_correlation(data_array, ts,
@@ -915,7 +823,7 @@ def compute_correlation(data_array, ts,
         name='p')
     gut.myprint(
         f"Computing {correlation_type} correlation for {len(data_array.lon)} locations ...")
-    for i, lon in enumerate(tqdm(data_array.lon)):
+    for i, lon in enumerate(data_array.lon):
         for j, lat in enumerate(data_array.lat):
             for l, lag in enumerate(lag_arr):
                 time_series_loc = data_array.sel(
@@ -1202,7 +1110,7 @@ def transpose_2D_data(da, dims=['lat', 'lon']):
 
 
 def check_dimensions(ds, ts_days=True,
-                     sort=True,
+                     sort=False,
                      lon360=False,
                      lon_2_180=True,
                      keep_time=False,
@@ -1275,7 +1183,7 @@ def check_dimensions(ds, ts_days=True,
     if numdims >= 2 and 'lon' in dims:
         # If lon from 0 to 360 shift to -180 to 180
         if lon360:
-            gut.myprint('Longitudes 0 - 360!')
+            gut.myprint('Longitudes 0 - 360!', verbose=verbose)
             if max(ds.lon) < 180:
                 ds = da_lon2_360(da=ds)
         else:
@@ -1332,6 +1240,70 @@ def check_dimensions(ds, ts_days=True,
             ds.time.encoding['calendar'] = calendar
 
     return ds
+
+
+def get_lon_range(ds):
+    lon = ds.lon
+    return [float(lon.min()), float(lon.max())]
+
+
+def check_full_globe_coverage(data_array: xr.DataArray,
+                              max_deviation=10) -> str:
+    """
+    Check whether the longitude range in an xarray DataArray covers the whole globe (360°)
+    or only part of it.
+
+    Parameters:
+    - data_array (xr.DataArray): An xarray DataArray containing a longitude dimension.
+
+    Returns:
+    - str: A message indicating whether the longitude range covers the whole globe or only parts.
+    """
+    if 'lon' not in data_array.dims and 'longitude' not in data_array.dims:
+        raise ValueError(
+            "The DataArray must have a 'lon' or 'longitude' dimension.")
+
+    # Identify the longitude dimension
+    lon_dim = 'lon' if 'lon' in data_array.dims else 'longitude'
+    lon_values = np.array(data_array[lon_dim].values)
+    # Normalize longitudes to the range [0, 360)
+    normalized_lons = np.sort(lon2_360(lon_values))
+    # Check the range
+    lon_range = normalized_lons[-1] - normalized_lons[0]
+    if lon_range >= 360-max_deviation:
+        return True
+
+    else:
+        return False
+
+
+def check_if_crosses_dateline(data_array: xr.DataArray) -> bool:
+    """
+    Check whether the longitude values in an xarray DataArray cross the dateline.
+
+    Parameters:
+    - data_array (xr.DataArray): An xarray DataArray containing a longitude dimension.
+
+    Returns:
+    - bool: True if the longitude values cross the dateline, False otherwise.
+    """
+    if 'lon' not in data_array.dims and 'longitude' not in data_array.dims:
+        raise ValueError(
+            "The DataArray must have a 'lon' or 'longitude' dimension.")
+
+    # Identify the longitude dimension
+    lon_dim = 'lon' if 'lon' in data_array.dims else 'longitude'
+    lon_values = data_array[lon_dim].values
+
+    # Normalize longitudes to the range [0, 360)
+    normalized_lons = lon2_180(lon_values)
+
+    # Check for dateline crossing
+    diff = np.diff(normalized_lons)
+    if np.any(np.abs(diff) > 180):  # A gap larger than 180° indicates crossing the dateline
+        return True
+
+    return False
 
 
 def get_grid_range(da):
@@ -1412,7 +1384,12 @@ def merge_datasets(datasets, multiple='max'):
     return merged_dataset
 
 
-def get_data_coord(da, coord, in3d=True, method='nearest'):
+def get_data_coordinate(da, coord, in3d=False, method='nearest'):
+
+    if in3d and len(coord) != 3:
+        raise ValueError(
+            'Coordinate must have 3 elements for 3D dataarray!')
+
     if in3d:
         x_0, y_0, lev_0 = coord
         if method == 'nearest':
@@ -1424,6 +1401,7 @@ def get_data_coord(da, coord, in3d=True, method='nearest'):
                                  kwargs={"fill_value": "extrapolate"}
                                  )
     else:
+        x_0, y_0 = coord
         if method == 'nearest':
             da_coord = da.sel(lon=x_0, lat=y_0,
                               method=method)
@@ -1451,7 +1429,7 @@ def calculate_percentile(arr1, arr2,):
 
     percentile_values = np.zeros(arr1.shape)
 
-    for i, lat in enumerate(tqdm(arr1.lat.values)):
+    for i, lat in enumerate(arr1.lat.values):
         for j, lon in enumerate(arr1.lon.values):
             this_val = st.percentileofscore(
                 arr2.sel(lon=lon, lat=lat, method='nearest'), arr1.sel(lon=lon, lat=lat, method='nearest'))

@@ -3,6 +3,7 @@ import shutil
 import string
 import random
 import pickle
+import comm
 import numpy as np
 import os
 import xarray as xr
@@ -16,9 +17,13 @@ reload(gut)
 # ##################### Assert functions #####################
 
 def assert_folder_exists(folder_path):
+    folder_path_here = f'./{folder_path}'
     folder_path = os.path.dirname(folder_path)
+
     if not os.path.exists(folder_path):
-        raise ValueError(f"Folder {folder_path} does not exist.")
+        if not os.path.exists(folder_path_here):
+            gut.myprint(f"Folder at ./{folder_path} does not exist.")
+            raise ValueError(f"Folder {folder_path} does not exist.")
 
 
 def assert_file_exists(filepath):
@@ -250,13 +255,17 @@ def create_random_folder(path='./', k=8, extension=None):
     return folder_path
 
 
-def create_random_filename(folder_path='./', k=8,
-                           startstring=None,
-                           extension=None):
+def create_filename(folder_path='./', k=1,
+                    file_string=None,
+                    startstring=None,
+                    extension=None):
     while True:
         # Generate a random filename
-        file_name = ''.join(random.choices(string.ascii_letters + string.digits,
-                                           k=k))
+        if file_string is None:
+            file_name = ''.join(random.choices(string.ascii_letters + string.digits,
+                                               k=k))
+        else:
+            file_name = file_string
         # Add startstring if provided
         if startstring is not None:
             file_name = f'{startstring}_{file_name}'
@@ -271,6 +280,8 @@ def create_random_filename(folder_path='./', k=8,
         # Check if the file already exists, if not, return the filename
         if not os.path.exists(file_path):
             return file_path
+        else:
+            file_string = None
 
 
 def get_human_readable_size(size_in_bytes):
@@ -326,7 +337,8 @@ def print_file_location_and_size(filepath, verbose=True):
         else:
             total_size = get_folder_size(file)
 
-        gut.myprint(f"Total size of '{file}':\n   {total_size} bytes")
+        gut.myprint(f"Total size of '{file}':\n   {total_size} bytes",
+                    verbose=verbose)
 
     return None
 
@@ -402,15 +414,14 @@ def sort_filenames_by_number(arr):
     # Check if each string has at least one number
     has_number = any(extract_numbers(s) for s in arr)
     if not has_number:
+        print("No numbers found in any string!")
         return arr  # No sorting if no numbers are found in any string
-
-    # Check if all numbers are the same across strings
-    if len(common_numbers) == 1 or not common_numbers:
-        return arr  # Do not sort if all numbers are identical or none are common
 
     # Define the sorting key function
     def sort_key(s):
         numbers = extract_numbers(s)
+        if len(numbers) == len(common_numbers):
+            return float('inf')
         unique_numbers = [num for num in numbers if num not in common_numbers]
         # Sort by unique number if exists; otherwise, by first common number
         return unique_numbers[0] if unique_numbers else numbers[0]
@@ -478,6 +489,7 @@ def find_files_with_string(folder_path: str, search_string: str = None,
     Returns:
         list: A list of file paths that contain the search string.
     """
+    print(folder_path)
     assert_folder_exists(folder_path)
 
     file_list = []
