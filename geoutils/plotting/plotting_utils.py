@@ -11,7 +11,7 @@ import cartopy as ctp
 import cartopy.mpl as cmpl
 import geoutils.plotting.plot_settings as pst
 from importlib import reload
-
+reload(pst)
 
 def get_available_mpl_colormaps():
     """
@@ -61,15 +61,14 @@ def get_available_palettable_colormaps():
             scientific_div)
 
 
-def get_cmap(cmap, all=False, levels=None):
-
+def get_cmap(cmap, levels=None, all=pst.enable_all_cmaps):
     mpl_cmaps = get_available_mpl_colormaps()
     if cmap in mpl_cmaps:
         colormap = cmap
-    else:
+    elif not all:
         raise ValueError(
             f'Colormap {cmap} not found. Please choose from {mpl_cmaps}!')
-    if all:
+    if all and cmap not in mpl_cmaps:
         import palettable as pt
         pt_cmaps, d_cmaps, q_cmaps, s_cmaps, cmocean_div, cmocean_seq, scientific_seq, scientific_div = get_available_palettable_colormaps()
 
@@ -116,7 +115,7 @@ def set_title(title, ax=None, fig=None, **kwargs):
     title_color = kwargs.pop('title_color', 'black')
     # fw = kwargs.pop('title_fontweight', "normal")
     fw = kwargs.pop('title_fontweight', "bold")
-    fsize = kwargs.pop('title_fsize', pst.BIGGER_SIZE)
+    fsize = kwargs.pop('title_fsize', pst.MEDIUM_SIZE)
     if title is not None:
         if ax is not None:
             ax.set_title(title, color=title_color,
@@ -127,7 +126,7 @@ def set_title(title, ax=None, fig=None, **kwargs):
                          color=title_color,
                          y=y_title,
                          fontweight=fw,
-                         fontsize=pst.BIGGER_SIZE)
+                         fontsize=fsize)
     if vertical_title is not None:
         fsize = kwargs.pop('vertical_title_fsize', pst.BIGGER_SIZE)
         ax.text(x=x_title_offset, y=.5, s=vertical_title,
@@ -343,7 +342,7 @@ def truncate_colormap(cmap='terrain_r', minval=0.0, maxval=1.0, n=100):
 def create_cmap(cmap, levels=None, **kwargs):
     # set colormap
     if isinstance(cmap, str):
-        cmap = get_cmap(cmap, levels)
+        cmap = get_cmap(cmap, levels=levels)
     elif not isinstance(cmap, mpl.colors.Colormap) or not isinstance(cmap, mpl.colors.LinearSegmentedColormap):
         raise ValueError(
             f'cmap has to be of type str or mpl.colors.Colormap but is of type {type(cmap)}!')

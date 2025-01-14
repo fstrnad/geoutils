@@ -180,11 +180,11 @@ def plot_2d(
             if lw is None:
                 lw = lw_arr[idx] if idx < len(lw_arr) else lw_arr[-1]
 
-            mk = kwargs.get('marker', None)
+            mk = kwargs.get('mk', None)
             if mk is None:
                 mk = mk_arr[idx] if idx < len(mk_arr) else mk_arr[-1]
 
-            mk_size = kwargs.get('marker_size', 1)
+            mk_size = kwargs.get('marker_size', None)
             mk_size_arr = kwargs.get('mk_size_arr', None)
             if mk_size_arr is not None:
                 mk_size = mk_size_arr[idx] if idx < len(mk_size_arr) else mk_size_arr[-1]

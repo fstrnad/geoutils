@@ -8,6 +8,7 @@ MAXIMUM_SIZE = 22
 MAX_ZORDER = 100
 
 set_new_font = True
+enable_all_cmaps = True
 
 plt.rcdefaults()
 

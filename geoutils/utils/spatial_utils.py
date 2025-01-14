@@ -1248,7 +1248,7 @@ def get_lon_range(ds):
 
 
 def check_full_globe_coverage(data_array: xr.DataArray,
-                              max_deviation=10) -> str:
+                              max_deviation=10) -> bool:
     """
     Check whether the longitude range in an xarray DataArray covers the whole globe (360°)
     or only part of it.
@@ -1267,10 +1267,12 @@ def check_full_globe_coverage(data_array: xr.DataArray,
     lon_dim = 'lon' if 'lon' in data_array.dims else 'longitude'
     lon_values = np.array(data_array[lon_dim].values)
     # Normalize longitudes to the range [0, 360)
-    normalized_lons = np.sort(lon2_360(lon_values))
+    normalized_lons_360 = np.sort(lon2_360(lon_values))
+    normalized_lons_180 = np.sort(lon2_180(lon_values))
     # Check the range
-    lon_range = normalized_lons[-1] - normalized_lons[0]
-    if lon_range >= 360-max_deviation:
+    lon_range_360 = normalized_lons_360[-1] - normalized_lons_360[0]
+    lon_range_180 = normalized_lons_180[-1] - normalized_lons_180[0]
+    if lon_range_360 >= 360-max_deviation and lon_range_180 >= 360-max_deviation:
         return True
 
     else:

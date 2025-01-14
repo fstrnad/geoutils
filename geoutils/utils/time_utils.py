@@ -1611,7 +1611,6 @@ def get_ee_ds(
     verbose=True,
 ):
     if threshold is not None:
-        gut.myprint(f"Threshold is set to {threshold}")
         q_val_map = xr.where(~np.isnan(dataarray), threshold, np.nan)
     elif q is not None:
         if q > 1 or q < 0:
@@ -1622,11 +1621,15 @@ def get_ee_ds(
         # Remove days without rain
         dataarray = dataarray.where(dataarray > min_threshold)
     if threshold is not None:
+        gut.myprint(f'Compute extreme events with threshold {threshold}!')
+        if q is not None:
+            gut.myprint(f'q is given, but will be ignored!')
         if reverse_threshold:
             data_quantile = xr.where(dataarray < threshold, dataarray, np.nan)
         else:
             data_quantile = xr.where(dataarray > threshold, dataarray, np.nan)
     else:
+        gut.myprint(f"Compute extreme events with quantile {q}!")
         # Gives the quanile value for each cell
         q_val_map = dataarray.quantile(q, dim="time")
         # Set values below quantile to 0
@@ -1643,7 +1646,7 @@ def get_ee_ds(
 
     if verbose:
         tot_frac_events = float(ee_map.sum()) / dataarray.size
-        gut.myprint(f"Number of events: {tot_frac_events} (if q given: ~{q})!")
+        gut.myprint(f"Fraction of events: {tot_frac_events}!")
 
     rel_frac_q_map = data_quantile.sum(dim="time") / dataarray.sum(dim="time")
 
@@ -1667,7 +1670,7 @@ def compute_evs(
     reverse_treshold=False,
     min_threshold=None,
     th_eev=None,
-    min_evs=1,
+    min_num_events=1,
     verbose=True,
 ):
     """Creates an event series from an input time series.
@@ -1677,7 +1680,7 @@ def compute_evs(
         Quantile for defining an extreme event. Defaults to 0.95. min_threshold (int,
         optional): Threshold. Removes all values in time series.
             Eg. important to get wet days. Defaults to 1.
-        th_eev (int, optional): Minimum value of an extreme event. Defaults to 15. min_evs
+        th_eev (int, optional): Minimum value of an extreme event. Defaults to 15. min_num_events
         (int, optional): Minimum number of extreme event within 1 time series. Defaults to
         20.
 
@@ -1700,17 +1703,16 @@ def compute_evs(
         verbose=verbose,
     )
     # Create mask for which cells are left out
-    gut.myprint(f"Remove cells without min number of events: {min_evs}")
-    mask = ee_map > min_evs
+    mask = ee_map > min_num_events
     final_data = data_quantile.where(mask, np.nan)
 
-    gut.myprint("Now create binary event series!")
     event_series = xr.where(~np.isnan(final_data[:]), 1, 0)
-    gut.myprint("Done!")
     event_series = event_series.rename("evs")
 
     # Create new mask for dataset: Masked values are areas with no events!
-    mask = xr.where(ee_map > min_evs, 1, 0)
+    mask = xr.where(ee_map > min_num_events, 1, 0)
+    fraction_masked = 1 - float(mask.sum()) / mask.size
+    gut.myprint(f"Fraction of masked values: {fraction_masked:.2f}!")
 
     return event_series, mask
 
