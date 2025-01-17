@@ -11,7 +11,6 @@ import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
-import geoutils.utils.met_utils as mut
 from importlib import reload
 import xarray as xr
 reload(gut)
@@ -229,6 +228,7 @@ class BaseDataset():
             ds = tu.compute_timemax(ds=ds, timemean=timemax, verbose=verbose)
 
         if parse_cf:
+            import geoutils.utils.met_utils as mut
             ds = mut.parse_cf(ds=ds)
 
         delete_hist = kwargs.pop('delete_hist', False)

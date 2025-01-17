@@ -147,13 +147,19 @@ def download_era5(variable, plevel=None,
         prefix = f'{variable}_{plevel}_{start_month}_{end_month}'
     else:
         dir = f'{folder}/single_pressure_level/{variable}/'
-        prefix = f'{variable}_{start_month}_{end_month}'
+        if start_month != 'Jan' or end_month != 'Dec':
+            prefix = f'{variable}_{start_month}_{end_month}'
+        else:
+            prefix = f'{variable}'
 
     fut.create_folder(dir)
     for year in years:
         gut.myprint(
             f"Year {year}, Pressure Level {plevel}, Variable {variable}")
-        filename = f'{dir}/{prefix}_{tstr}_{year}.nc'
+        if tstr != '1h':
+            filename = f'{dir}/{prefix}_{tstr}_{year}.nc'
+        else:
+            filename = f'{dir}/{prefix}_{year}.nc'
         fname_daymean = f'{dir}/{prefix}_{year}_daymean.nc'
         if not fut.exist_file(filename, verbose=True):
             # This runs the ERA5 downloader

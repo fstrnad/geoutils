@@ -3,7 +3,6 @@ import numpy as np
 import geoutils.utils.general_utils as gut
 import geoutils.utils.spatial_utils as sput
 import geoutils.preprocessing.open_nc_file as of
-import xesmf as xe
 
 from importlib import reload
 reload(gut)
@@ -22,6 +21,10 @@ def interpolate_grid(dataarray, grid_step,
     """
     if grid_step is None:
         raise ValueError("Grid step must be defined!")
+    native_grid_step, _, _ = sput.get_grid_step(dataarray)
+    if native_grid_step < grid_step:
+        method = "nearest"  # coarse graining by next neighbor
+
     dataarray, dims = of.check_dimensions(dataarray,
                                           check_clim_dims=False,
                                           transpose_dims=False,
@@ -92,6 +95,8 @@ def interpolate_grid(dataarray, grid_step,
     )
 
     if use_esmf:
+        import xesmf as xe
+
         grid = xr.Dataset(
             {
                 "lat": (['lat'], init_lat, {"units": "degrees_north"}),

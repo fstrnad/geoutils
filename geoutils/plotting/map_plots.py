@@ -313,7 +313,7 @@ def create_map(
     projection="PlateCarree",
     central_longitude=None,
     alpha=1,
-    plot_grid=False,  # Check if this is already set from before!
+    plot_grid=True,  # Check if this is already set from before!
     lat_range=None,
     lon_range=None,
     dateline=False,
@@ -1228,7 +1228,7 @@ def plot_trajectory(lon_lat_pairs,
 
 def create_multi_plot(nrows, ncols, projection=None,
                       lon_range=None, lat_range=None,
-                      plot_grid=True, **kwargs):
+                      plot_grid=False, **kwargs):
     reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:

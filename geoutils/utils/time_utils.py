@@ -1178,6 +1178,31 @@ def get_frequency(x):
         return "none"
 
 
+def convert_time_resolution(dataarray, keep_time_points=6, average=False):
+    """
+    Convert an xarray DataArray with hourly time points to 6-hourly resolution.
+
+    Parameters:
+    ----------
+    dataarray : xarray.DataArray
+        Input DataArray with hourly time points.
+
+    Returns:
+    -------
+    xarray.DataArray
+        DataArray with only every 6th time point, representing 6-hourly resolution.
+    """
+    # Ensure the time dimension exists
+    if "time" not in dataarray.dims:
+        raise ValueError("The DataArray must have a 'time' dimension.")
+
+    if average:
+        return dataarray.rolling(time=6, center=False).mean()
+    else:
+        # Subset the DataArray to keep every 6th time point
+        return dataarray.isel(time=slice(None, None, keep_time_points))
+
+
 def check_hour_equality(da1, da2):
     """
     Check whether the hour of the time dimension is equal in two xarray DataArrays.
@@ -1610,13 +1635,12 @@ def get_ee_ds(
     th_eev=None,
     verbose=True,
 ):
+    if threshold is None and q is None:
+        raise ValueError("ERROR! Either q or threshold has to be    provided!")
+
     if threshold is not None:
         q_val_map = xr.where(~np.isnan(dataarray), threshold, np.nan)
-    elif q is not None:
-        if q > 1 or q < 0:
-            raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
-    else:
-        raise ValueError("ERROR! Either q or threshold has to be provided!")
+
     if min_threshold is not None:
         # Remove days without rain
         dataarray = dataarray.where(dataarray > min_threshold)
@@ -1631,7 +1655,7 @@ def get_ee_ds(
     else:
         gut.myprint(f"Compute extreme events with quantile {q}!")
         # Gives the quanile value for each cell
-        q_val_map = dataarray.quantile(q, dim="time")
+        q_val_map = get_q_val_map(dataarray=dataarray, q=q)
         # Set values below quantile to 0
         if q > 0.5:
             data_quantile = xr.where(dataarray > q_val_map, dataarray, np.nan)
@@ -1651,6 +1675,16 @@ def get_ee_ds(
     rel_frac_q_map = data_quantile.sum(dim="time") / dataarray.sum(dim="time")
 
     return q_val_map, ee_map, data_quantile, rel_frac_q_map
+
+
+def get_q_val_map(dataarray, q=0.95):
+    if q > 1 or q < 0:
+        raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
+
+    if 'time' not in dataarray.dims:
+        raise ValueError("ERROR! No time dimension found!")
+    q_val_map = dataarray.quantile(q, dim="time")
+    return q_val_map
 
 
 def get_ee_count_ds(ds, q=0.95):
