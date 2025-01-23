@@ -1,4 +1,6 @@
 """General Util functions."""
+from tabnanny import check
+import pkg_resources
 from collections import Counter
 from pprint import pprint
 import contextlib
@@ -103,11 +105,22 @@ def get_vars(ds):
     return vars
 
 
+def check_xarray_version():
+    required_version = '2024.9.0'
+    installed_version = xr.__version__
+
+    # Compare the installed version with the required version
+    if pkg_resources.parse_version(installed_version) >= pkg_resources.parse_version(required_version):
+        return True
+    else:
+        return False
+
+
 def get_dims(ds=None):
 
     if isinstance(ds, xr.Dataset):
         # check if xarray version is new
-        if xr.__version__ != '2024.9.0':
+        if check_xarray_version():
             dims = list(ds.dims.keys())
         else:
             dims = list(ds.dims)  # new in xarray 2023.06.
@@ -729,21 +742,24 @@ def custom_arange(start, end, step, include_end=True):
         return np.arange(start, end, step)
 
 
-def get_random_numbers_no_neighboring_elems(min_num, max_num, amount):
+def get_random_numbers_no_neighboring_elems(min_num=0, length_array=1,
+                                            amount=0, mult=3):
     """Generates amount random numbers in [min_num,..,max_num] that do not
     include neighboring numbers."""
 
-    # this is far from exact - it is best to have about 5+ times the amount
+    # this is far from exact - it is best to have about 3+ times the amount
     # of numbers to choose from - if the margin is too small you might take
     # very long to get all your "fitting numbers" as only about 1/4 of the range
     # is a viable candidate (worst case):
     #   [1 2 3 4 5 6 7 8 9 10]: draw 2 then 5 then 8 and no more are possible
-    if (max_num-min_num) // 5 < amount:
-        raise ValueError(f"Range too small - increase given range.")
+    num_events = length_array - min_num
+    if (num_events) / mult < amount:
+        raise ValueError(
+            f"Range {num_events} too small for given amount {amount}.")
 
     rnd_set = set()
     while len(rnd_set) != amount:
-        a = np.random.randint(min_num, max_num)
+        a = np.random.randint(min_num, length_array)
         if not {a-1, a, a+1} & rnd_set:  # set intersection: empty == False == no commons
             rnd_set.add(a)
     return np.array(sorted(rnd_set))

@@ -988,6 +988,31 @@ def lon2_180(lon3):
     return lon1
 
 
+def get_lat_lon_for_value(da: xr.DataArray, value: float):
+    """
+    Get the latitudes and longitudes for a specific value in an xarray DataArray.
+
+    Args:
+    da (xr.DataArray): The xarray DataArray containing data with 'lat' and 'lon' coordinates.
+    specific_value (float): The value for which to find the corresponding latitude and longitude.
+
+    Returns:
+    list of tuples: A list of (latitude, longitude) tuples where the value is located.
+    """
+    # Find the indices where the data matches the specific value
+    matching_indices = np.where(da.values == value)
+
+    # Get the corresponding lat/lon values
+    matching_lats = np.array(da.coords['lat'][matching_indices[0]])
+    matching_lons = np.array(da.coords['lon'][matching_indices[1]])
+
+    # Combine the lat and lon values into a list of tuples
+    locations = list(zip(matching_lons, matching_lats))
+
+    return locations
+
+
+
 def sum_eres(data):
     """Gives sum of EREs per point over the whole dataset provided.
 

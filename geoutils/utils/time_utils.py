@@ -782,7 +782,9 @@ def is_in_month_range(month, start_month, end_month):
 
 def get_month_range_data(dataset,
                          start_month="Jan",
-                         end_month="Dec", verbose=False):
+                         end_month="Dec",
+                         set_zero=False,
+                         verbose=False):
     """
     This function generates data within a given month range. It can be from smaller month
     to higher (eg. Jul-Sep) but as well from higher month to smaller month (eg. Dec-Feb)
@@ -804,9 +806,16 @@ def get_month_range_data(dataset,
         raise ValueError("Please specify start and end month!")
     if verbose:
         gut.myprint(f"Select data from {start_month} - {end_month}!")
-    seasonal_data = dataset.sel(
-        time=is_in_month_range(dataset["time.month"], start_month, end_month)
-    )
+
+    if set_zero:
+        # sets everything outside month range to 0
+        seasonal_data = get_month_range_zero(dataarray=dataset,
+                                             start_month=start_month,
+                                             end_month=end_month)
+    else:
+        seasonal_data = dataset.sel(
+            time=is_in_month_range(dataset["time.month"], start_month, end_month)
+        )
 
     return seasonal_data
 
@@ -900,15 +909,16 @@ def get_idx_months(times, start_month, end_month):
 
 
 def get_month_range_zero(dataarray, start_month, end_month):
+    dataarray_copy = dataarray.copy()
     times = dataarray.time
     idx_in_months, idx_out_months = get_idx_months(
         times=times, start_month=start_month, end_month=end_month
     )
     non_dates = times.data[idx_out_months]
 
-    dataarray.loc[dict(time=non_dates)] = 0
+    dataarray_copy.loc[dict(time=non_dates)] = 0
 
-    return dataarray
+    return dataarray_copy
 
 
 def get_idx_tps_times(tps, times):

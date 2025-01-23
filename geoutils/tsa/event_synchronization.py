@@ -17,6 +17,8 @@ from tqdm import tqdm
 import scipy.stats as st
 from itertools import product
 import geoutils.tsa.time_series_analysis as tsa
+reload(gut)
+reload(tsa)
 
 
 def event_synchronization(event_data, taumax=10, min_num_sync_events=2):
@@ -451,7 +453,7 @@ def null_model_one_series(i,
                           num_permutations,
                           taumax,
                           double_taumax,
-                          q=[0.25, 0.5, 0.75, 0.95, 0.98, 0.99, 0.995, 0.999],
+                          q_vals=[0.25, 0.5, 0.75, 0.95, 0.98, 0.99, 0.995, 0.999],
                           nnelems=True):
     reload(gut)
     list_thresholds_i = []
@@ -465,24 +467,22 @@ def null_model_one_series(i,
         for k in range(num_permutations):
 
             if nnelems:
-                # ind_list_e1 = np.sort(rng.choice(le, size=i, replace=False))
-                # ind_list_e2 = np.sort(rng.choice(le, size=j, replace=False))
                 ind_list_e1 = gut.get_random_numbers_no_neighboring_elems(
-                    0, le, i)
+                    0, length_array=le, amount=i)
                 ind_list_e2 = gut.get_random_numbers_no_neighboring_elems(
-                    0, le, j)
-
-                cor[k] = event_sync(ind_list_e1, ind_list_e2,
-                                    taumax, double_taumax)
+                    0, length_array=le, amount=j)
             else:
                 dat_rnd = np.random.permutation(season1)
                 ind_list_e1 = tsa.get_evs_index(evs=dat_rnd, rcevs=True)
                 dat_rnd = np.random.permutation(season2)
                 ind_list_e2 = tsa.get_evs_index(evs=dat_rnd, rcevs=True)
 
+            cor[k] = event_sync(ind_list_e1, ind_list_e2,
+                                taumax, double_taumax)
+
         res_q = np.quantile(
             cor,
-            q=q
+            q=q_vals
         )
 
         list_thresholds_i.append(
@@ -495,39 +495,63 @@ def null_model_distribution(length_time_series,
                             taumax=10,
                             min_num_events=1,
                             max_num_events=1000,
-                            num_permutations=3000,
-                            q=[0.25, 0.5, 0.75, 0.95, 0.98, 0.99, 0.995, 0.999],
+                            num_permutations=1000,
+                            q_vals=[0.25, 0.5, 0.75, 0.9,
+                                    0.95, 0.98, 0.99, 0.995, 0.999],
                             savepath=None,
                             nnelems=True):
+    """This function computes the null model for the event synchronization.
+    It computes the quantiles of the event synchronization for a given number of permutations.
+    It returns a dictionary with the quantiles as keys and the corresponding null model as values.
+
+    Args:
+        length_time_series (int): lenghth of time steps in the time series
+        taumax (int, optional): Maximum delay between two events. Defaults to 10.
+        min_num_events (int, optional): Minimum number of events. Defaults to 1.
+        max_num_events (int, optional): Maximum number of events. Defaults to 1000.
+        num_permutations (int, optional): Number of permutation tests of random time series. Defaults to 1000.
+        q (list, optional): List of possible q_values that are of interest. Defaults to [0.25, 0.5, 0.75, 0.95, 0.98, 0.99, 0.995, 0.999].
+        savepath (string, optional): If given, the null model is stored to this path. Defaults to None.
+        nnelems (bool, optional): Avoid neighbor elements in the random time series. Defaults to True.
+
+    Returns:
+        dict: Dictionary of the null model with the q-values as keys and the corresponding null model as values.
+    """
+
     gut.myprint(
-        f"Start creating ES Null model for Model distribution size: {num_permutations}")
+        f"Creating Null model ({num_permutations} samples) for {length_time_series} time series!")
     le = length_time_series
+    if not isinstance(max_num_events, int):
+        max_num_events = int(max_num_events)
+        gut.myprint(f"Max number of events is set to int {max_num_events}")
+    # Test if it is for the maximum number of events even possible
+    gut.get_random_numbers_no_neighboring_elems(0,
+                                                length_time_series,
+                                                amount=max_num_events
+                                                )
+
     double_taumax = 2*taumax
 
-    size = max_num_events-min_num_events
-    # num_ij_pairs = ceil(size*(size + 1) / 2) #  "Kleiner Gauss"
+    size = max_num_events-min_num_events + 1
     gut.myprint(f"Size of Null_model Matrix: {size}")
 
-    size = max_num_events
-    num_q_vals = len(q)  # lq, med, hq, th05, th02, th01, th005, th001
+    num_q_vals = len(q_vals)  # lq, med, hq, th05, th02, th01, th005, th001
     null_model_arr_q = np.empty((num_q_vals, size, size))
     null_model_arr_q[:] = np.nan
 
     # For parallel Programming
     num_cpus_avail = mpi.cpu_count()
-    # num_cpus_avail=1
     gut.myprint(f"Number of available CPUs: {num_cpus_avail}")
     backend = 'multiprocessing'
-    # backend='loky'
-    # backend='threading'
+
 
     # Parallelizing by using joblib
     pb_fmt = "{desc:<5.5}{percentage:3.0f}%|{bar:30}{r_bar}"
-    pb_desc = "Computing Null Model in time..."
+    pb_desc = "Events processed: "
     parallelArray = (Parallel(n_jobs=num_cpus_avail, backend=backend)
                      (delayed(null_model_one_series)
                       (i, min_num_events, le, num_permutations,
-                       taumax, double_taumax, q, nnelems)
+                       taumax, double_taumax, q_vals, nnelems)
                       for i in tqdm(range(min_num_events, max_num_events),
                                     bar_format=pb_fmt, desc=pb_desc)
                       )
@@ -544,11 +568,11 @@ def null_model_distribution(length_time_series,
             for q_idx, P_arr in enumerate(null_model_arr_q):
                 P_arr[i, j] = P_arr[j, i] = res_q[q_idx]
 
-    q_dict = {q[idx_q]: P_arr for idx_q, P_arr in enumerate(null_model_arr_q)}
+    q_dict = {q_vals[idx_q]: P_arr for idx_q, P_arr in enumerate(null_model_arr_q)}
     if savepath is not None:
         gut.myprint(f'Save null model to {savepath}')
         # save and load a dictionary to a file using NumPy, pickle would work as well
-        np.save(savepath, q_dict, allow_pickle=True)
+        fut.save_np_dict(arr_dict=q_dict, sp=savepath)
     return q_dict
 
 

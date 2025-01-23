@@ -76,6 +76,7 @@ class BaseDataset():
                 f'Provide single or multiple files as strings but data_nc = {data_nc}!')
 
         self.grid_step = grid_step
+        self.set_dim_names()
         ds = self.open_ds(
             nc_files=data_nc_arr,
             var_name=var_name,  # if var_name given only this variable is read
@@ -132,7 +133,7 @@ class BaseDataset():
             self.ds = self.set_metpy_labels()
 
     def set_ds_objects(self):
-        if 'time' in self.dims:
+        if 'time' in self.get_dims():
             self.time = self.ds.time
         self.coords = self.ds.coords
         self.loc_dict = dict()
@@ -166,7 +167,6 @@ class BaseDataset():
                              plevel_name=self.plevel_name,
                              **kwargs)
         self.dims = self.get_dims(ds=ds)
-        self.set_dim_names()
 
         if 'time' in self.dims:
             ds = self.get_data_timerange(ds, time_range, verbose=verbose)
@@ -371,6 +371,7 @@ class BaseDataset():
         self.lat_name = 'lat'
         self.time_name = 'time'
         self.lev_name = 'lev'
+        self.info_dict = {}
 
     def check_time(self, ds, **kwargs):
         """Sets the respective calender!
@@ -492,7 +493,7 @@ class BaseDataset():
             self.ds[var].attrs.update(self.var_attrs[var])
         self.ds[self.lon_name].attrs.update(self.lon_attrs)
         self.ds[self.lat_name].attrs.update(self.lat_attrs)
-        if 'time' in self.dims:
+        if 'time' in self.get_dims():
             self.ds.time.attrs.update(self.time_attrs)
 
     def add_var_attribute(self, var_dict):
@@ -641,23 +642,16 @@ class BaseDataset():
         # Number of non-NaNs should be equal to length of data
         if np.count_nonzero(mask_arr) != len(data):
             raise ValueError(
-                f"Number of defined ds points {non_zero_ds} != # datapoints {len(data)}"
+                f"Number of defined ds points {
+                    non_zero_ds} != # datapoints {len(data)}"
             )
 
         # create array with NaNs
         data_map = np.empty(len(mask_arr))
-        data_map[:] = np.NaN
+        data_map[:] = np.nan
 
         # fill array with sample
         data_map[mask_arr] = data
-
-        # dmap = xr.DataArray(
-        #     data=data_map,
-        #     dims=['points'],
-        #     coords=dict(points=self.ds.points.data,
-        #                 lon=("points", self.ds[self.lon_name].data),
-        #                 lat=("points", self.ds[self.lat_name].data)),
-        #     name=name)
 
         dmap = xr.DataArray(
             data=np.reshape(data_map, self.mask.data.shape),
@@ -761,7 +755,7 @@ class BaseDataset():
             ds = self.ds
         if isinstance(ds, xr.Dataset):
             # check if xarray version is new
-            if xr.__version__ != '2024.9.0':
+            if not gut.check_xarray_version():
                 dims = list(ds.dims.keys())
             else:
                 dims = list(ds.dims)  # new in xarray 2023.06.
@@ -917,7 +911,7 @@ class BaseDataset():
                     rep_ids = self.get_n_ids(loc=mean_loc, num_nn=n_rep_ids)
                     rep_locs = self.get_locs_for_indices(rep_ids)
                     pids = self.get_points_for_idx(ids_lst)
-                    if 'points' in self.dims:
+                    if 'points' in self.get_dims():
                         data = self.ds.sel(points=pids)
                     else:
                         data = self.get_data_for_lon_lat_range(lon_range=lon_range,
@@ -934,11 +928,13 @@ class BaseDataset():
                         self.flat_idx_array(ids_lst))
             else:
                 raise ValueError(
-                    f"ERROR! This region {name} does not contain any data points!"
+                    f"ERROR! This region {
+                        name} does not contain any data points!"
                 )
         else:
             raise ValueError(
-                f"ERROR! This region {name} does not fit into {lon_range}, {lat_range}!"
+                f"ERROR! This region {name} does not fit into {
+                    lon_range}, {lat_range}!"
             )
 
         self.loc_dict[name] = this_loc_dict
@@ -1095,12 +1091,14 @@ class BaseDataset():
             if nlat % 2:
                 # Odd number of latitudes includes the poles.
                 gut.myprint(
-                    f"WARNING: Poles might be included: {min_lat} and {min_lat}!",
+                    f"WARNING: Poles might be included: {
+                        min_lat} and {min_lat}!",
                     color='red', bold=True
                 )
 
         gut.myprint(
-            f"Interpolte grid from {min(init_lon)} to {max(init_lon)}, {min(init_lat)} to {max(init_lat)}!",
+            f"Interpolte grid from {min(init_lon)} to {max(init_lon)}, {
+                min(init_lat)} to {max(init_lat)}!",
         )
         grid = {"lat": init_lat, "lon": init_lon}
 
@@ -1385,6 +1383,7 @@ class BaseDataset():
         if dataarray is None:
             dataarray = self.ds[self.var_name]
         if set_zero:
+            # Sets everything in the month range to zero
             seasonal_data = tu.get_month_range_zero(
                 dataarray=dataarray, start_month=start_month, end_month=end_month
             )
@@ -1810,7 +1809,8 @@ class BaseDataset():
         da = self.ds[self.var_name]
         # Sets the data outside the month range to 0, but retains the dates
         da_mr = self.get_month_range_data(
-            dataarray=da, start_month=start_month, end_month=end_month, set_zero=True
+            dataarray=da, start_month=start_month, end_month=end_month,
+            set_zero=True
         )
         # Computes the Event Series
         evs_mr, mask = tu.compute_evs(

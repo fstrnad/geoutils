@@ -421,9 +421,9 @@ def get_projection(projection, central_longitude=None, central_latitude=None,
 
 
 def plot_map(dmap: xr.DataArray,
+             ds: object = None,
              fig: plt.Figure = None,
              ax: plt.Axes = None,
-             ds: object = None,
              plot_type: str = "colormesh",
              central_longitude: int = None,
              vmin: float = None,
@@ -465,14 +465,18 @@ def plot_map(dmap: xr.DataArray,
     if label is None and isinstance(dmap, xr.DataArray):
         unset_label = kwargs.pop('unset_label', False)
         label = dmap.name if not unset_label else None
-
+    if isinstance(dmap, xr.DataArray):
+        data_dims = gut.get_dims(dmap)
+        point_dims = 'points' in data_dims
+    else:
+        point_dims = False
     hatch_type = kwargs.pop('hatch_type', '..')
     inverse_mask = kwargs.pop('inverse_mask', False)
     set_map = kwargs.pop('set_map', True)
     figsize = kwargs.pop("figsize", (9, 6))
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
-    if plot_type != 'points':
+    if plot_type != 'points' and not point_dims:
         if not sput.check_full_globe_coverage(dmap):
             dateline = sput.check_if_crosses_dateline(dmap)
         trafo_lon = True if dateline else False
@@ -636,7 +640,7 @@ def plot_array(
     projection=None,
     vmin=None,
     vmax=None,
-    cmap='coolwarm',
+    cmap='viridis',
     label=None,
     title=None,
     significance_mask=None,
@@ -649,10 +653,14 @@ def plot_array(
         raise ValueError(
             'Please provide at least z')
     if x is None and y is None:
-        dims = gut.get_dims(z)
-        # for plotting dimensions are transposed
-        x = z.coords[dims[1]]
-        y = z.coords[dims[0]]
+        if isinstance(z, xr.DataArray):
+            dims = gut.get_dims(z)
+            # for plotting dimensions are transposed
+            x = z.coords[dims[1]]
+            y = z.coords[dims[0]]
+        else:
+            x = np.arange(0, len(z[0]))
+            y = np.arange(0, len(z))
     # plotting
     color = kwargs.pop("color", None)
     cmap = None if color is not None else cmap
@@ -993,7 +1001,7 @@ def plot_edges(
     counter = 0
     lw = kwargs.pop("lw", 1)
     alpha = kwargs.pop("alpha", 1)
-    color = kwargs.pop("color", "k")
+    color = kwargs.pop("color", "gray")
 
     if vmin is None:
         vmin = np.min(weights)
