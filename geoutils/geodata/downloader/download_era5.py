@@ -126,7 +126,7 @@ def download_era5(variable, plevel=None,
     else:
         run = True
 
-    years = np.arange(starty, endy+1, 1)
+    years = np.arange(starty, endy+1, 1) # include last year as well
     smonths = tu.get_month_number(start_month)
     emonths = tu.get_month_number(end_month)
     marray = np.arange(smonths, emonths+1, 1)

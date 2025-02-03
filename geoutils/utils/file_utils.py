@@ -9,6 +9,7 @@ import os
 import xarray as xr
 import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
+
 from importlib import reload
 reload(tu)
 reload(gut)
@@ -127,6 +128,7 @@ def save_ds(ds, filepath, unlimited_dim=None,
             classic_nc=False,
             zlib=True,
             only_dim_corrds=False,
+            show_progress=False,
             backup=False):
     if os.path.exists(filepath):
         gut.myprint(f"File {filepath} already exists!")
@@ -144,15 +146,23 @@ def save_ds(ds, filepath, unlimited_dim=None,
         ds = gut.delete_all_non_dimension_attributes(ds)
     if zlib:
         encoding = {var: {'zlib': True} for var in ds.data_vars}
-        ds.to_netcdf(filepath, encoding=encoding)
+        write_job = ds.to_netcdf(filepath, encoding=encoding,
+                                 compute=False)
     else:
         if classic_nc:
             gut.myprint('Store as NETCDF4_CLASSIC!')
-            ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
-                         format='NETCDF4_CLASSIC')
+            write_job = ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
+                                     format='NETCDF4_CLASSIC')
         else:
-            ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
-                         engine='netcdf4')
+            write_job = ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
+                                     engine='netcdf4', compute=False)
+
+    if show_progress:
+        from dask.diagnostics import ProgressBar
+        with ProgressBar(minimum=2):
+            write_job.compute()
+    else:
+        write_job.compute()
 
     gut.myprint(f"File {filepath} written!")
     print_file_location_and_size(filepath=filepath)
@@ -446,6 +456,7 @@ def sort_filenames_by_number(arr):
 
 def get_files_in_folder(folder_path: str,
                         verbose: bool = True,
+                        ignore_string=None,
                         sort=True) -> list:
     """
     Returns a list of all files in a given folder.
@@ -470,6 +481,9 @@ def get_files_in_folder(folder_path: str,
         assert_file_exists(filepath=filepath)
     if sort:
         file_list = sort_filenames_by_number(file_list)
+
+    if ignore_string is not None:
+        file_list = [f for f in file_list if ignore_string not in f]
 
     gut.myprint(f'Found {len(file_list)} files!',
                 verbose=verbose)

@@ -352,6 +352,7 @@ class BaseDataset():
         self.lon360 = kwargs.pop('lon360', False)
         ts_days = kwargs.pop('ts_days', True)
         keep_time = kwargs.pop('keep_time', False)
+        
         freq = kwargs.pop('freq', 'D')
         ds = sput.check_dimensions(ds=ds,
                                    ts_days=ts_days,

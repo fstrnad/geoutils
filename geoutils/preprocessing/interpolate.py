@@ -21,9 +21,17 @@ def interpolate_grid(dataarray, grid_step,
     """
     if grid_step is None:
         raise ValueError("Grid step must be defined!")
+    times_in = dataarray["time"]
     native_grid_step, _, _ = sput.get_grid_step(dataarray)
+    if native_grid_step == grid_step:
+        gut.myprint(
+            f"Native grid step is the same as the desired grid step: {grid_step}!")
+        gut.myprint(f"Returning the same dataarray!")
+        return dataarray
+
     if native_grid_step < grid_step:
-        method = "nearest"  # coarse graining by next neighbor
+        # coarse graining by next neighbor
+        method = "nearest" if not use_esmf else 'nearest_s2d'
 
     dataarray, dims = of.check_dimensions(dataarray,
                                           check_clim_dims=False,
@@ -31,6 +39,46 @@ def interpolate_grid(dataarray, grid_step,
                                           verbose=False,
                                           )
 
+    init_lat, init_lon = generate_new_grid(
+        dataarray, grid_step,
+        min_lon, max_lon, min_lat, max_lat,
+        grid_step_lon, grid_step_lat)
+
+    if use_esmf:
+        import xesmf as xe
+
+        grid = xr.Dataset(
+            {
+                "lat": (['lat'], init_lat, {"units": "degrees_north"}),
+                "lon": (['lon'], init_lon, {"units": "degrees_east"}),
+            }
+        )
+        gut.myprint(f"Using ESMF regridder with method {method}!")
+        regridder = xe.Regridder(dataarray, grid,
+                                 method=method,
+                                 #    extrap_method="nearest_s2d",
+                                 periodic=True)
+        dr_out = regridder(dataarray,
+                           skipna=True,   # keeps as many pixels as possible
+                           na_thres=1.0,  # lowering this results in more NaNs in ds_out
+                           keep_attrs=True)
+    else:
+        grid = {"lat": init_lat, "lon": init_lon}
+
+        dr_out = dataarray.interp(coords=grid,
+                                  method=method,
+                                  kwargs={"fill_value": "extrapolate"}
+                                  )  # Extrapolate if outside of the range
+
+    # time dimension is not preserved
+    # dr_out = gut.assign_new_coords(dr_out, 'time', times_in)
+
+    return dr_out
+
+
+def generate_new_grid(dataarray, grid_step,
+                      min_lon, max_lon, min_lat, max_lat,
+                      grid_step_lon, grid_step_lat):
     correct_max_lon = True if max_lon is None else False
     correct_min_lon = True if min_lon is None else False
     correct_min_lat = True if min_lat is None else False
@@ -80,6 +128,10 @@ def interpolate_grid(dataarray, grid_step,
     init_lon = gut.custom_arange(start=min_lon,
                                  end=max_lon,
                                  step=grid_step_lon)
+    gut.myprint(
+        f"Interpolte grid from {min(init_lon)} to {max(init_lon)},{min(init_lat)} to {
+            max(init_lat)}  with grid_step {grid_step}!",
+    )
 
     nlat = len(init_lat)
     if nlat % 2:
@@ -89,35 +141,4 @@ def interpolate_grid(dataarray, grid_step,
             color='yellow'
         )
 
-    gut.myprint(
-        f"Interpolte grid from {min(init_lon)} to {max(init_lon)},{min(init_lat)} to {
-            max(init_lat)}  with grid_step {grid_step}!",
-    )
-
-    if use_esmf:
-        import xesmf as xe
-
-        grid = xr.Dataset(
-            {
-                "lat": (['lat'], init_lat, {"units": "degrees_north"}),
-                "lon": (['lon'], init_lon, {"units": "degrees_east"}),
-            }
-        )
-        gut.myprint(f"Using ESMF regridder with method {method}!")
-        regridder = xe.Regridder(dataarray, grid,
-                                 method=method,
-                                 #    extrap_method="nearest_s2d",
-                                 periodic=True)
-        dr_out = regridder(dataarray,
-                           skipna=True,   # keeps as many pixels as possible
-                           na_thres=1.0,  # lowering this results in more NaNs in ds_out
-                           keep_attrs=True)
-    else:
-        grid = {"lat": init_lat, "lon": init_lon}
-
-        dr_out = dataarray.interp(coords=grid,
-                                  method=method,
-                                  kwargs={"fill_value": "extrapolate"}
-                                  )  # Extrapolate if outside of the range
-
-    return dr_out
+    return init_lat, init_lon

@@ -120,11 +120,10 @@ def get_dims(ds=None):
 
     if isinstance(ds, xr.Dataset):
         # check if xarray version is new
-        if check_xarray_version():
+        if not check_xarray_version():
             dims = list(ds.dims.keys())
         else:
             dims = list(ds.dims)  # new in xarray 2023.06.
-
     elif isinstance(ds, xr.DataArray):
         dims = ds.dims
     else:
@@ -301,6 +300,10 @@ def find_local_min_max_xy(data, x):
     max_dict['x_min'] = x[max_dict['min_idx']]
 
     return max_dict
+
+
+def get_min_max(array):
+    return np.min(array), np.max(array)
 
 
 def find_local_extrema(arr):
@@ -947,7 +950,7 @@ def assign_new_coords(da, dim, coords):
     """
     if dim not in get_dims(da):
         raise ValueError(f'Dimension {dim} not in {get_dims(da)}!')
-    if not isinstance(coords, list) and not isinstance(coords, np.ndarray):
+    if not isinstance(coords, list) and not isinstance(coords, np.ndarray) and not isinstance(coords, xr.DataArray):
         raise ValueError(f'Coordinates {coords} has to be list!')
     if len(coords) != len(da[dim]):
         raise ValueError(
@@ -1016,6 +1019,12 @@ def rename_var_era5(ds, verbose=True, **kwargs):
     if "precip" in names:
         ds = ds.rename({"precip": "pr"})
         myprint("Rename precip: pr!")
+    # if '10m_u_component_of_wind' in names:
+    #     ds = ds.rename({"10m_u_component_of_wind": "u"})
+    #     myprint("Rename 10m_u_component_of_wind: u10!")
+    # if '10m_v_component_of_wind' in names:
+    #     ds = ds.rename({"10m_v_component_of_wind": "v"})
+    #     myprint("Rename 10m_v_component_of_wind: v10!")
     if "tp" in names:
         ds = ds.rename({"tp": "pr"})
         myprint("Rename tp to pr!")

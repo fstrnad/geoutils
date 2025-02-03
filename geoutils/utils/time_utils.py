@@ -814,7 +814,8 @@ def get_month_range_data(dataset,
                                              end_month=end_month)
     else:
         seasonal_data = dataset.sel(
-            time=is_in_month_range(dataset["time.month"], start_month, end_month)
+            time=is_in_month_range(
+                dataset["time.month"], start_month, end_month)
         )
 
     return seasonal_data
@@ -1126,13 +1127,14 @@ def get_dates_of_ds(ds):
     return tps
 
 
-def str2datetime(string, numpy=True, verbose=False):
-    if type(string) is str:
-        date = np.datetime64(string)
+def str2datetime(string, numpy=True, xarray=True, verbose=False):
+    if isinstance(string, str):
+        date = np.datetime64(string, "ns")
         if not numpy:
             y, m, d, h = get_date2ymdh(date=date)
             date = datetime.datetime(year=y, month=m, day=d, hour=h)
-        date = xr.DataArray(date, coords={"time": date})
+        if xarray:
+            date = xr.DataArray(date, coords={"time": date})
     else:
         date = string
         gut.myprint(f"WARNING {string} is not string!", verbose=verbose)
@@ -1151,6 +1153,33 @@ def is_full_year(ds, get_missing_dates=False):
             return False
     else:
         return True
+
+
+def convert_to_best_unit(diffs):
+    best_unit_diffs = []
+    for diff in diffs:
+        if diff >= np.timedelta64(1, 'D'):  # If the difference is 1 day or more
+            best_unit_diffs.append(diff.astype(
+                'timedelta64[D]'))  # Convert to days
+        else:
+            # Otherwise, keep as hours
+            best_unit_diffs.append(diff.astype('timedelta64[h]'))
+    return np.array(best_unit_diffs)
+
+
+def get_frequency_resolution(dates):
+
+    if isinstance(dates, xr.DataArray):
+        dates = dates.time.data
+    if not isinstance(dates, np.ndarray):
+        dates = np.array(dates)
+    # Compute the differences between consecutive dates
+    date_diffs = np.unique(np.diff(dates))
+    best_unit_intervals = convert_to_best_unit(date_diffs)
+    if len(best_unit_intervals) > 1:
+        gut.myprint(f'WARNING: Multiple time intervals detected: {
+                    best_unit_intervals}!')
+    return best_unit_intervals[0]
 
 
 def get_frequency(x):
@@ -1188,7 +1217,8 @@ def get_frequency(x):
         return "none"
 
 
-def convert_time_resolution(dataarray, keep_time_points=6, average=False):
+def convert_time_resolution(dataarray, keep_time_points=6,
+                            freq='h', average=False):
     """
     Convert an xarray DataArray with hourly time points to 6-hourly resolution.
 
@@ -1209,8 +1239,18 @@ def convert_time_resolution(dataarray, keep_time_points=6, average=False):
     if average:
         return dataarray.rolling(time=6, center=False).mean()
     else:
+        sd, ed = get_start_end_date(data=dataarray)
+        td = get_frequency_resolution(dates=dataarray.time)
+        if td > np.timedelta64(keep_time_points, freq):
+            raise ValueError(
+                f"Time difference {td} larger than {keep_time_points} {freq}!"
+            )
+        dates = get_dates_in_range(start_date=sd, end_date=ed,
+                                   freq=freq,
+                                   time_delta=keep_time_points)
+
         # Subset the DataArray to keep every 6th time point
-        return dataarray.isel(time=slice(None, None, keep_time_points))
+        return dataarray.sel(time=dates, method='nearest')
 
 
 def check_hour_equality(da1, da2):
@@ -1819,7 +1859,7 @@ def correlation_per_timeperiod(x, y, time_period):
     return xr.DataArray(corr, dims=["time"], coords={"time": time_period[:, 0]})
 
 
-def tp2str(tp, m=True, d=True, h=False):
+def tp2str(tp, m=True, d=True, h=True):
     """Returns the string for np.datetime(64) object.
 
     Args:
@@ -1844,11 +1884,11 @@ def tp2str(tp, m=True, d=True, h=False):
         if d:
             date = ts.strftime("%Y-%m-%d")
         if h:
-            date = ts.strftime("%Y-%m-%d-%H:00")
+            date = ts.strftime("%Y-%m-%dT%H:00")
     return date
 
 
-def tps2str(tps, m=True, d=True, h=False):
+def tps2str(tps, m=True, d=True, h=True):
     if isinstance(tps, (xr.DataArray, xr.Dataset)):
         if gut.is_single_tp(tps=tps):
             return tp2str(tp=tps, m=m, d=d, h=h)
@@ -2193,13 +2233,26 @@ def get_dates_of_time_ranges(time_ranges, freq="D"):
     return arr
 
 
-def get_dates_in_range(start_date, end_date, freq="D", make_xr=True):
+def get_dates_in_range(start_date, end_date, freq="D",
+                       time_delta=1, make_xr=True):
 
     if isinstance(start_date, xr.DataArray):
         start_date = np.datetime64(start_date.time.data)
     if isinstance(end_date, xr.DataArray):
         end_date = np.datetime64(end_date.time.data)
-    tps = np.arange(start_date, end_date, dtype=f"datetime64[{freq}]")
+    if isinstance(start_date, str):
+        start_date = str2datetime(start_date, xarray=False)
+    if isinstance(end_date, str):
+        end_date = str2datetime(end_date, xarray=False)
+
+    if not isinstance(time_delta, np.timedelta64):
+        td = np.timedelta64(time_delta, freq)
+    else:
+        td = time_delta
+
+    # includes start and end date
+    tps = np.arange(start_date, end_date + td, td,
+                    )
 
     if make_xr:
         tps = create_xr_ts(data=tps, times=tps)

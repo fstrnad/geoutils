@@ -778,10 +778,6 @@ def get_mask_for_nan_array(arr, var_name=None):
     return mask
 
 
-
-
-
-
 def compute_correlation(data_array, ts,
                         correlation_type='spearman',
                         lag_arr=None, prev_lags=True,
@@ -1012,7 +1008,6 @@ def get_lat_lon_for_value(da: xr.DataArray, value: float):
     return locations
 
 
-
 def sum_eres(data):
     """Gives sum of EREs per point over the whole dataset provided.
 
@@ -1051,10 +1046,11 @@ def remove_useless_variables(ds, rm_var=False):
         # Remove useless dimensions in ds for all variables
         dims = gut.get_dims(ds=ds)
         if 'expver' in dims:
-            # occurs for ERA5 data for total precipitation
-            gut.myprint(f'Combine expver from ds!')
-            ds = ds.sel(expver=1).combine_first(ds.sel(expver=5))
-            ds.load()
+            # occurs for ERA5 data sometimes
+            # see https://confluence.ecmwf.int/display/CKB/ERA5%3A+data+documentation
+            gut.myprint(f'Select expver=1 (ERA5) from ds!')
+            ds = ds.sel(expver=1)# .combine_first(ds.sel(expver=5))
+            # ds.load()
             gut.myprint(f'Combined expver 1 and 5 for ds!')
             dims = gut.get_dims(ds=ds)
 
@@ -1134,47 +1130,22 @@ def transpose_2D_data(da, dims=['lat', 'lon']):
     return da
 
 
-def check_dimensions(ds, ts_days=True,
-                     sort=False,
+def check_dimensions(ds, datetime_ts=True,
+                     sort=True, # necessary when transforming from 0-360 to -180-180
                      lon360=False,
                      lon_2_180=True,
                      keep_time=False,
                      freq='D',
                      transpose_dims=False,
                      hours_to_zero=False,
+                     set_netcdf_encoding=False,
                      verbose=True):
     """
     Checks whether the dimensions are the correct ones for xarray!
     """
     reload(tu)
     gut.myprint('Check dimensions of dataset!', verbose=verbose)
-    rename_dict = {
-        'longitude': 'lon',
-        'latitude': 'lat',
-        't': 'time',
-        'valid_time': 'time',
-        'month': 'time',
-        'time_counter': 'time',
-        'AR_key': 'time',
-        'plevel': 'lev',
-        'dimx_lon': 'x',
-        'dimy_lon': 'y',
-        'dimz_lon': 'z',
-        'x': 'lon',
-        'y': 'lat',
-        'Lon': 'lon',
-        'Lat': 'lat',
-    }
-    lon_lat_names = list(rename_dict.keys())
-
-    dims = list(ds.dims)
-    for idx, lon_lat in enumerate(lon_lat_names):
-        if lon_lat in dims:
-            gut.myprint(
-                f'Rename:{lon_lat} : {rename_dict[lon_lat]}', verbose=verbose)
-            ds = ds.rename({lon_lat: rename_dict[lon_lat]})
-            dims = list(ds.dims)
-            gut.myprint(dims, verbose=verbose)
+    ds = rename_dims(ds=ds, verbose=verbose)
     ds = remove_single_dim(ds=ds)
     ds = remove_useless_variables(ds=ds)
     dims = list(ds.dims)
@@ -1224,16 +1195,18 @@ def check_dimensions(ds, ts_days=True,
                 verbose=verbose)
 
     if 'time' in dims:
-        if ts_days:
+        # create a time index deepending if a datetime time series is provided or not
+        if datetime_ts:
             if gut.is_datetime360(time=ds.time.data[0]) or keep_time:
                 ds = ds
             else:
                 # Sets to equal hours. If days sets hours to 0
-                ds = tu.get_netcdf_encoding(ds=ds,
-                                            calendar='gregorian',
-                                            verbose=verbose,
-                                            hours_to_zero=hours_to_zero,
-                                            )
+                if set_netcdf_encoding:
+                    ds = tu.get_netcdf_encoding(ds=ds,
+                                                calendar='gregorian',
+                                                verbose=verbose,
+                                                hours_to_zero=hours_to_zero,
+                                                )
         else:
             time_ds = ds.time
             num_steps = len(time_ds)
@@ -1267,9 +1240,53 @@ def check_dimensions(ds, ts_days=True,
     return ds
 
 
-def get_lon_range(ds):
+def rename_dims(ds, verbose):
+    rename_dict = {
+        'longitude': 'lon',
+        'latitude': 'lat',
+        't': 'time',
+        'valid_time': 'time',
+        'month': 'time',
+        'time_counter': 'time',
+        'AR_key': 'time',
+        'plevel': 'lev',
+        'dimx_lon': 'x',
+        'dimy_lon': 'y',
+        'dimz_lon': 'z',
+        'x': 'lon',
+        'y': 'lat',
+        'Lon': 'lon',
+        'Lat': 'lat',
+    }
+    lon_lat_names = list(rename_dict.keys())
+
+    dims = list(ds.dims)
+    for idx, lon_lat in enumerate(lon_lat_names):
+        if lon_lat in dims:
+            gut.myprint(
+                f'Rename:{lon_lat} : {rename_dict[lon_lat]}', verbose=verbose)
+            ds = ds.rename({lon_lat: rename_dict[lon_lat]})
+            dims = list(ds.dims)
+            gut.myprint(dims, verbose=verbose)
+    return ds
+
+
+def get_lon_range(ds, decimals=3):
     lon = ds.lon
-    return [float(lon.min()), float(lon.max())]
+    lon_range = [float(lon.min()), float(lon.max())]
+    return np.around(lon_range, decimals=decimals)
+
+
+def get_lat_range(ds, decimals=3):
+    lat = ds.lat
+    lat_range = [float(lat.min()), float(lat.max())]
+    return np.around(lat_range, decimals=decimals)
+
+
+def get_lon_lat_range(ds, decimals=3):
+    lon = get_lon_range(ds, decimals=decimals)
+    lat = get_lat_range(ds, decimals=decimals)
+    return lon, lat
 
 
 def check_full_globe_coverage(data_array: xr.DataArray,

@@ -35,7 +35,7 @@ def open_nc_file(
         **kwargs)
 
     ds, dims = check_dimensions(
-        ds, ts_days=decode_times, verbose=verbose,
+        ds, datetime_ts=decode_times, verbose=verbose,
         hours_to_zero=hours_to_zero, **kwargs)
     dims = gut.get_dims(ds=ds)
     ds = gut.rename_var_era5(ds=ds, verbose=verbose, **kwargs)
@@ -186,12 +186,12 @@ def check_dimensions(ds, verbose=True, **kwargs):
     reload(sput)
     sort = kwargs.pop('sort', True)
     lon360 = kwargs.pop('lon360', False)
-    ts_days = kwargs.pop('ts_days', False)
+    datetime_ts = kwargs.pop('datetime_ts', True)
     keep_time = kwargs.pop('keep_time', False)
     freq = kwargs.pop('freq', 'D')
     transpose = kwargs.pop('transpose_dims', False)
     ds = sput.check_dimensions(ds=ds,
-                               ts_days=ts_days,
+                               datetime_ts=datetime_ts,
                                lon360=lon360,
                                sort=sort,
                                keep_time=keep_time,
@@ -217,8 +217,8 @@ def check_time(ds, **kwargs):
     Returns:
         xr.dataset: dataset
     """
-    ts_days = kwargs.pop("ts_days", True)
-    if ts_days:
+    datetime_ts = kwargs.pop("datetime_ts", True)
+    if datetime_ts:
         if not gut.is_datetime360(time=ds.time.data[0]):
             calender360 = False
         else:

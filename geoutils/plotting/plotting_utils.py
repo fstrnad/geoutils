@@ -495,7 +495,7 @@ def add_colorbar(im, fig, label,
         # find out number of rows and columns
         grid_spec = fig.axes[0].get_subplotspec().get_gridspec()
         num_rows, num_cols = grid_spec.get_geometry()
-
+        num_cols = len(fig.axes) // num_rows
         bbox0 = fig.axes[0].get_position(fig)
         bbox1 = fig.axes[num_cols-1].get_position(fig)  # last column
         bboxlast = fig.axes[-1].get_position(fig)

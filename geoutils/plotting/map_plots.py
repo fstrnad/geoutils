@@ -223,7 +223,7 @@ def set_extent(da, ax,
             abs(min_ext_lat) > 89 and
                 abs(max_ext_lat) > 89):
             set_global = True
-            gut.myprint('WARNING! Set global map!')
+            # gut.myprint('WARNING! Set global map!')
     final_extent = [min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat]
     if set_global:
         ax.set_global()
