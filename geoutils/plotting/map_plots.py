@@ -477,13 +477,16 @@ def plot_map(dmap: xr.DataArray,
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
     if plot_type != 'points' and not point_dims:
-        if not sput.check_full_globe_coverage(dmap):
-            dateline = sput.check_if_crosses_dateline(dmap)
-        trafo_lon = True if dateline else False
         dmap = sput.check_dimensions(dmap,
                                      transpose_dims=True,
-                                     verbose=False,
-                                     lon360=trafo_lon)
+                                     verbose=False)
+        if not sput.check_full_globe_coverage(dmap):
+            dateline = sput.check_if_crosses_dateline(dmap)
+            trafo_lon = True if dateline else False
+            dmap = sput.check_dimensions(dmap,
+                                         transpose_dims=True,
+                                         verbose=False,
+                                         lon360=trafo_lon)
 
     put.check_plot_type(plot_type)
     projection = put.check_projection(ax=ax, projection=projection)

@@ -15,7 +15,6 @@ import copy
 import geoutils.utils.time_utils as tu
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
-import metpy.calc as mpcalc
 
 reload(mp)
 
@@ -167,6 +166,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
         """
         # vw = VectorWind(self.ds[self.u_name], self.ds[self.u_name])
+        import metpy.calc as mpcalc
 
         gut.myprint('Compute relative vorticity...')
         # Relative Vorticity
@@ -183,6 +183,7 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
         """Compute vorticity with windspharm package
         see https://ajdawson.github.io/windspharm/latest/examples/rws_xarray.html
         """
+        import metpy.calc as mpcalc
 
         # vw = VectorWind(self.ds[self.u_name], self.ds[self.u_name])
 

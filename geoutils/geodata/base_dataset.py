@@ -45,7 +45,7 @@ class BaseDataset():
         verbose=True,
         metpy_labels=False,  # labelling according to metpy convention
         metpy_unit=None,
-        parse_cf=True,
+        parse_cf=False,
         **kwargs,
     ):
         """Initializes a BaseDataset object with an nc file provided.
@@ -75,6 +75,7 @@ class BaseDataset():
             raise ValueError(
                 f'Provide single or multiple files as strings but data_nc = {data_nc}!')
 
+        read_into_memory = kwargs.pop('read_into_memory', True)
         self.grid_step = grid_step
         self.set_dim_names()
         ds = self.open_ds(
@@ -125,7 +126,6 @@ class BaseDataset():
 
         self.set_ds_objects()
 
-        read_into_memory = kwargs.pop('read_into_memory', True)
         if read_into_memory:
             self.ds = self.read_data_into_memory()
 
@@ -151,7 +151,7 @@ class BaseDataset():
         use_ds_grid=False,
         decode_times=True,
         verbose=True,
-        parse_cf=True,
+        parse_cf=False,
         var_name=None,
         **kwargs,
     ):
@@ -165,13 +165,14 @@ class BaseDataset():
                              verbose=verbose,
                              var_name=var_name,
                              plevel_name=self.plevel_name,
-                             **kwargs)
+                             **kwargs)#.compute()
         self.dims = self.get_dims(ds=ds)
 
         if 'time' in self.dims:
             ds = self.get_data_timerange(ds, time_range, verbose=verbose)
 
         if month_range is not None:
+            gut.myprint(f'Get month range data {month_range}!')
             ds = tu.get_month_range_data(dataset=ds,
                                          start_month=month_range[0],
                                          end_month=month_range[1],
@@ -215,9 +216,8 @@ class BaseDataset():
             self.grid_step, self.grid_step_lon, self.grid_step_lat = sput.get_grid_step(
                 ds=ds, verbose=verbose)
 
-        ds.unify_chunks()
-
-        gut.myprint("Finished processing data", verbose=verbose)
+        # ds.unify_chunks()
+        ds.compute()
         self.info_dict = copy.deepcopy(ds.attrs)
 
         timemean = kwargs.pop('timemean', None)
@@ -234,6 +234,7 @@ class BaseDataset():
         delete_hist = kwargs.pop('delete_hist', False)
         if delete_hist:
             ds = gut.delete_ds_attr(ds=ds, attr='history')
+        gut.myprint("Finished processing data", verbose=verbose)
 
         return ds
 
@@ -352,7 +353,7 @@ class BaseDataset():
         self.lon360 = kwargs.pop('lon360', False)
         ts_days = kwargs.pop('ts_days', True)
         keep_time = kwargs.pop('keep_time', False)
-        
+
         freq = kwargs.pop('freq', 'D')
         ds = sput.check_dimensions(ds=ds,
                                    ts_days=ts_days,
@@ -1285,10 +1286,11 @@ class BaseDataset():
 
         return anomalies
 
-    def compute_anomalies_ds(self, var_name=None, **kwargs):
+    def compute_anomalies_ds(self, var_name=None, verbose=True, **kwargs):
         self.an_types = kwargs.pop('an_types', [])
         normalize_anomalies = kwargs.pop('normalize_anomalies', False)
         var_name = self.var_name if var_name is None else var_name
+        gut.myprint('Compute Anomalies!', verbose=verbose)
         if var_name in self.vars:
             for an_type in self.an_types:
                 self.ds[f"{var_name}_an_{an_type}"] = self.compute_anomalies(
@@ -1353,7 +1355,7 @@ class BaseDataset():
         else:
             da = data
         tr = tu.get_time_range(ds=da)
-        gut.myprint(f'Load data from in time range {tu.tps2str(tr)}!',
+        gut.myprint(f'Load data from time range {tu.tps2str(tr)}!',
                     verbose=verbose)
         return da
 

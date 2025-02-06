@@ -1265,6 +1265,11 @@ def rename_dims(ds, verbose):
         if lon_lat in dims:
             gut.myprint(
                 f'Rename:{lon_lat} : {rename_dict[lon_lat]}', verbose=verbose)
+            coords_lon_lat = ds.coords[lon_lat]
+            if rename_dict[lon_lat] in coords_lon_lat.coords:
+                gut.myprint(
+                    f'WARNING: {rename_dict[lon_lat]} already in coordinates!', verbose=verbose)
+                ds = ds.drop(rename_dict[lon_lat])
             ds = ds.rename({lon_lat: rename_dict[lon_lat]})
             dims = list(ds.dims)
             gut.myprint(dims, verbose=verbose)

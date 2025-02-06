@@ -17,6 +17,7 @@ def open_nc_file(
         nc_files,
         plevels=None,
         decode_times=True,
+        datetime_ts=True,
         verbose=True,
         var_name=None,
         lat_range=None,
@@ -35,7 +36,7 @@ def open_nc_file(
         **kwargs)
 
     ds, dims = check_dimensions(
-        ds, datetime_ts=decode_times, verbose=verbose,
+        ds, datetime_ts=datetime_ts, verbose=verbose,
         hours_to_zero=hours_to_zero, **kwargs)
     dims = gut.get_dims(ds=ds)
     ds = gut.rename_var_era5(ds=ds, verbose=verbose, **kwargs)

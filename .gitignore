@@ -3,6 +3,8 @@
 *.sh
 *.npy
 *.nc
+*.csv
+*.zip
 
 # Paths to ignore
 climnet.egg-info/

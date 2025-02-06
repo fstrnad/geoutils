@@ -813,6 +813,8 @@ def get_month_range_data(dataset,
                                              start_month=start_month,
                                              end_month=end_month)
     else:
+        gut.myprint('Attention. Data is read into memory for month range!')
+        dataset = dataset.compute()
         seasonal_data = dataset.sel(
             time=is_in_month_range(
                 dataset["time.month"], start_month, end_month)
