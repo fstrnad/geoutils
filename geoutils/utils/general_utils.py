@@ -105,6 +105,14 @@ def get_vars(ds):
     return vars
 
 
+def check_vars_in_ds(ds, vars):
+    ds_vars = get_vars(ds)
+    for var in vars:
+        if var not in ds_vars:
+            raise ValueError(f'Variables {vars} not in {ds_vars}!')
+    return True
+
+
 def check_xarray_version():
     required_version = '2024.9.0'
     installed_version = xr.__version__
@@ -959,6 +967,30 @@ def assign_new_coords(da, dim, coords):
     return da
 
 
+def add_attribute(ds, attribute_name, attribute_value, var_names=None):
+    """
+    Adds a new attribute to the xarray Dataset.
+
+    Args:
+        ds (xarray.Dataset): The input xarray Dataset.
+        attribute_name (str): The name of the attribute to add.
+        attribute_value: The value of the attribute to add.
+
+    Returns:
+        xarray.Dataset: The modified xarray Dataset with the new attribute added.
+    """
+    if var_names is None:
+        ds.attrs[attribute_name] = attribute_value
+    else:
+        if var_names == 'all':
+            ds.attrs[attribute_name] = attribute_value
+            var_names = get_vars(ds)
+        for var_name in var_names:
+            ds[var_name].attrs[attribute_name] = attribute_value
+
+    return ds
+
+
 def delete_non_dimension_attribute(dataarray, attribute_name, verbose=True):
     """
     Delete the given attribute from the coordinates if it is not a real dimension of the xarray DataArray.
@@ -1013,18 +1045,25 @@ def rename_da(da, name):
 def rename_var_era5(ds, verbose=True, **kwargs):
     names = get_vars(ds=ds)
 
-    if "precipitation" in names:
-        ds = ds.rename({"precipitation": "pr"})
-        myprint("Rename precipitation: pr!")
-    if "precip" in names:
-        ds = ds.rename({"precip": "pr"})
-        myprint("Rename precip: pr!")
-    # if '10m_u_component_of_wind' in names:
-    #     ds = ds.rename({"10m_u_component_of_wind": "u"})
-    #     myprint("Rename 10m_u_component_of_wind: u10!")
-    # if '10m_v_component_of_wind' in names:
-    #     ds = ds.rename({"10m_v_component_of_wind": "v"})
-    #     myprint("Rename 10m_v_component_of_wind: v10!")
+    rename_dict = {
+        'precipitation': 'pr',
+        'precip': 'pr',
+        '10m_u_component_of_wind': 'u10',
+        '10m_v_component_of_wind': 'v10',
+        '100m_u_component_of_wind': 'u100',
+        '100m_v_component_of_wind': 'v100',
+        'forecast_surface_roughness': 'fsr',
+        'total_sky_direct_solar_radiation_at_surface': 'fdir',
+        'toa_incident_solar_radiation': 'tisr',
+        'surface_solar_radiation_downwards': 'ssrd',
+        'surface_net_solar_radiation': 'ssr',
+        '2m_temperature': 'temperature',
+    }
+    for name in names:
+        if name in rename_dict:
+            ds = ds.rename({name: rename_dict[name]})
+            myprint(f'Rename {name} to {rename_dict[name]}!', verbose=verbose)
+
     if "tp" in names:
         ds = ds.rename({"tp": "pr"})
         myprint("Rename tp to pr!")
@@ -1248,6 +1287,25 @@ def add_compliment(arr):
     if 0 not in new_arr:
         new_arr.insert(len(new_arr) // 2, 0)
     return new_arr
+
+
+def sum_up_list(arr):
+    """
+    Sums up all the elements in the input list.
+
+    Args:
+        arr (list): The input list of numbers.
+
+    Returns:
+        int: The sum of all elements in the input list.
+
+    Example:
+    >>> my_list = [1, 2, 3, 4, 5]
+    >>> total_sum = sum_up_list(my_list)
+    >>> print(total_sum)
+    15
+    """
+    return sum(arr)
 
 
 def make_arr_negative(arr):

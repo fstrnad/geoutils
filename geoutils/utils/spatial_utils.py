@@ -329,6 +329,8 @@ def interp2gaus(dataarray, grid_step=2.5):
 def cut_map(ds, lon_range=[-180, 180],
             lat_range=[-90, 90],
             dateline=False,
+            lon_name='lon',
+            lat_name='lat',
             verbose=False):
     """
     Works only for rectangular data!
@@ -378,13 +380,13 @@ def cut_map(ds, lon_range=[-180, 180],
     lats = da.lat
     if lats[0] < lats[1]:
         ds_cut = da.sel(
-            lon=lon_range,
-            lat=slice(np.min(lat_range), np.max(lat_range))
+            {lon_name: lon_range,
+                lat_name: slice(np.min(lat_range), np.max(lat_range))},
         )
     else:
-        ds_cut = da.sel(
-            lon=lon_range,
-            lat=slice(np.max(lat_range), np.min(lat_range))
+        ds_cut = da.sel({
+            lon_name: lon_range,
+            lat_name: slice(np.max(lat_range), np.min(lat_range))},
         )
 
     return ds_cut
@@ -579,7 +581,7 @@ def gdistance(pt1, pt2, radius=RADIUS_EARTH):
     return haversine(lon1=lon1, lat1=lat1, lon2=lon2, lat2=lat2)
 
 
-@ np.vectorize
+@np.vectorize
 def haversine(lon1, lat1, lon2, lat2, radius=1):
     """Computes spatial distance between two points, given as (lon1,lat1) and
     (lon2,lat2).
@@ -1049,7 +1051,7 @@ def remove_useless_variables(ds, rm_var=False):
             # occurs for ERA5 data sometimes
             # see https://confluence.ecmwf.int/display/CKB/ERA5%3A+data+documentation
             gut.myprint(f'Select expver=1 (ERA5) from ds!')
-            ds = ds.sel(expver=1)# .combine_first(ds.sel(expver=5))
+            ds = ds.sel(expver=1)  # .combine_first(ds.sel(expver=5))
             # ds.load()
             gut.myprint(f'Combined expver 1 and 5 for ds!')
             dims = gut.get_dims(ds=ds)
@@ -1086,7 +1088,7 @@ def remove_useless_variables(ds, rm_var=False):
 
 
 def remove_single_dim(ds):
-    if isinstance(ds, xr.Dataset):
+    if isinstance(ds, xr.Dataset) or isinstance(ds, xr.DataArray):
         dims = dict(ds.sizes)  # new in xarray 2023.06.
         for dim, num in dims.items():
             if num < 2:
@@ -1131,7 +1133,7 @@ def transpose_2D_data(da, dims=['lat', 'lon']):
 
 
 def check_dimensions(ds, datetime_ts=True,
-                     sort=True, # necessary when transforming from 0-360 to -180-180
+                     sort=True,  # necessary when transforming from 0-360 to -180-180
                      lon360=False,
                      lon_2_180=True,
                      keep_time=False,
@@ -1273,6 +1275,18 @@ def rename_dims(ds, verbose):
             ds = ds.rename({lon_lat: rename_dict[lon_lat]})
             dims = list(ds.dims)
             gut.myprint(dims, verbose=verbose)
+    return ds
+
+
+def long_dimension_names(ds):
+    dims = gut.get_dims(ds)
+    xdims = ['lon', 'x']
+    ydims = ['lat', 'y']
+    for dim in dims:
+        if dim in xdims:
+            ds = ds.rename({dim: 'longitude'})
+        elif dim in ydims:
+            ds = ds.rename({dim: 'latitude'})
     return ds
 
 
@@ -1623,3 +1637,88 @@ def get_defined_lon_lat_range(dataarray):
                          non_nan_data.lon.max().item()])
 
     return lon_range, lat_range
+
+
+def max_power_of_2(n):
+    """Finds the largest power of 2 that divides n."""
+    power = 0
+    while n % 2 == 0 and n > 1:
+        n //= 2
+        power += 1
+    return power
+
+
+def trim_range(arr, target_length, mode):
+    """Trims an array to the target length based on the given mode."""
+    current_length = len(arr)
+    trim_amount = current_length - target_length
+    if trim_amount <= 0:
+        return arr
+    else:
+        if mode == "start":  # Cut from beginning (e.g., west or south)
+            return arr[trim_amount:]
+        elif mode == "end":  # Cut from end (e.g., east or north)
+            return arr[:target_length]
+        elif mode == "center":  # Cut evenly from both sides
+            start_trim = trim_amount // 2
+            end_trim = trim_amount - start_trim
+            return arr[start_trim: -end_trim]
+        else:
+            raise ValueError("Mode must be 'start', 'end', or 'center'")
+
+
+def find_optimal_subrange(ds, lat_name="lat", lon_name="lon",
+                          min_power=2,
+                          lat_trim="center", lon_trim="center"):
+    """
+    Finds the largest subrange where the number of latitude and longitude values
+    is divisible by 2 at least `min_power` times.
+
+    Parameters:
+        ds (xarray.Dataset): Input dataset.
+        lat_name (str): Name of the latitude dimension.
+        lon_name (str): Name of the longitude dimension.
+        min_power (int): Minimum number of times both lat and lon counts should be divisible by 2.
+
+    Returns:
+        xarray.Dataset: Optimized subset of the dataset.
+    """
+    lat_vals = ds[lat_name].values
+    lon_vals = ds[lon_name].values
+
+    # Compute original lengths
+    num_lat = len(lat_vals)
+    num_lon = len(lon_vals)
+
+    # Compute initial power of 2 divisibility
+    best_lat_pow = max_power_of_2(num_lat)
+    best_lon_pow = max_power_of_2(num_lon)
+
+    print(f"Original lat count: {num_lat}, divisible by 2: {best_lat_pow} times")
+    print(f"Original lon count: {num_lon}, divisible by 2: {best_lon_pow} times")
+
+    # Ensure both dimensions are divisible by 2 at least `min_power` times
+    num_iters = 0
+    while num_lat > 1 and num_lon > 1:
+        if best_lat_pow >= min_power and best_lon_pow >= min_power:
+            break  # Stop when both meet the required divisibility
+
+        num_lat -= 1 if best_lat_pow < min_power else 0
+        num_lon -= 1 if best_lon_pow < min_power else 0
+        best_lat_pow = max_power_of_2(num_lat)
+        best_lon_pow = max_power_of_2(num_lon)
+        num_iters += 1
+
+    print(f"Optimized lat count: {num_lat}, divisible by 2: {best_lat_pow} times")
+    print(f"Optimized lon count: {num_lon}, divisible by 2: {best_lon_pow} times")
+
+    # Trim latitude and longitude ranges based on the user-defined method
+    if num_iters > 0:
+        gut.myprint(f"Trimmed {num_iters} times!")
+        lat_vals_optimal = trim_range(lat_vals, num_lat, mode=lat_trim)
+        lon_vals_optimal = trim_range(lon_vals, num_lon, mode=lon_trim)
+        # Select optimized range from dataset
+        ds_optimal = ds.sel({lat_name: lat_vals_optimal, lon_name: lon_vals_optimal})
+    else:
+        ds_optimal = ds
+    return ds_optimal

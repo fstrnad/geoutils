@@ -129,6 +129,7 @@ def save_ds(ds, filepath, unlimited_dim=None,
             zlib=True,
             only_dim_corrds=False,
             show_progress=False,
+            compression=9,
             backup=False):
     if os.path.exists(filepath):
         gut.myprint(f"File {filepath} already exists!")
@@ -145,7 +146,10 @@ def save_ds(ds, filepath, unlimited_dim=None,
     if only_dim_corrds:
         ds = gut.delete_all_non_dimension_attributes(ds)
     if zlib:
-        encoding = {var: {'zlib': True} for var in ds.data_vars}
+        encoding = {var: {'zlib': zlib,
+                        #   "complevel": compression
+                          }
+                    for var in ds.data_vars}
         write_job = ds.to_netcdf(filepath, encoding=encoding,
                                  compute=False)
     else:

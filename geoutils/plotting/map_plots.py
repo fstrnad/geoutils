@@ -365,8 +365,8 @@ def create_map(
         ax.coastlines(alpha=alpha,
                       #   color=coast_color
                       )
-        set_borders = kwargs.pop("set_borders", False)
-        if set_borders:
+        plot_borders = kwargs.pop("plot_borders", False)
+        if plot_borders:
             ax.add_feature(ctp.feature.BORDERS,
                            linestyle="--",
                            #    color="grey",
@@ -941,7 +941,8 @@ def plot_array(
     # else:
     #     raise ValueError(f"Plot type {plot_type} does not exist!")
     if put.check_geoaxis(ax):
-        y_title = kwargs.pop('y_title', 1.2)
+        # set distance of plot to the title
+        y_title = kwargs.pop('y_title', 1.1)
     else:
         y_title = kwargs.pop('y_title', 1.05)
     kwargs = put.set_title(title=title, ax=ax,

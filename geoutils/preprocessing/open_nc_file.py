@@ -25,6 +25,7 @@ def open_nc_file(
         time_range=None,
         month_range=None,
         hours_to_zero=False,
+        rename_era5=False,
         **kwargs,):
     reload(gut)
     fut.print_file_location_and_size(nc_files, verbose=verbose)
@@ -39,7 +40,8 @@ def open_nc_file(
         ds, datetime_ts=datetime_ts, verbose=verbose,
         hours_to_zero=hours_to_zero, **kwargs)
     dims = gut.get_dims(ds=ds)
-    ds = gut.rename_var_era5(ds=ds, verbose=verbose, **kwargs)
+    if rename_era5:
+        ds = gut.rename_var_era5(ds=ds, verbose=verbose, **kwargs)
     gut.myprint(f"End processing data! Dimensions: {dims}", verbose=verbose)
 
     if lat_range is not None or lon_range is not None:

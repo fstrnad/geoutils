@@ -110,14 +110,19 @@ def get_country_shape(country_names):
     return countries.reindex(country_names)
 
 
-def cutout_country_cells(cutout, country_name):
+def get_country_bounds(country_name):
     country_shape = get_country_shape(country_name)
+    return country_shape.total_bounds
 
+
+def cutout_country_cells(cutout, country_name, as_xr=True):
+    country_shape = get_country_shape(country_name)
     indicator_matrix = cutout.indicatormatrix(country_shape)
-    indicator_matrix = xr.DataArray(
-        indicator_matrix.toarray().reshape(cutout.shape),
-        dims=["lat", "lon"],
-        coords=[cutout.coords["lat"], cutout.coords["lon"]],
-    )
-    
+    if as_xr:
+        indicator_matrix = xr.DataArray(
+            indicator_matrix.toarray().reshape(cutout.shape),
+            dims=["lat", "lon"],
+            coords=[cutout.coords["lat"], cutout.coords["lon"]],
+        )
+
     return indicator_matrix

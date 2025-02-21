@@ -80,8 +80,6 @@ def set_legend(ax,
 def plot_2d(
     y=None,
     x=None,
-    y_arr=None,
-    x_arr=None,
     z_arr=[],
     x_err_arr=[],
     y_err_arr=[],
@@ -100,25 +98,27 @@ def plot_2d(
     standardize=False,
     ts_axis=False,
     plot_type='xy',
-    set_axis=False,
+    set_axis=True,
     **kwargs,
 ):
     reload(sut)
     reload(gut)
-    if y is None and y_arr is None:
-        raise ValueError("y_arr or y must be provided!")
-    if y_arr is None and y is not None:
+    if y is None:
+        raise ValueError("y must be provided!")
+
+    if isinstance(y[0], (list, np.ndarray, xr.DataArray)):
+        y_arr = y
+    else:
         y_arr = [y]
 
-    if not isinstance(y_arr[0], (list, np.ndarray)):
-        y_arr = [y_arr]
+    if x is not None:
+        if isinstance(x[0], (list, np.ndarray)):
+            x_arr = x
+        else:
+            x_arr = [x]
+    else:
+        x_arr = None
 
-    if x is not None and x_arr is None:
-        x_arr = [x]
-    if x_arr is not None and isinstance(x_arr[0], (list, np.ndarray)):
-        if len(y_arr) != len(x_arr):
-            raise ValueError(
-                f"x and y arrays must have the same length, but are {len(x_arr)} and {len(y_arr)}!")
     if ax is None:
         figsize = kwargs.pop("figsize",
                              (8, 5))
@@ -154,14 +154,19 @@ def plot_2d(
             if x_arr is None:
                 x = np.arange(len(y_arr[idx]))
             else:
-                if isinstance(x_arr[0], (list, np.ndarray, xr.DataArray)):
-                    x = x_arr[idx]
-                else:
-                    x = x_arr
+                x = x_arr[0] if len(x_arr) == 1 else x_arr[idx]
             if linearize_xaxis:
                 x = np.arange(0, len(x))
 
             y = y_arr[idx] if len(y_arr) > 1 else y_arr[0]
+
+            if len(y) != len(x):
+                raise ValueError(f"{len(x)} and {len(y)} must have the same length")
+            if isinstance(y, xr.DataArray):
+                y = y.values
+            if isinstance(x, xr.DataArray):
+                x = x.values
+
             zorder += len(y_arr) - idx if inverted_z_order else idx
             z = z_arr[idx] if len(z_arr) == 1 else None
             if norm is True:

@@ -1112,7 +1112,7 @@ def get_start_end_date_shift(time, sm, em, shift=0):
     return start_date, end_date
 
 
-def get_time_range(ds):
+def get_time_range(ds, asstr=False):
     time = ds.time
     if gut.is_datetime360(time=time.data[0]):
         sd = time.data[0]
@@ -1120,6 +1120,11 @@ def get_time_range(ds):
     else:
         sd = np.datetime64(time.data[0], "D")
         ed = np.datetime64(time.data[-1], "D")
+
+    if asstr:
+        sd = tp2str(sd)
+        ed = tp2str(ed)
+
     return sd, ed
 
 
@@ -1129,18 +1134,27 @@ def get_dates_of_ds(ds):
     return tps
 
 
-def str2datetime(string, numpy=True, xarray=True, verbose=False):
-    if isinstance(string, str):
-        date = np.datetime64(string, "ns")
-        if not numpy:
-            y, m, d, h = get_date2ymdh(date=date)
-            date = datetime.datetime(year=y, month=m, day=d, hour=h)
-        if xarray:
-            date = xr.DataArray(date, coords={"time": date})
-    else:
-        date = string
-        gut.myprint(f"WARNING {string} is not string!", verbose=verbose)
-    return date
+def str2datetime(string, numpy=True, xarray=True, verbose=True):
+    if not isinstance(string, (list, np.ndarray)):
+        string = [string]
+    dates = []
+    for s in string:
+        if isinstance(s, str):
+            date = np.datetime64(s, "ns")
+            if not numpy:
+                y, m, d, h = get_date2ymdh(date=date)
+                date = datetime.datetime(year=y, month=m, day=d, hour=h)
+        else:
+            date = s
+            gut.myprint(f"WARNING {s} is not string!", verbose=verbose)
+        dates.append(date)
+    if len(dates) == 1:
+        dates = dates[0]
+
+    if xarray:
+        dates = xr.DataArray(dates, coords={"time": dates})
+
+    return dates
 
 
 def is_full_year(ds, get_missing_dates=False):
@@ -1220,6 +1234,7 @@ def get_frequency(x):
 
 
 def convert_time_resolution(dataarray, keep_time_points=6,
+                            start_index=0,
                             freq='h', average=False):
     """
     Convert an xarray DataArray with hourly time points to 6-hourly resolution.
@@ -1242,6 +1257,8 @@ def convert_time_resolution(dataarray, keep_time_points=6,
         return dataarray.rolling(time=6, center=False).mean()
     else:
         sd, ed = get_start_end_date(data=dataarray)
+        if start_index > 0:
+            sd = add_time_window(sd, time_step=start_index, freq=freq)
         td = get_frequency_resolution(dates=dataarray.time)
         if td > np.timedelta64(keep_time_points, freq):
             raise ValueError(
@@ -1403,6 +1420,20 @@ def compute_timemean(
         else:
             ds = ds.resample(time=tm).mean(dim="time", skipna=True)
 
+    return ds
+
+
+def rolling_timemean(ds, window, verbose=False):
+    """Computes the rolling mean of a given xr.dataset
+
+    Args:
+        ds (xr.dataset): xr dataset for the dataset
+
+    Returns:
+        xr.dataset: monthly average dataset
+    """
+    gut.myprint(f"Compute rolling mean ({window} window)!", verbose=verbose)
+    ds = ds.rolling(time=window, center=True).mean()
     return ds
 
 
@@ -2014,6 +2045,8 @@ def add_time_window(date, time_step=1, freq="D"):
         tdelta = pd.DateOffset(months=time_step)
     elif freq == "Y":
         tdelta = pd.DateOffset(years=time_step)
+    elif freq == "h":
+        tdelta = pd.DateOffset(hours=time_step)
     else:
         raise ValueError(f"Invalid '{freq}', must be 'D', 'M', or 'Y'")
     if isinstance(date, xr.DataArray):
@@ -2438,6 +2471,26 @@ def create_xr_ts(times, data=None, name="time"):
         raise ValueError("ERROR! Times and data must have same length!")
 
     return xr.DataArray(data=data, dims=[name], coords={f"{name}": times})
+
+
+def pandas2xr_ts(df, times=None, name='time'):
+    if isinstance(df, pd.DataFrame):
+        data = df[df.columns[0]].values
+        times = df.index.values
+    elif isinstance(df, pd.Series):
+        data = df.values
+        if times is None:
+            raise ValueError("ERROR! times has to be provided!")
+        if len(times) != len(data):
+            raise ValueError("ERROR! times and data must have same length!")
+        if isinstance(times, pd.Series):
+            times = times.values
+        if isinstance(times[0], str):
+            times = str2datetime(times)
+    else:
+        raise ValueError("ERROR! df has to be a pandas DataFrame!")
+
+    return create_xr_ts(times=times, data=data, name=name)
 
 
 def create_zero_ts(times):
@@ -2891,6 +2944,23 @@ def get_intersect_tps(tps1, tps2):
     if len(tps) == 0:
         return []
     return tps.time
+
+
+def remove_nans(dataarray):
+    """
+    Remove NaN values from an xarray DataArray.
+
+    Parameters:
+    -----------
+    dataarray : xarray DataArray
+        The input dataarray
+
+    Returns:
+    --------
+    xarray DataArray
+        The input dataarray with NaN values removed
+    """
+    return dataarray.dropna(dim="time", how="all")
 
 
 def check_time_overlap(da1, da2, return_overlap=False):
