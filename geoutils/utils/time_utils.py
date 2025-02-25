@@ -1714,27 +1714,29 @@ def get_ee_ds(
     q=0.95,
     threshold=None,
     min_threshold=None,
-    reverse_threshold=False,
+    threshold_type='upper',
     th_eev=None,
     verbose=True,
 ):
     if threshold is None and q is None:
         raise ValueError("ERROR! Either q or threshold has to be    provided!")
 
-    if threshold is not None:
-        q_val_map = xr.where(~np.isnan(dataarray), threshold, np.nan)
-
     if min_threshold is not None:
         # Remove days without rain
         dataarray = dataarray.where(dataarray > min_threshold)
     if threshold is not None:
+        q_val_map = xr.where(~np.isnan(dataarray), threshold, np.nan)
         gut.myprint(f'Compute extreme events with threshold {threshold}!')
         if q is not None:
-            gut.myprint(f'q is given, but will be ignored!')
-        if reverse_threshold:
-            data_quantile = xr.where(dataarray < threshold, dataarray, np.nan)
+            gut.myprint(f'q is given, but will be ignored!',
+                        color='yellow', verbose=verbose)
+        if threshold_type == 'upper':
+            data_quantile = xr.where(dataarray <= threshold, dataarray, np.nan)
+        elif threshold_type == 'lower':
+            data_quantile = xr.where(dataarray >= threshold, dataarray, np.nan)
         else:
-            data_quantile = xr.where(dataarray > threshold, dataarray, np.nan)
+            raise ValueError(
+                f"ERROR! threshold_type {threshold_type} not recognized!")
     else:
         gut.myprint(f"Compute extreme events with quantile {q}!")
         # Gives the quanile value for each cell
@@ -1760,13 +1762,13 @@ def get_ee_ds(
     return q_val_map, ee_map, data_quantile, rel_frac_q_map
 
 
-def get_q_val_map(dataarray, q=0.95):
+def get_q_val_map(dataarray, q=0.95, dim='time'):
     if q > 1 or q < 0:
         raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
 
     if 'time' not in dataarray.dims:
         raise ValueError("ERROR! No time dimension found!")
-    q_val_map = dataarray.quantile(q, dim="time")
+    q_val_map = dataarray.quantile(q, dim=dim)
     return q_val_map
 
 
@@ -1784,7 +1786,7 @@ def compute_evs(
     dataarray,
     q=0.9,
     threshold=None,
-    reverse_treshold=False,
+    threshold_type=False,
     min_threshold=None,
     th_eev=None,
     min_num_events=1,
@@ -1814,7 +1816,7 @@ def compute_evs(
         dataarray=dataarray,
         q=q,
         threshold=threshold,
-        reverse_threshold=reverse_treshold,
+        threshold_type=threshold_type,
         min_threshold=min_threshold,
         th_eev=th_eev,
         verbose=verbose,

@@ -26,6 +26,7 @@ def open_nc_file(
         month_range=None,
         hours_to_zero=False,
         rename_era5=False,
+        to_dataarray=False,
         **kwargs,):
     reload(gut)
     fut.print_file_location_and_size(nc_files, verbose=verbose)
@@ -59,6 +60,11 @@ def open_nc_file(
 
     if var_name is not None:
         ds = ds[var_name]
+
+    if to_dataarray:
+        if len(gut.get_vars(ds)) > 1:
+            raise ValueError('More than one variable found in dataset!')
+        ds = ds.to_dataarray()
 
     return ds
 

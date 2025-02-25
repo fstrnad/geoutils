@@ -59,14 +59,8 @@ feature_dict = {
 requested_vars = requested_era5_flux + requested_era5_temp + \
     requested_era5_wind + requested_static_era5
 
-grid_step = 2.5
-
-for variable in requested_vars:
-    new_file = f'{output_dir}/{grid_step}/{variable}_{grid_step}.nc'
-    if fut.exist_file(new_file):
-        gut.myprint(f'File {new_file} exists!')
-    else:
-        gut.myprint(f'File {new_file} does not exist!')
+grid_step = 1
+country_name = "Germany"
 
 features = ['runoff', 'wind', 'influx', 'temperature']
 
@@ -75,9 +69,12 @@ for feature in features:
     variables += feature_dict[feature]
 files = []
 for variable in variables:
-    new_file = f'{output_dir}/{grid_step}/{variable}_{grid_step}.nc'
+    new_file = f'{output_dir}/{country_name}/{grid_step}/{variable}_{grid_step}.nc'
     if fut.exist_file(new_file):
+        gut.myprint(f'File {new_file} exists!')
         files.append(new_file)
+    else:
+        gut.myprint(f'File {new_file} does not exist!')
 
 # %%
 reload(sput)
@@ -130,7 +127,7 @@ ds = prepare_input_cutout(features, files)
 ds
 # %%
 reload(fut)
-savepath = f'{data_dir}/pv_wind_{grid_step}.nc'
+savepath = f'{data_dir}/{country_name}/pv_wind_{grid_step}.nc'
 fut.save_ds(ds, savepath)
 
 

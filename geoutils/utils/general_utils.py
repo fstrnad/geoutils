@@ -840,6 +840,10 @@ def create_xr_ds(data, dims, coords, name=None):
                         )
 
 
+def list2str(list, sep='+'):
+    return f'{sep}'.join([str(elem) for elem in list])
+
+
 def nans_array(size):
     """Creates an array filled of np.nans.
 
