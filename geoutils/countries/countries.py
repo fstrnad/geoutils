@@ -1,3 +1,4 @@
+import os
 import xarray as xr
 from tabnanny import check
 import geopandas as gpd
@@ -37,12 +38,33 @@ def check_country_exist(country_name):
         raise ValueError(f"{country_name} is not a valid country name.")
 
 
-def get_countries():
-    countries = get_country_file()
-    country_shapes = gpd.GeoSeries(
-        {r.attributes["NAME_EN"]: r.geometry for r in countries},
-        crs={"init": "epsg:4326"},
-    )
+def get_countries_offshore():
+    import country_converter as coco
+    file = os.path.abspath(__file__)
+    wd = os.path.dirname(file)
+    countries = gpd.read_file(f'{wd}/offshore_shapes.geojson')
+    cc = coco.CountryConverter()
+    country_names = list(countries.name)
+    countries_en = cc.convert(names=country_names, to='name_short')
+    countries['name'] = countries_en
+
+    return countries
+
+
+def get_countries(onshore=True):
+    if onshore:
+        countries = get_country_file()
+        country_shapes = gpd.GeoSeries(
+            {r.attributes["NAME_EN"]: r.geometry for r in countries},
+            crs={"init": "epsg:4326"},
+        )
+    else:
+        countries = get_countries_offshore()
+        country_shapes = gpd.GeoSeries(
+            {r.name: r.geometry for r in countries.itertuples()},
+            crs={"init": "epsg:4326"},
+        )
+
     return country_shapes
 
 
@@ -100,13 +122,13 @@ def get_country(country_names):
     return countries.loc[country_names]
 
 
-def get_country_shape(country_names):
+def get_country_shape(country_names, onshore=True):
     if isinstance(country_names, str):
         country_names = [country_names]
     for country in country_names:
         check_country_exist(country)
 
-    countries = get_countries()
+    countries = get_countries(onshore=onshore)
     return countries.reindex(country_names)
 
 
@@ -115,8 +137,8 @@ def get_country_bounds(country_name):
     return country_shape.total_bounds
 
 
-def cutout_country_cells(cutout, country_name, as_xr=True):
-    country_shape = get_country_shape(country_name)
+def cutout_country_cells(cutout, country_name, onshore=True, as_xr=True):
+    country_shape = get_country_shape(country_name, onshore=onshore)
     indicator_matrix = cutout.indicatormatrix(country_shape)
     if as_xr:
         indicator_matrix = xr.DataArray(

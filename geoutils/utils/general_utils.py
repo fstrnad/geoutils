@@ -1057,11 +1057,11 @@ def rename_var_era5(ds, verbose=True, **kwargs):
         '100m_u_component_of_wind': 'u100',
         '100m_v_component_of_wind': 'v100',
         'forecast_surface_roughness': 'fsr',
-        'total_sky_direct_solar_radiation_at_surface': 'fdir',
-        'toa_incident_solar_radiation': 'tisr',
-        'surface_solar_radiation_downwards': 'ssrd',
-        'surface_net_solar_radiation': 'ssr',
-        '2m_temperature': 'temperature',
+        'total_sky_direct_solar_radiation_at_surface': 'fdir',  # used in atlite
+        'toa_incident_solar_radiation': 'tisr',  # used in atlite
+        'surface_solar_radiation_downwards': 'ssrd',  # used in atlite
+        'surface_net_solar_radiation': 'ssr',  # used in atlite
+        '2m_temperature': 'temperature',  # used in atlite
     }
     for name in names:
         if name in rename_dict:

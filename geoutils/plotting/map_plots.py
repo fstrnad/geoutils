@@ -465,6 +465,8 @@ def plot_map(dmap: xr.DataArray,
     if label is None and isinstance(dmap, xr.DataArray):
         unset_label = kwargs.pop('unset_label', False)
         label = dmap.name if not unset_label else None
+    if isinstance(dmap, xr.Dataset):
+        dmap = dmap[list(dmap.data_vars)[0]] # take the first variable
     if isinstance(dmap, xr.DataArray):
         data_dims = gut.get_dims(dmap)
         point_dims = 'points' in data_dims
@@ -707,7 +709,9 @@ def plot_array(
         vmin = np.nanquantile(z, q=0.1) if vmin is None else vmin
         vmax = np.nanquantile(z, q=0.9) if vmax is None else vmax
         if vmin == vmax and plot_type != 'hatch':
-            raise ValueError(f'Vmin and vmax are equal: {vmin}!')
+            gut.myprint(f'Vmin and vmax are equal: {vmin}!')
+            vmin = vmin - 0.1
+            vmax = vmax + 0.1
     else:
         vmin = vmax = None
 
@@ -1244,7 +1248,7 @@ def create_multi_plot(nrows, ncols, projection=None,
     reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
-        figsize = (5*ncols, 5*nrows)
+        figsize = (6*ncols, 6*nrows)
 
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx
@@ -1268,7 +1272,7 @@ def create_multi_plot(nrows, ncols, projection=None,
     fig = plt.figure(figsize=(figsize[0], figsize[1]))
 
     hspace = kwargs.pop('hspace', 0.)
-    wspace = kwargs.pop('wspace', 0.)
+    wspace = kwargs.pop('wspace', 0.3)
 
     gs = fig.add_gridspec(gs_rows, gs_cols,
                           height_ratios=ratios_h,

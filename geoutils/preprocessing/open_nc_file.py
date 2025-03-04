@@ -27,15 +27,18 @@ def open_nc_file(
         hours_to_zero=False,
         rename_era5=False,
         to_dataarray=False,
+        zarr=False,
         **kwargs,):
     reload(gut)
     fut.print_file_location_and_size(nc_files, verbose=verbose)
-
-    ds = open_ds(
-        nc_files=nc_files,
-        plevels=plevels,
-        decode_times=decode_times,
-        **kwargs)
+    if zarr:
+        ds = xr.open_zarr(nc_files)
+    else:
+        ds = open_ds(
+            nc_files=nc_files,
+            plevels=plevels,
+            decode_times=decode_times,
+            **kwargs)
 
     ds, dims = check_dimensions(
         ds, datetime_ts=datetime_ts, verbose=verbose,

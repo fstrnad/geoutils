@@ -1725,15 +1725,25 @@ def get_ee_ds(
         # Remove days without rain
         dataarray = dataarray.where(dataarray > min_threshold)
     if threshold is not None:
-        q_val_map = xr.where(~np.isnan(dataarray), threshold, np.nan)
+
+        if threshold_type == 'upper':
+            mean_ds = dataarray.min(dim="time")
+            q_val_map = xr.where(mean_ds < threshold, mean_ds, np.nan)
+        elif threshold_type == 'lower':
+            mean_ds = dataarray.max(dim="time")
+            q_val_map = xr.where(mean_ds > threshold, mean_ds, np.nan)
+        else:
+            raise ValueError(
+                f"ERROR! threshold_type {threshold_type} not recognized!")
+
         gut.myprint(f'Compute extreme events with threshold {threshold}!')
         if q is not None:
             gut.myprint(f'q is given, but will be ignored!',
                         color='yellow', verbose=verbose)
         if threshold_type == 'upper':
-            data_quantile = xr.where(dataarray <= threshold, dataarray, np.nan)
-        elif threshold_type == 'lower':
             data_quantile = xr.where(dataarray >= threshold, dataarray, np.nan)
+        elif threshold_type == 'lower':
+            data_quantile = xr.where(dataarray <= threshold, dataarray, np.nan)
         else:
             raise ValueError(
                 f"ERROR! threshold_type {threshold_type} not recognized!")
@@ -1786,7 +1796,7 @@ def compute_evs(
     dataarray,
     q=0.9,
     threshold=None,
-    threshold_type=False,
+    threshold_type='upper',
     min_threshold=None,
     th_eev=None,
     min_num_events=1,

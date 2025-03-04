@@ -145,6 +145,8 @@ def save_ds(ds, filepath, unlimited_dim=None,
         zlib = False   # because dataarray has no var attibute
     if only_dim_corrds:
         ds = gut.delete_all_non_dimension_attributes(ds)
+
+    gut.myprint(f"Store to {filepath}...")
     if zlib:
         encoding = {var: {'zlib': zlib,
                         #   "complevel": compression

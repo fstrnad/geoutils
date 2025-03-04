@@ -10,8 +10,9 @@ reload(sput)
 reload(of)
 
 
-def interpolate_grid(dataarray, grid_step,
-                     method="bilinear",
+def interpolate_grid(dataarray, grid_step=None,
+                     input_grid=None,
+                     method="nearest",
                      min_lon=None, max_lon=None,
                      min_lat=None, max_lat=None,
                      grid_step_lon=None,
@@ -19,34 +20,40 @@ def interpolate_grid(dataarray, grid_step,
                      use_esmf=True,):
     """Common grid for all datasets.
     """
-    if grid_step is None:
-        raise ValueError("Grid step must be defined!")
-    times_in = dataarray["time"]
-    native_grid_step, _, _ = sput.get_grid_step(dataarray)
-    if native_grid_step == grid_step:
-        gut.myprint(
-            f"Native grid step is the same as the desired grid step: {grid_step}!")
-        gut.myprint(f"Returning the same dataarray!")
-        return dataarray
-
-    if native_grid_step < grid_step:
-        # coarse graining by next neighbor
-        method = "nearest" if not use_esmf else 'nearest_s2d'
+    if grid_step is None and input_grid is None:
+        raise ValueError("Either grid step or input_grid must be given!")
+    if grid_step is not None and input_grid is not None:
+        raise ValueError(
+            "Either grid step or input_grid must be given, not both!")
 
     dataarray, dims = of.check_dimensions(dataarray,
                                           check_clim_dims=False,
                                           transpose_dims=False,
                                           verbose=False,
                                           )
+    if input_grid is not None:
+        init_lat = input_grid["lat"]
+        init_lon = input_grid["lon"]
+    else:
+        native_grid_step, _, _ = sput.get_grid_step(dataarray)
+        if native_grid_step == grid_step:
+            gut.myprint(
+                f"Native grid step is the same as the desired grid step: {grid_step}!")
+            gut.myprint(f"Returning the same dataarray!")
+            return dataarray
 
-    init_lat, init_lon = generate_new_grid(
-        dataarray, grid_step,
-        min_lon, max_lon, min_lat, max_lat,
-        grid_step_lon, grid_step_lat)
+        if native_grid_step < grid_step:
+            # coarse graining by next neighbor
+            method = "nearest" if not use_esmf else 'nearest_s2d'
+
+        init_lat, init_lon = generate_new_grid(
+            dataarray, grid_step,
+            min_lon, max_lon, min_lat, max_lat,
+            grid_step_lon, grid_step_lat)
 
     if use_esmf:
         import xesmf as xe
-
+        method = 'nearest_s2d' if method == 'nearest' else method
         grid = xr.Dataset(
             {
                 "lat": (['lat'], init_lat, {"units": "degrees_north"}),
@@ -142,5 +149,3 @@ def generate_new_grid(dataarray, grid_step,
         )
 
     return init_lat, init_lon
-
-

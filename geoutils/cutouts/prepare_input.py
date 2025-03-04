@@ -37,8 +37,8 @@ requested_era5_temp = [
 requested_era5_wind = [
     "10m_u_component_of_wind",
     "10m_v_component_of_wind",
-    "100m_u_component_of_wind",
-    "100m_v_component_of_wind",
+    # "100m_u_component_of_wind",
+    # "100m_v_component_of_wind",
     "forecast_surface_roughness",
 ]
 
@@ -52,17 +52,19 @@ feature_dict = {
     "temperature": requested_era5_temp,
     "influx": requested_era5_flux,
     "static": requested_static_era5,
-    'runoff': ['runoff']
+    # 'runoff': ['runoff']
 }
 
 
 requested_vars = requested_era5_flux + requested_era5_temp + \
     requested_era5_wind + requested_static_era5
 
-grid_step = 1
+grid_step = 2.5
 country_name = "Germany"
 
-features = ['runoff', 'wind', 'influx', 'temperature']
+features = ['wind', 'influx', 'temperature',
+            # 'runoff',
+            ]
 
 variables = []
 for feature in features:
@@ -80,9 +82,16 @@ for variable in variables:
 reload(sput)
 reload(gut)
 reload(of)
+reload(ald)
 
-wind_features = ['wnd100m', 'wnd_azimuth', 'wnd_shear_exp',
-                 'roughness']
+
+wind_features = [
+    # 'wnd100m',
+    'wnd10m',
+    #  'wnd_azimuth',
+    #  'wnd_shear_exp',
+    'roughness'
+]
 influx_features = ['influx_direct', 'influx_diffuse',
                    'influx_toa', 'solar_altitude', 'solar_azimuth', 'albedo']
 temp_features = ['temperature']
@@ -90,7 +99,7 @@ temp_features = ['temperature']
 output_feature_dict = {
     "wind": wind_features,
     "influx": influx_features,
-    "runoff": ['runoff'],
+    # "runoff": ['runoff'],
     "temperature": temp_features,
 }
 
@@ -101,8 +110,10 @@ def prepare_input_cutout(features, files):
 
     ds = gut.rename_var_era5(ds=ds, verbose=True)
 
-    reload(ald)
-    ds = ald.get_data_wind(ds=ds, retrieval_params=None)
+    ds = ald.get_data_wind(ds=ds,
+                           wnd_shear=False,
+                           wnd_azimuth=False,
+                           retrieval_params=None)
     ds = sput.long_dimension_names(ds)
     ds = ald.get_data_influx(ds=ds, retrieval_params=None)
 
