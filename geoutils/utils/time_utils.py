@@ -202,12 +202,23 @@ def month2str(month):
 
 
 def get_month_name(month_number):
-    if not isinstance(month_number, int):
-        raise ValueError(f"Month is not integer but is {type(month_number)}!")
-    if month_number < 1 or month_number > 12:
-        raise ValueError(
-            f"Month should be in range 1-12 but is {month_number}!")
-    return months[month_number - 1]
+    if isinstance(month_number, int):
+        monthnums = [month_number]
+    else:
+        monthnums = month_number
+    month_names = []
+    for month_number in monthnums:
+        if not isinstance(month_number, (int, np.int64)):
+            raise ValueError(
+                f"Month is not integer but is {type(month_number)}!")
+        if month_number < 1 or month_number > 12:
+            raise ValueError(
+                f"Month should be in range 1-12 but is {month_number}!")
+        month_names.append(str(months[month_number - 1]))
+    if len(month_names) == 1:
+        return month_names[0]
+    else:  # return list of month names
+        return month_names
 
 
 def get_netcdf_encoding(
@@ -484,6 +495,35 @@ def remove_time_points(dataset, time_points, verbose=False):
     filtered_dataset = dataset.drop_sel(time=rem_tps)
 
     return filtered_dataset
+
+
+def find_consecutive_ones(data_array, min_consecutive=1):
+    """
+    Find the time points of the onset of consecutive 1s in a DataArray.
+
+    Parameters:
+        data_array (xr.DataArray): A DataArray of 1s and 0s with a time dimension.
+        min_consecutive (int): The minimum number of consecutive 1s required for an onset.
+
+    Returns:
+        xr.DataArray: The time points where consecutive 1s (of at least `min_consecutive` length) begin.
+    """
+    time_dim = 'time'  # Adjust if the time dimension is named differently
+    binary_values = data_array.values  # Extract NumPy array
+
+    # Find where 1 appears after a 0 (potential onset points)
+    onset_indices = np.where(
+        (binary_values[:-1] == 0) & (binary_values[1:] == 1))[0] + 1
+    # Verify that each onset is followed by at least `min_consecutive - 1` more 1s
+    valid_onset_indices = [
+        # +1 for the range
+        idx for idx in onset_indices if np.all(binary_values[idx:idx + min_consecutive + 1] == 1)
+    ]
+
+    # Extract corresponding time points
+    onset_times = data_array[time_dim][valid_onset_indices]
+
+    return onset_times
 
 
 def remove_consecutive_tps(
@@ -1183,19 +1223,26 @@ def convert_to_best_unit(diffs):
     return np.array(best_unit_diffs)
 
 
-def get_frequency_resolution(dates):
+def get_frequency_resolution(dates, verbose=False):
 
     if isinstance(dates, xr.DataArray):
         dates = dates.time.data
     if not isinstance(dates, np.ndarray):
         dates = np.array(dates)
     # Compute the differences between consecutive dates
-    date_diffs = np.unique(np.diff(dates))
+    date_diffs, counts = np.unique(np.diff(dates), return_counts=True)
     best_unit_intervals = convert_to_best_unit(date_diffs)
     if len(best_unit_intervals) > 1:
         gut.myprint(f'WARNING: Multiple time intervals detected: {
-                    best_unit_intervals}!')
-    return best_unit_intervals[0]
+                    best_unit_intervals}!', verbose=verbose)
+    best_unit_interval = best_unit_intervals[np.argmax(counts)]
+    return best_unit_interval
+
+
+def get_frequency_resolution_hours(dates):
+    frequency_delta = get_frequency_resolution(dates)
+    hours = frequency_delta / np.timedelta64(1, 'h')
+    return float(hours)
 
 
 def get_frequency(x):
@@ -1423,7 +1470,7 @@ def compute_timemean(
     return ds
 
 
-def rolling_timemean(ds, window, verbose=False):
+def rolling_timemean(ds, window, dropna=True, verbose=False):
     """Computes the rolling mean of a given xr.dataset
 
     Args:
@@ -1434,6 +1481,8 @@ def rolling_timemean(ds, window, verbose=False):
     """
     gut.myprint(f"Compute rolling mean ({window} window)!", verbose=verbose)
     ds = ds.rolling(time=window, center=True).mean()
+    if dropna:
+        ds = ds.dropna(dim="time")
     return ds
 
 
@@ -1711,15 +1760,15 @@ def compute_anomalies_ds(
 
 def get_ee_ds(
     dataarray,
-    q=0.95,
+    q=None,
     threshold=None,
     min_threshold=None,
     threshold_type='upper',
     th_eev=None,
     verbose=True,
 ):
-    if threshold is None and q is None:
-        raise ValueError("ERROR! Either q or threshold has to be    provided!")
+    if threshold is not None and q is not None:
+        raise ValueError("ERROR! Either q OR threshold has to be provided!")
 
     if min_threshold is not None:
         # Remove days without rain
@@ -1747,7 +1796,7 @@ def get_ee_ds(
         else:
             raise ValueError(
                 f"ERROR! threshold_type {threshold_type} not recognized!")
-    else:
+    elif q is not None:
         gut.myprint(f"Compute extreme events with quantile {q}!")
         # Gives the quanile value for each cell
         q_val_map = get_q_val_map(dataarray=dataarray, q=q)
@@ -1758,6 +1807,8 @@ def get_ee_ds(
             data_quantile = xr.where(dataarray < q_val_map, dataarray, np.nan)
         else:
             raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
+    else:
+        raise ValueError("ERROR! Either q or threshold has to be provided!")
     if th_eev is not None:
         # Set values to 0 that have not at least the value th_eev
         data_quantile = xr.where(data_quantile > th_eev, data_quantile, np.nan)
@@ -1794,13 +1845,14 @@ def get_ee_count_ds(ds, q=0.95):
 
 def compute_evs(
     dataarray,
-    q=0.9,
+    q=None,
     threshold=None,
     threshold_type='upper',
     min_threshold=None,
     th_eev=None,
-    min_num_events=1,
+    min_num_events=0,
     verbose=True,
+    get_mask=True,
 ):
     """Creates an event series from an input time series.
 
@@ -1839,11 +1891,87 @@ def compute_evs(
     event_series = event_series.rename("evs")
 
     # Create new mask for dataset: Masked values are areas with no events!
-    mask = xr.where(ee_map > min_num_events, 1, 0)
-    fraction_masked = 1 - float(mask.sum()) / mask.size
-    gut.myprint(f"Fraction of masked values: {fraction_masked:.2f}!")
+    if min_num_events > 0:
+        mask = xr.where(ee_map > min_num_events, 1, 0)
+        fraction_masked = 1 - float(mask.sum()) / mask.size
+        gut.myprint(f"Fraction of masked values: {fraction_masked:.2f}!")
+    if get_mask:
+        return event_series, mask
+    else:
+        return event_series
 
-    return event_series, mask
+
+def get_quantile_of_ts(ts, q=0.9,
+                       max_quantile=False,
+                       return_indices=False,
+                       verbose=False):
+    q_value = np.quantile(ts, q)
+    if q >= 0.5 or max_quantile:
+        indices = np.where(ts >= q_value)[0]
+    else:
+        indices = np.where(ts < q_value)[0]
+    q_ts = ts[indices]
+
+    gut.myprint(f"Q-Value: {q_value}!", verbose=verbose)
+    if return_indices:
+        return q_ts, indices
+    else:
+        return q_ts
+
+
+def threshold_ts(dataarray, th=None, th_=None, q=None, dim='time'):
+    """Return all values in the input xarray that are above a value.
+    This depends on the input value th or th_.
+    th is the value above which the values are returned and th_ is the value below which the
+    values are returned.
+    As an alternative q can be used to get the quantile value above which the values are
+    returned.
+
+    Parameters:
+    -----------
+    dataarray : xarray.DataArray
+        The input data array to get values from.
+
+    Returns:
+    --------
+    xarray.DataArray
+        An xarray object containing only the values that are above the median.
+
+    Raises:
+    -------
+    ValueError:
+        If the input data array does not have a time dimension.
+    """
+    if dim not in dataarray.dims:
+        raise ValueError(f"Input data array must have a {dim} dimension")
+
+    if th == 'mean':
+        th = th_ = dataarray.mean(dim=dim)
+    elif q is not None:
+        if q < 1 and q > 0.5:
+            th = dataarray.quantile(q=q)
+            th_ = dataarray.quantile(q=(1-q))
+        else:
+            raise ValueError(f'q={q} has to be between 0.5 and 1')
+    elif th == 'median':
+        th = th_ = dataarray.median(dim=dim)
+    else:
+        if th is None and th_ is None:
+            raise ValueError("ERROR! Either th or th_ has to be provided!")
+        th = th_ if th is None else th
+        th_ = th if th_ is None else th_
+    above_th = dataarray.where(dataarray >= th).dropna(dim=dim)
+    below_th = dataarray.where(dataarray <= th_).dropna(dim=dim)
+    between_th = gut.diff_xarray(arr1=dataarray, arr2=above_th)
+    between_th = gut.diff_xarray(arr1=between_th, arr2=below_th)
+
+    return {
+        'th': float(th),
+        'th_': float(th_),
+        'above': above_th,
+        'below': below_th,
+        'between': between_th
+    }
 
 
 def detrend_dim(da, dim="time", deg=1, startyear=None, freq="D"):
@@ -1963,6 +2091,17 @@ def get_ymdh_date(date):
     return y, m, d, h
 
 
+def get_year(data):
+    if isinstance(data, xr.DataArray):
+        data = data.time.data
+    if isinstance(data, np.datetime64):
+        data = np.datetime_as_string(data, unit='Y')
+    if isinstance(data, str):
+        data = np.datetime64(data)
+    years = data.astype("M8[Y]")
+    return years.astype(str)
+
+
 def get_date2ymdh(date):
     if isinstance(date, xr.DataArray):
         date = date.data
@@ -2030,7 +2169,20 @@ def get_ym_date(date):
     return f"{mname} {y}"
 
 
-def add_time_window(date, time_step=1, freq="D"):
+def get_timedelta_unit(timedelta_obj):
+    """
+    Extracts the unit of time (e.g., days, hours, seconds) from a numpy.timedelta64 object.
+
+    Parameters:
+        timedelta_obj (np.timedelta64): A numpy timedelta object.
+
+    Returns:
+        str: The time unit of the timedelta (e.g., 'D', 'h', 'm', 's', 'ms', 'us', 'ns').
+    """
+    return np.datetime_data(timedelta_obj.dtype)[0]
+
+
+def add_time_window(date, time_step=None, freq=None):
     """
     Add a specified number of days, months, or years to the time dimension of an xarray
     DataArray.
@@ -2050,6 +2202,11 @@ def add_time_window(date, time_step=1, freq="D"):
     xr.DataArray
         The modified dataarray with the time dimension updated.
     """
+    if freq is None:
+        td = get_frequency_resolution(date)
+        freq = get_timedelta_unit(td)
+        time_step = td.astype(int)
+
     # Define the time delta to add based on the frequency parameter
     if freq == "D":
         tdelta = pd.DateOffset(days=time_step)
@@ -2080,8 +2237,8 @@ def add_time_window(date, time_step=1, freq="D"):
 
 def add_time_step_tps(
     tps,
-    time_step=1,
-    freq="D",
+    time_step=None,
+    freq=None,
 ):
     return add_time_window(date=tps, time_step=time_step, freq=freq)
 
@@ -2291,7 +2448,10 @@ def get_dates_in_range(start_date, end_date, freq="D",
         start_date = str2datetime(start_date, xarray=False)
     if isinstance(end_date, str):
         end_date = str2datetime(end_date, xarray=False)
-
+    if isinstance(start_date, (int, np.int64)):
+        start_date = np.datetime64(f"{start_date}-01-01", freq)
+    if isinstance(end_date, (int, np.int64)):
+        end_date = np.datetime64(f"{end_date}-12-31", freq)
     if not isinstance(time_delta, np.timedelta64):
         td = np.timedelta64(time_delta, freq)
     else:
@@ -2635,7 +2795,7 @@ def get_values_by_year(dataarray, years):
     return data_selected
 
 
-def count_time_points(
+def count_time_points_old(
     time_points,
     freq="Y",
     start_year=None,
@@ -2670,11 +2830,11 @@ def count_time_points(
         start_time, end_time = get_start_end_date(data=time_points)
 
     # Compute the number of years or months between start and end time points
-    if freq == "Y":
+    if freq == "Y" or freq == 'year':
         time_range = pd.date_range(
             start=start_time.values, end=end_time.values, freq="YS"
         )
-    elif freq == "M":
+    elif freq == "M" or freq == 'month':
         time_range = pd.date_range(
             start=start_time.values, end=end_time.values, freq="MS"
         )
@@ -2699,6 +2859,143 @@ def count_time_points(
     # Create output xarray DataArray
     output = xr.DataArray(counts, dims=("time",), coords={"time": time_range})
     return output
+
+
+def count_time_points(time_points, counter='year', linebreak=False):
+    """
+    Returns a time series that gives per year (or per month in the year) the number of
+    time points.
+
+    Parameters
+    ----------
+    time_points : xarray.DataArray
+        An xarray DataArray containing a time dimension of multiple time points.
+    counter : str, optional
+        The counter of the output counts. Valid options are 'year' (per year) and 'month'
+        (per month in the year). Default is 'year'.
+
+    Returns
+    -------
+    xarray.DataArray
+        An xarray DataArray with a time dimension of type np.datetime64 and the number of
+        time points as data. The time dimension is continuous from the earliest time point
+        in the input array to the last time point of the input array.
+    """
+    assert_has_time_dimension(time_points)
+
+    # Get the time count number
+    counts, counter_arr = count_tps_occ(time_points, counter=counter)
+    if counter == 'year':
+        # Get the unique years in the time points
+        # Create a continuous time series from the earliest to the latest year
+        years = counter_arr
+        time_range = get_dates_in_range(start_date=years[0],
+                                        end_date=years[-1],
+                                        freq='Y')
+        if len(years) != len(time_range):
+            gut.myprint(
+                f"WARNING! Not all years are in the time range {years} {time_range}")
+        counts = xr.DataArray(counts, dims=("time",),
+                              coords={"time": time_range})
+    elif counter == 'month':
+        months = get_month_name(counter_arr)
+        counts = xr.DataArray(counts, dims=("time",),
+                              coords={"time": months})
+    elif counter == 'week':
+        weeks = get_week_dates(counter_arr, linebreak=linebreak)
+        counts = xr.DataArray(counts, dims=("time",),
+                              coords={"time": weeks})
+    else:
+        raise ValueError(f"Invalid counter {counter}")
+
+    return counts
+
+
+def count_tps_occ(tps_arr, count_arr=None, counter='year',
+                  rel_freq=False,
+                  norm_fac=1):
+    """Counts the number of events per Month for a given list of list of time
+    point indices.
+
+    Args:
+        tps_arr (list): list of xarray time objects.
+
+    Returns:
+        list: list of length 12 with rel freq of occurence for every month
+    """
+    if isinstance(tps_arr, xr.DataArray):
+        tps_arr = [tps_arr.time]
+    if counter == 'month':
+        cnt_mnths = months if count_arr is None else count_arr
+        count_arr = np.array(get_month_number(*cnt_mnths), dtype=int)
+    if counter == 'week':
+        if count_arr is None:
+            count_arr = np.arange(1, 54)
+    elif counter == 'year':
+        if count_arr is None:
+            sd = np.inf
+            ed = -np.inf
+            for tps in tps_arr:
+                sd_tmp, ed_tmp = get_sy_ey_time(tps)
+                if sd_tmp < sd:
+                    sd = sd_tmp
+                if ed_tmp > ed:
+                    ed = ed_tmp
+            count_arr = np.arange(sd, ed)
+
+    res_c_occ_arr = np.zeros((len(tps_arr), len(count_arr)))
+
+    for idx, tps in enumerate(tps_arr):
+        m_c_occ = res_c_occ_arr[idx]
+        tot_num = len(tps)
+        counts = get_time_count_number(tps, counter=counter)
+        u, count = np.unique(counts,  return_counts=True)
+        u = np.array(u, dtype=int)
+        for iu, u_val in enumerate(u):
+            idx_cnt_arr = int(np.where(u_val == count_arr)[0])
+            m_c_occ[idx_cnt_arr] = count[iu]
+        if rel_freq:
+            if tot_num > 0:
+                m_c_occ /= tot_num
+                if np.abs(np.sum(m_c_occ) - 1) > 0.1:
+                    gut.myprint(
+                        f'WARNING, rel freq not summed to 1 {np.sum(m_c_occ)}')
+            else:
+                m_c_occ = 0
+
+    if norm_fac == 'max':
+        norm_fac = np.max(res_c_occ_arr, axis=1)
+    res_c_occ = np.mean(res_c_occ_arr, axis=0)/norm_fac
+
+    return res_c_occ, count_arr
+
+
+def count_tps_occ_evs(evs, counter='month', count_arr=None,
+                      rel_freq=True,
+                      norm_fac=1):
+    """Counts the number of occurence in every month for a given array of binary event
+    series
+
+    Args:
+        ds (BaseDataset): [description]
+        tps_arr (list): list of event series
+        times (xr.time, optional): Xarray datetime. Defaults to None.
+
+    Raises:
+        ValueError:
+
+    Returns:
+        list: list of freq of occurence per month
+    """
+    tps_arr = get_tps_evs(evs=evs)
+    if counter == 'month' or counter == 'week':
+        res_c_occ = count_tps_occ(
+            tps_arr=tps_arr, counter=counter, count_arr=count_arr, rel_freq=rel_freq,
+            norm_fac=norm_fac)
+    else:
+        raise ValueError(f'No such counter {counter} implemented yet!')
+
+    return res_c_occ
 
 
 def sort_time_points_by_year(tps, val=None, q=None):
@@ -2735,7 +3032,7 @@ def get_time_count_number(tps, counter="week"):
     return counts
 
 
-def get_week_dates(weeks):
+def get_week_dates(weeks,linebreak=True):
     """
     Given an array of week numbers, return a list of tuples, where each tuple contains the
     first calendar day of the corresponding week and the month as a string.
@@ -2757,11 +3054,13 @@ def get_week_dates(weeks):
     start_date = datetime.datetime(year, 1, 1)
     week_dates = []
     for week in weeks:
+        week = int(week) if isinstance(week, np.int64) else week
         week_start = start_date + datetime.timedelta(days=(week - 1) * 7)
         day_of_month = week_start.day
         month_num = week_start.month
         month_name = get_month_name(month_number=month_num)
-        week_dates.append(f"{day_of_month}\n{month_name}")
+        week_str = f"{day_of_month}\n{month_name}" if linebreak else f"{day_of_month} {month_name}"
+        week_dates.append(f"{week_str}")
     return week_dates
 
 

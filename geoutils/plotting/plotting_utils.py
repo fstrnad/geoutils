@@ -13,6 +13,59 @@ import geoutils.plotting.plot_settings as pst
 from importlib import reload
 reload(pst)
 
+
+def set_legend(ax,
+               fig=None,
+               label_arr=[],
+               legend_items=None,
+               **kwargs):
+    if fig is None:
+        fig = ax
+    loc = kwargs.pop("loc", "upper right")
+    box_loc = kwargs.pop('box_loc', (0.96, 1))
+    box_loc = (0.1, 0) if loc == 'under' else box_loc
+    bbox_to_anchor = box_loc if loc == "outside" or loc == 'under' else None
+    ncol_legend = kwargs.pop('ncol_legend', 1)
+    ncol_legend = 2 if ncol_legend == 1 and loc == 'under' else ncol_legend
+    loc = 'upper left' if loc == 'outside' or loc == 'under' else loc  # loc is set above
+    fsize = kwargs.pop("fontsize", pst.MEDIUM_SIZE)
+    order = kwargs.pop("order", None)
+    if len(label_arr) == 0:
+        legend_items, label_arr = ax.get_legend_handles_labels()
+    if len(label_arr) > 0:
+        if order is not None:
+            legend_items = [legend_items[idx] for idx in order],
+            label_arr = [label_arr[idx] for idx in order]
+
+        leg = fig.legend(
+            handles=legend_items,
+            labels=label_arr,
+            bbox_to_anchor=bbox_to_anchor,
+            loc=loc,
+            fancybox=True,
+            shadow=False,
+            ncol=ncol_legend,
+            framealpha=0.8,
+            frameon=True,
+            fontsize=fsize,
+        )
+        # leg = fig.legend(
+        #     # label_arr,   # if commented in might cause problems with sns
+        #     bbox_to_anchor=bbox_to_anchor,
+        #     loc=loc,
+        #     fancybox=True,
+        #     shadow=False,
+        #     ncol=ncol_legend,
+        #     framealpha=0.8,
+        #     frameon=True,
+        #     fontsize=fsize,
+        # )
+
+        leg.get_frame().set_linewidth(0.0)
+        leg.set_zorder(pst.MAX_ZORDER)
+    return ax
+
+
 def get_available_mpl_colormaps():
     """
     Get a list of all available colormaps in matplotlib.
@@ -752,6 +805,11 @@ def plot_hline(ax, y, transform=None, **kwargs):
                    linestyle=ls,
                    transform=transform,
                    label=label)
+
+    if label is not None:
+        # labels and legend items are already within ax-object
+        ax = set_legend(ax=ax, **kwargs)
+
     return {'im': ax}
 
 

@@ -59,7 +59,7 @@ feature_dict = {
 requested_vars = requested_era5_flux + requested_era5_temp + \
     requested_era5_wind + requested_static_era5
 
-grid_step = 2.5
+grid_step = 0.25
 country_name = "Germany"
 
 features = ['wind', 'influx', 'temperature',
@@ -139,7 +139,7 @@ ds
 # %%
 reload(fut)
 savepath = f'{data_dir}/{country_name}/pv_wind_{grid_step}.nc'
-fut.save_ds(ds, savepath)
+fut.save_ds(ds, savepath, zlib=False)
 
 
 # %%

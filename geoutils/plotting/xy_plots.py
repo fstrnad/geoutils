@@ -25,58 +25,6 @@ reload(put)
 reload(pst)
 
 
-def set_legend(ax,
-               fig=None,
-               label_arr=[],
-               legend_items=None,
-               **kwargs):
-    if fig is None:
-        fig = ax
-    loc = kwargs.pop("loc", "upper right")
-    box_loc = kwargs.pop('box_loc', (0.96, 1))
-    box_loc = (0.1, 0) if loc == 'under' else box_loc
-    bbox_to_anchor = box_loc if loc == "outside" or loc == 'under' else None
-    ncol_legend = kwargs.pop('ncol_legend', 1)
-    ncol_legend = 2 if ncol_legend == 1 and loc == 'under' else ncol_legend
-    loc = 'upper left' if loc == 'outside' or loc == 'under' else loc  # loc is set above
-    fsize = kwargs.pop("fontsize", pst.MEDIUM_SIZE)
-    order = kwargs.pop("order", None)
-    if len(label_arr) == 0:
-        legend_items, label_arr = ax.get_legend_handles_labels()
-    if len(label_arr) > 0:
-        if order is not None:
-            legend_items = [legend_items[idx] for idx in order],
-            label_arr = [label_arr[idx] for idx in order]
-
-        leg = fig.legend(
-            handles=legend_items,
-            labels=label_arr,
-            bbox_to_anchor=bbox_to_anchor,
-            loc=loc,
-            fancybox=True,
-            shadow=False,
-            ncol=ncol_legend,
-            framealpha=0.8,
-            frameon=True,
-            fontsize=fsize,
-        )
-        # leg = fig.legend(
-        #     # label_arr,   # if commented in might cause problems with sns
-        #     bbox_to_anchor=bbox_to_anchor,
-        #     loc=loc,
-        #     fancybox=True,
-        #     shadow=False,
-        #     ncol=ncol_legend,
-        #     framealpha=0.8,
-        #     frameon=True,
-        #     fontsize=fsize,
-        # )
-
-        leg.get_frame().set_linewidth(0.0)
-        leg.set_zorder(pst.MAX_ZORDER)
-    return ax
-
-
 def plot_2d(
     y=None,
     x=None,
@@ -161,7 +109,8 @@ def plot_2d(
             y = y_arr[idx] if len(y_arr) > 1 else y_arr[0]
 
             if len(y) != len(x):
-                raise ValueError(f"{len(x)} and {len(y)} must have the same length")
+                raise ValueError(
+                    f"{len(x)} and {len(y)} must have the same length")
             if isinstance(y, xr.DataArray):
                 y = y.values
             if isinstance(x, xr.DataArray):
@@ -193,7 +142,8 @@ def plot_2d(
             mk_size = kwargs.get('mk_size', None)
             mk_size_arr = kwargs.get('mk_size_arr', None)
             if mk_size_arr is not None:
-                mk_size = mk_size_arr[idx] if idx < len(mk_size_arr) else mk_size_arr[-1]
+                mk_size = mk_size_arr[idx] if idx < len(
+                    mk_size_arr) else mk_size_arr[-1]
 
             ls = kwargs.get('ls', None)
             if ls is None:
@@ -295,14 +245,13 @@ def plot_2d(
         # Bar plot
         stacked = kwargs.pop('stacked', False)
         df = pd.DataFrame(dict(
-            X=x_arr
+            X=x_arr[0]
         ))
         edgecolor = kwargs.pop('edge_color', None)
         fill_bar = kwargs.pop('fill_bar', True)
         label_arr_tmp = [0] if len(label_arr) == 0 else label_arr
 
         for idx, arr in enumerate(y_arr):
-            # print(idx, len(label_arr_tmp), len(y_arr))
             df[label_arr_tmp[idx]] = arr
 
         if color_arr is None:
@@ -356,7 +305,7 @@ def plot_2d(
     make_legend = kwargs.pop('set_legend', True)
     if make_legend and len(label_arr) > 0:
         # labels and legend items are already within ax-object
-        ax = set_legend(ax=ax, **kwargs)
+        ax = put.set_legend(ax=ax, **kwargs)
     else:
         if plot_type == 'bar':
             ax.legend_.remove()
@@ -375,8 +324,6 @@ def fill_between(ax, x, y, y2, thresh=0, larger=True,
                         where=(y <= y2 + thresh),
                         **kwargs)
     return ax
-
-
 
 
 def plot_lines(ax, te, color="Turquoise"):
@@ -455,7 +402,7 @@ def plot_hist(data, ax=None, fig=None,
         else:
             ax.plot(bc, hc, "x", color=c, label=label, ls='-')
     if label_arr is not None:
-        ax = set_legend(ax, label_arr=label_arr, **kwargs)
+        ax = put.set_legend(ax, label_arr=label_arr, **kwargs)
 
     sci = kwargs.pop("sci", None)
     if sci is not None:
