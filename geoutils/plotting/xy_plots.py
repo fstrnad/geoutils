@@ -1,7 +1,6 @@
 """Basic plotting functions for maps"""
 # import matplotlib.cm as cm
 import copy
-from turtle import color
 import xarray as xr
 import pandas as pd
 import geoutils.utils.time_utils as tu
@@ -29,11 +28,6 @@ def plot_2d(
     y=None,
     x=None,
     z_arr=[],
-    x_err_arr=[],
-    y_err_arr=[],
-    y_lb_arr=[],
-    y_ub_arr=[],
-    label_arr=[],
     lw_arr=[1],
     mk_arr=[""],
     ls_arr=['-'],
@@ -67,6 +61,20 @@ def plot_2d(
     else:
         x_arr = None
 
+    y_lb = kwargs.pop('y_lb', [])
+    y_ub = kwargs.pop('y_ub', [])
+    y_lb_arr = y_lb if isinstance(y_lb, list) else [y_lb]
+    y_ub_arr = y_ub if isinstance(y_ub, list) else [y_ub]
+    if len(y_lb_arr) > 0 and len(y_ub_arr) == 0:
+        y_ub_arr = y_lb_arr
+    if len(y_ub_arr) > 0 and len(y_lb_arr) == 0:
+        y_lb_arr = y_ub_arr
+
+    y_err = kwargs.pop('y_err', [])
+    y_err_arr = y_err if isinstance(y_err, list) else [y_err]
+    x_err = kwargs.pop('x_err', [])
+    x_err_arr = x_err if isinstance(x_err, list) else [x_err]
+
     if ax is None:
         figsize = kwargs.pop("figsize",
                              (8, 5))
@@ -91,6 +99,8 @@ def plot_2d(
     alpha = kwargs.pop('alpha', 1)
     inverted_z_order = kwargs.pop('inv_z_order', False)
     linearize_xaxis = kwargs.pop('linearize_xaxis', False)
+    label = kwargs.pop('label', None)
+    label_arr = kwargs.get("label_arr", [])
 
     # ############# Plotting  Scatter ################
     if plot_type == 'xy' or plot_type == 'scatter':
@@ -149,7 +159,15 @@ def plot_2d(
             if ls is None:
                 ls = ls_arr[idx] if idx < len(ls_arr) else ls_arr[-1]
 
-            label = label_arr[idx] if idx < len(label_arr) else None
+            if label is not None:
+                label_arr = [label]
+            if len(label_arr) > 0:
+                if len(label_arr) > idx:
+                    label = label_arr[idx]
+                else:
+                    label = None
+            else:
+                label = None
             if lcmap is None:
                 if color is None:
                     if color_arr is None:
@@ -222,14 +240,12 @@ def plot_2d(
                 if y_lb is not None:
                     color_arr_ci = kwargs.pop('color_arr_ci', None)
                     c = color_arr_ci if color_arr_ci is not None else c
-
                     im = ax.fill_between(
                         x,
                         y_lb,
                         y_ub,
                         color=c,
                         alpha=0.5,
-                        # label=label,
                     )
 
                 plot_errorbar = kwargs.pop('plot_errorbars', False)
@@ -303,7 +319,7 @@ def plot_2d(
         ax.ticklabel_format(style="sci", axis="x", scilimits=(sci_x, sci_x))
 
     make_legend = kwargs.pop('set_legend', True)
-    if make_legend and len(label_arr) > 0:
+    if make_legend and label is not None:
         # labels and legend items are already within ax-object
         ax = put.set_legend(ax=ax, **kwargs)
     else:
@@ -340,14 +356,13 @@ def plot_lines(ax, te, color="Turquoise"):
 
 
 def plot_hist(data, ax=None, fig=None,
-              label_arr=None,
+              plot_type='xy',
               log=False,
-              color_arr=None, **kwargs):
+              **kwargs):
     reload(sut)
     reload(gut)
 
     density = kwargs.pop("density", False)
-    bar = kwargs.pop("bar", False)
     nbins = kwargs.pop("nbins", None)
     bw = kwargs.pop("bw", None)
     if len(np.shape(data)) > 1:
@@ -364,12 +379,8 @@ def plot_hist(data, ax=None, fig=None,
         data_tmp = gut.remove_nans(data_tmp)
         nbins = sut.__doane(data_tmp)
 
-    if ax is None:
-        figsize = kwargs.pop("figsize", (6, 4))
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-    ax, kwargs = put.prepare_axis(ax, log=log, **kwargs)
-
     hc_arr = []
+    bc_arr = []
     for idx, arr in enumerate(data_arr):
         arr = gut.remove_nans(arr)
         if log:
@@ -384,34 +395,15 @@ def plot_hist(data, ax=None, fig=None,
                 density=density,
             )
         hc_arr.append(hc)
-        label = label_arr[idx] if label_arr is not None else []
-        c = pst.colors[idx] if color_arr is None else color_arr[idx]
-        if bar:
-            width = (bc[1] - bc[0]) * 0.4
-            x_pos = bc + width * idx
-            ax.bar(
-                x_pos,
-                hc,
-                yerr=None,
-                ecolor=c,
-                capsize=2,
-                width=width,
-                color=c,
-                label=label,
-            )
-        else:
-            ax.plot(bc, hc, "x", color=c, label=label, ls='-')
-    if label_arr is not None:
-        ax = put.set_legend(ax, label_arr=label_arr, **kwargs)
+        bc_arr.append(bc)
 
-    sci = kwargs.pop("sci", None)
-    if sci is not None:
-        ax.ticklabel_format(style="sci", axis="x", scilimits=(sci, sci))
+    im = plot_2d(x=bc_arr, y=hc_arr,
+                 ax=ax, plot_type=plot_type, **kwargs)
 
     return dict(
         ax=ax,
         be=be,
-        bc=bc,
+        bc=bc_arr,
         hc=hc_arr,
         fig=fig,
     )

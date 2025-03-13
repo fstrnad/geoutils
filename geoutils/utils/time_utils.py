@@ -1158,8 +1158,8 @@ def get_time_range(ds, asstr=False):
         sd = time.data[0]
         ed = time.data[-1]
     else:
-        sd = np.datetime64(time.data[0], "D")
-        ed = np.datetime64(time.data[-1], "D")
+        sd = np.datetime64(time.data[0])
+        ed = np.datetime64(time.data[-1])
 
     if asstr:
         sd = tp2str(sd)

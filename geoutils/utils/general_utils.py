@@ -1120,7 +1120,7 @@ def rename_var_era5(ds, verbose=True, **kwargs):
     return ds
 
 
-def merge_datasets(ds1, ds2):
+def merge_datasets(ds_arr):
     """
     Merge two xarray Dataset objects into a single Dataset object.
 
@@ -1140,13 +1140,15 @@ def merge_datasets(ds1, ds2):
         If the dimensions (lat, lon, time) are not consistent between ds1 and ds2.
     """
     # Check if the dimensions are consistent between ds1 and ds2
-    for dim in ["lat", "lon", "time"]:
-        if not np.array_equal(ds1[dim].data, ds2[dim].data):
-            raise ValueError(
-                f"Inconsistent dimension {dim} between datasets: {ds1[dim]} vs {ds2[dim]}!")
+    ds1 = ds_arr[0]
+    for ds2 in ds_arr[1:]:
+        for dim in ["lat", "lon", "time"]:
+            if not np.array_equal(ds1[dim].data, ds2[dim].data):
+                raise ValueError(
+                    f"Inconsistent dimension {dim} between datasets: {ds1[dim]} vs {ds2[dim]}!")
 
     # Merge the two Dataset objects into a single Dataset object
-    merged_ds = xr.merge([ds1, ds2])
+    merged_ds = xr.merge(ds_arr)
 
     return merged_ds
 

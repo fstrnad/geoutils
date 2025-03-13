@@ -838,7 +838,7 @@ def enumerate_subplots(axs, pos_x=-0.12,
         fac = n // 26  # factor
         lw_case = f"{string.ascii_lowercase[li]}."
         up_case = f"{string.ascii_uppercase[li]}{fac}."
-        plt_text(
+        plot_text(
             ax=ax,
             xpos=pos_x[n],
             ypos=pos_y[n],
@@ -853,7 +853,7 @@ def enumerate_subplots(axs, pos_x=-0.12,
     return axs
 
 
-def plt_text(ax, text, xpos=0, ypos=0,
+def plot_text(ax, text, xpos=0, ypos=0,
              **kwargs):
 
     color = kwargs.pop("color", "k")

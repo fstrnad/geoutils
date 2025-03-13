@@ -706,8 +706,19 @@ def plot_array(
                 f'Vmax has to be of type float or int but is of type {type(vmax)}!')
 
     if z is not None:
-        vmin = np.nanquantile(z, q=0.1) if vmin is None else vmin
-        vmax = np.nanquantile(z, q=0.9) if vmax is None else vmax
+        color_bounds = kwargs.pop('color_bounds', 'quantile')
+        if color_bounds == 'quantile':
+            vmin = np.nanquantile(z, q=0.1) if vmin is None else vmin
+            vmax = np.nanquantile(z, q=0.9) if vmax is None else vmax
+        elif color_bounds == 'minmax':
+            vmin = np.nanmin(z) if vmin is None else vmin
+            vmax = np.nanmax(z) if vmax is None else vmax
+        elif color_bounds == 'absmax':
+            vmin = -1*np.nanmax(abs(z)) if vmin is None else vmin
+            vmax = np.nanmax(abs(z)) if vmax is None else vmax
+        elif color_bounds == 'absquantile':
+            vmax = np.nanquantile(abs(z), q=0.9) if vmax is None else vmax
+            vmin = -1*vmax
         if vmin == vmax and plot_type != 'hatch':
             gut.myprint(f'Vmin and vmax are equal: {vmin}!')
             vmin = vmin - 0.1

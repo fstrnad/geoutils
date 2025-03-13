@@ -149,3 +149,43 @@ def generate_new_grid(dataarray, grid_step,
         )
 
     return init_lat, init_lon
+
+
+def coarse_spatial_grid(da, coarsen_factor, method="mean"):
+    """
+    Coarse an xarray DataArray by spatial averaging.
+
+    Parameters:
+    - da (xarray.DataArray): The input DataArray to coarsen.
+    - coarsen_factor (int): The factor by which to coarsen the resolution (e.g., 4 for 32x32 -> 8x8).
+
+    Returns:
+    - xarray.DataArray: The coarsened DataArray.
+    """
+    # Ensure coarsen_factor is an integer and that the input DataArray has the expected dimensions
+    if not isinstance(coarsen_factor, int):
+        raise ValueError("Coarsen factor must be an integer")
+
+    dims = gut.get_dims(da)
+    if len(dims) < 2:
+        raise ValueError(
+            "Input DataArray must have at least two dimensions (lon and lat)")
+
+    if coarsen_factor == 0:
+        return da
+
+    # Coarse the DataArray based on the coarsen_factor
+    if method == "mean":
+        coarsened_da = da.coarsen(
+            lon=coarsen_factor, lat=coarsen_factor, boundary="trim").mean()
+    elif method == "sum":
+        coarsened_da = da.coarsen(
+            lon=coarsen_factor, lat=coarsen_factor, boundary="trim").sum()
+    elif method == 'median':
+        coarsened_da = da.coarsen(
+            lon=coarsen_factor, lat=coarsen_factor, boundary="trim").median()
+    else:
+        raise ValueError(
+            "Invalid method; must be one of 'mean', 'sum', or 'median'")
+
+    return coarsened_da

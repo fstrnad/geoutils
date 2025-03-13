@@ -1043,7 +1043,7 @@ valid_dims = ['time', 'lat', 'lon', 'plevel', 'lev', 'plev',
               'Year', 'year', 'month', 'day', 'points']
 
 
-def remove_useless_variables(ds, rm_var=False):
+def check_var_dims(ds, validate_dims=False, rm_var_dims=False):
     if isinstance(ds, xr.Dataset):
         # Remove useless dimensions in ds for all variables
         dims = gut.get_dims(ds=ds)
@@ -1056,13 +1056,14 @@ def remove_useless_variables(ds, rm_var=False):
             gut.myprint(f'Combined expver 1 and 5 for ds!')
             dims = gut.get_dims(ds=ds)
 
-        for dim in dims:
-            if dim not in valid_dims:
-                ds = ds.drop_dims(dim)
-                gut.myprint(f'Remove dimension {dim}!')
+        if validate_dims:
+            for dim in dims:
+                if dim not in valid_dims:
+                    ds = ds.drop_dims(dim)
+                    gut.myprint(f'Remove dimension {dim}!')
 
         # Remove useless variables
-        if rm_var:
+        if rm_var_dims:
             vars = gut.get_vars(ds=ds)
             for var in vars:
                 this_dims = gut.get_dims(ds[var])
@@ -1132,6 +1133,24 @@ def transpose_2D_data(da, dims=['lat', 'lon']):
     return da
 
 
+def check_dim_coords(ds):
+    """Checks whether all dimensions have coordinates.
+    If not, add these to coordinates.
+
+    Args:
+        ds (xr.Dataset): xarray dataset
+    """
+    dims = set(gut.get_dims(ds))
+    coords = set(ds.coords)
+    dims_without_coords = dims - coords
+    if len(dims_without_coords) > 0:
+        for dim in dims_without_coords:
+            if dim in ds.dims:
+                ds = ds.assign_coords({dim: np.arange(ds.sizes[dim])})
+                gut.myprint(f'Added coordinate for dimension {dim}!')
+    return ds
+
+
 def check_dimensions(ds, datetime_ts=True,
                      sort=True,  # necessary when transforming from 0-360 to -180-180
                      lon360=False,
@@ -1141,6 +1160,8 @@ def check_dimensions(ds, datetime_ts=True,
                      transpose_dims=False,
                      hours_to_zero=False,
                      set_netcdf_encoding=False,
+                     check_vars=False,
+                     validate_dims=True,
                      verbose=True):
     """
     Checks whether the dimensions are the correct ones for xarray!
@@ -1149,10 +1170,11 @@ def check_dimensions(ds, datetime_ts=True,
     gut.myprint('Check dimensions of dataset!', verbose=verbose)
     ds = rename_dims(ds=ds, verbose=verbose)
     ds = remove_single_dim(ds=ds)
-    ds = remove_useless_variables(ds=ds)
+    if check_vars:
+        ds = check_var_dims(ds=ds, validate_dims=validate_dims)
     dims = list(ds.dims)
     numdims = len(dims)
-
+    ds = check_dim_coords(ds=ds)
     gut.myprint(
         f'Checked labelling according to netcdf conventions!', verbose=verbose)
     dims = gut.get_dims(ds)

@@ -31,8 +31,8 @@ plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
 # plt.rcParams['pcolor.shading'] ='nearest' # For pcolormesh
 colors = [
     'dimgray',
-    "steelblue",
     'firebrick',
+    "steelblue",
     "tab:green",
     "m",
     "tomato",
