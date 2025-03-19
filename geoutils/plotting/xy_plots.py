@@ -100,8 +100,12 @@ def plot_2d(
     inverted_z_order = kwargs.pop('inv_z_order', False)
     linearize_xaxis = kwargs.pop('linearize_xaxis', False)
     label = kwargs.pop('label', None)
-    label_arr = kwargs.get("label_arr", [])
-
+    label_arr = kwargs.get("label_arr", [])  # to account that both label or label_arr can be used
+    if label is not None:
+        if not isinstance(label, (list, np.ndarray)):
+            label_arr = [label]
+        else:
+            label_arr = label
     # ############# Plotting  Scatter ################
     if plot_type == 'xy' or plot_type == 'scatter':
         if lcmap is not None:
@@ -120,7 +124,7 @@ def plot_2d(
 
             if len(y) != len(x):
                 raise ValueError(
-                    f"{len(x)} and {len(y)} must have the same length")
+                    f"{x} and {y} must have the same length")
             if isinstance(y, xr.DataArray):
                 y = y.values
             if isinstance(x, xr.DataArray):
@@ -159,15 +163,11 @@ def plot_2d(
             if ls is None:
                 ls = ls_arr[idx] if idx < len(ls_arr) else ls_arr[-1]
 
-            if label is not None:
-                label_arr = [label]
             if len(label_arr) > 0:
-                if len(label_arr) > idx:
+                if len(label_arr) >= idx:
                     label = label_arr[idx]
                 else:
                     label = None
-            else:
-                label = None
             if lcmap is None:
                 if color is None:
                     if color_arr is None:

@@ -168,7 +168,7 @@ def set_title(title, ax=None, fig=None, **kwargs):
     title_color = kwargs.pop('title_color', 'black')
     # fw = kwargs.pop('title_fontweight', "normal")
     fw = kwargs.pop('title_fontweight', "bold")
-    fsize = kwargs.pop('title_fsize', pst.MEDIUM_SIZE)
+    fsize = kwargs.pop('title_fsize', pst.BIGGER_SIZE)
     if title is not None:
         if ax is not None:
             ax.set_title(title, color=title_color,

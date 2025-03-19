@@ -1,13 +1,14 @@
+from tracemalloc import start
+import geoutils.utils.time_utils as tu
+import pandas as pd
 import geoutils.utils.spatial_utils as sput
-import metpy.calc as metcalc
 import numpy as np
-from metpy.units import units
 from importlib import reload
 import xarray as xr
 import geoutils.utils.general_utils as gut
-from metpy.interpolate import cross_section
 reload(gut)
 
+JULIAN_YEAR_LENGTH_IN_DAYS = 365.25
 
 def parse_cf(ds):
     """Parse the coordinates of a dataset.
@@ -88,6 +89,9 @@ def specific_humidity_to_relative_humidity(specific_humidity,
     xarray.DataArray
         relative humidity
     """
+    import metpy.calc as metcalc
+    from metpy.units import units
+
     # check for units:
     if temperature.metpy.units != units.K:
         temperature = temperature * units.K
@@ -129,6 +133,9 @@ def potential_temperature(temperature, pressure):
     xarray.DataArray
         potential temperature in Kelvin
     """
+    import metpy.calc as metcalc
+    from metpy.units import units
+
     # check for units:
     if temperature.metpy.units != units.K:
         temperature = temperature * units.K
@@ -170,6 +177,8 @@ def vertical_cross_section(data, lon_range, lat_range,
     # data = gut.rename_dim(data, dim='lon', name='longitude')
 
     # ATTENTION: metpy expects start as LAT, LON Pairs! (not LON, LAT)
+    from metpy.interpolate import cross_section
+
     cross = cross_section(data,
                           (lat_range[0], lon_range[0]),
                           (lat_range[1], lon_range[1]),
@@ -202,6 +211,9 @@ def geopotential_to_heigth(geopotential):
     xarray.Dataset
         dataset with heigth
     """
+    import metpy.calc as metcalc
+    from metpy.units import units
+
     if not isinstance(geopotential, xr.DataArray):
         raise ValueError('geopotential must be an xarray.Dataset')
 
@@ -225,3 +237,101 @@ def remove_units(data):
         data array without units
     """
     return data.metpy.dequantify()
+
+
+def compute_toa_solar_radiation(grid_step=1, start_date="2023-01-01", end_date="2023-12-31",
+                                times=None, longitudes=None, latitudes=None,
+                                unit="Watts",
+                                xarray_dataset=None):
+    """
+    Computes the top-of-atmosphere (TOA) incident solar radiation for a global grid
+    with a user-defined resolution, a custom date range, and hourly time resolution.
+
+    Args:
+        grid_step (float): Grid resolution in degrees (e.g., 2, 1, 0.5).
+        start_date (str): Start date in 'YYYY-MM-DD' format.
+        end_date (str): End date in 'YYYY-MM-DD' format.
+
+    Returns:
+        xarray Dataset containing TOA solar radiation [W/m²] for each latitude, longitude, and hour.
+    """
+    # Constants
+    if xarray_dataset is not None:
+        latitudes = xarray_dataset.lat
+        longitudes = xarray_dataset.lon
+        times = xarray_dataset.time
+
+    S0 = 1361  # Solar constant (W/m²)
+
+    # Create latitude and longitude arrays with the given grid step
+    latitudes = np.arange(-90, 90 + grid_step,
+                          grid_step) if latitudes is None else latitudes
+    # No +grid_step to avoid duplicate 180° point
+    longitudes = np.arange(-180, 180,
+                           grid_step) if longitudes is None else longitudes
+
+    # Generate time range (hourly timestamps)
+    times = tu.get_dates_in_range(start_date=start_date, end_date=end_date,
+                                  freq="h") if times is None else times
+
+    # Extract day of the year and hour for each timestamp
+    days_of_year = times.dt.dayofyear.data
+    hours_of_day = times.dt.hour.data
+
+    # # Generate time range (hourly timestamps)
+    # times = pd.date_range(start=start_date, end=end_date, freq="h")
+
+    # # Extract day of the year and hour for each timestamp
+    # days_of_year = times.dayofyear
+    # hours_of_day = times.hour
+
+    # Convert latitude and longitude to radians
+    lat_radians = np.radians(latitudes)
+
+    # Compute solar declination angle δ (radians) for each day of the year
+    declination = np.radians(
+        23.44 * np.sin((2 * np.pi * (days_of_year + 10)) / 365))
+
+    # Compute Earth-Sun distance correction factor (r0/r)^2
+    distance_factor = (1 + 0.033 * np.cos(2 * np.pi * days_of_year / 365)) ** 2
+
+    # Initialize TOA radiation array
+    toa_radiation = np.zeros((len(times), len(latitudes), len(longitudes)))
+
+    # Compute TOA solar radiation for each grid point
+    for i, lat in enumerate(lat_radians):
+        for t, (day, hour) in enumerate(zip(days_of_year, hours_of_day)):
+            # Hour angle (ω) in radians: ω = (hour - 12) * 15° (converted to radians)
+            hour_angle = np.radians((hour - 12) * 15)
+
+            # Compute cosine of the solar zenith angle (θz)
+            cos_theta_z = (np.sin(lat) * np.sin(declination[t])) + (
+                np.cos(lat) * np.cos(declination[t]) * np.cos(hour_angle))
+
+            # TOA radiation: If the Sun is below the horizon (cos_theta_z < 0), set to 0
+            toa_radiation[t, i, :] = np.maximum(
+                S0 * distance_factor[t] * cos_theta_z, 0)
+
+    if unit == 'Joule':
+        # Convert to J/m²
+        toa_radiation = toa_radiation * 3600
+        units = 'J/m²'
+    else:
+        units = 'W/m²'
+
+    # Convert to xarray Dataset
+    ds = xr.DataArray(
+        data=toa_radiation,
+        dims=["time", "lat", "lon"],
+        coords={
+            "time": times,
+            "lat": latitudes,
+            "lon": longitudes
+        },
+        attrs={
+            "units": f"{units}",
+            "description": f"TOA solar radiation with {grid_step}° resolution from {start_date} to {end_date}, hourly"
+        }
+    )
+
+    return ds

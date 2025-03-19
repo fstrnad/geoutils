@@ -1028,6 +1028,26 @@ def rename_da(da, name):
     return da
 
 
+def rename_cmip2era5(da, verbose=True):
+    names = get_vars(da)
+    rename_dict = {
+        'tas': 'temperature',
+        'uas': 'u10',
+        'vas': 'v10',
+        'rsds': 'ssrd',
+        'rsns': 'ssr',
+        'ps': 'sp',
+        'pr': 'tp',
+        'evspsbl': 'e',  # evaporation
+        'sfcWind': 'si10'  # surface wind
+    }
+    for name in names:
+        if name in rename_dict:
+            da = da.rename({name: rename_dict[name]})
+            myprint(f'Rename {name} to {rename_dict[name]}!', verbose=verbose)
+    return da
+
+
 def rename_var_era5(ds, verbose=True, **kwargs):
     names = get_vars(ds=ds)
 

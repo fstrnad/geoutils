@@ -462,6 +462,7 @@ def sort_filenames_by_number(arr):
 
 def get_files_in_folder(folder_path: str,
                         verbose: bool = True,
+                        include_string=None,
                         ignore_string=None,
                         sort=True) -> list:
     """
@@ -481,6 +482,12 @@ def get_files_in_folder(folder_path: str,
             filepath = os.path.join(root, file)
             if os.path.isfile(filepath):
                 file_list.append(filepath)
+
+    if include_string is not None:
+        file_list = find_files_with_string(folder_path=folder_path,
+                                           search_string=include_string,
+                                           sort=sort,
+                                           verbose=False)
 
     # Check that all files in the file list actually exist
     for filepath in file_list:

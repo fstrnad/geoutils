@@ -73,11 +73,13 @@ def open_nc_file(
 
 
 def open_ds(nc_files, plevels=None,
-            decode_times=True, **kwargs):
+            decode_times=True,
+            **kwargs):
     plevel_name = kwargs.pop('plevel_name', 'lev')
-
+    compat = kwargs.pop('compat', 'override')
     if plevels is None:
-        ds = my_open_mfdataset(nc_files, decode_times)
+        ds = my_open_mfdataset(nc_files, decode_times,
+                               compat=compat)
     else:
         if not check_mva(files=nc_files):
             ds = open_plevels(nc_files,
@@ -101,29 +103,34 @@ def open_ds(nc_files, plevels=None,
     return ds
 
 
-def open_plevels(nc_files, decode_times, plevels, plevel_name):
+def open_plevels(nc_files, decode_times, plevels, plevel_name,
+                 compat='override'):
     da_arrays = []
     for file in nc_files:
         gut.myprint(f'Open file: {file}')
         da_arrays.append(my_open_mfdataset(nc_files=file,
-                                           decode_times=decode_times))
+                                           decode_times=decode_times,
+                                           compat=compat,))
     ds = xr.concat(da_arrays, dim=plevel_name)
     ds.coords[plevel_name] = plevels
     return ds
 
 
-def my_open_mfdataset(nc_files, decode_times=True, mfdataset=True):
+def my_open_mfdataset(nc_files, decode_times=True, mfdataset=True,
+                      compat='override'):
     if isinstance(nc_files, str):
         nc_files = [nc_files]
     if len(nc_files) == 1:
         print(nc_files)
         ds = xr.open_dataset(nc_files[0],
                              decode_times=decode_times,
+                             compat=compat,
                              )
     else:
         if mfdataset:
             ds = xr.open_mfdataset(nc_files,
                                    decode_times=decode_times,
+                                   compat=compat,
                                    )
         else:
             data_array = []
@@ -131,6 +138,7 @@ def my_open_mfdataset(nc_files, decode_times=True, mfdataset=True):
                 print(f'Open file: {file}')
                 data_array.append(xr.open_dataarray(file,
                                                     decode_times=decode_times,
+                                                    compat=compat,
                                                     )
                                   )
             ds = xr.merge(data_array)
@@ -202,12 +210,14 @@ def check_dimensions(ds, verbose=True, **kwargs):
     keep_time = kwargs.pop('keep_time', False)
     freq = kwargs.pop('freq', 'D')
     transpose = kwargs.pop('transpose_dims', False)
+    check_vars = kwargs.pop('check_vars', False)
     ds = sput.check_dimensions(ds=ds,
                                datetime_ts=datetime_ts,
                                lon360=lon360,
                                sort=sort,
                                keep_time=keep_time,
                                freq=freq,
+                               check_vars=check_vars,
                                transpose_dims=transpose,
                                verbose=verbose)
     # Set time series to days

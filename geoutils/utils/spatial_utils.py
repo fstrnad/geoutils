@@ -1470,11 +1470,17 @@ def merge_datasets(datasets, multiple='max'):
     return merged_dataset
 
 
-def get_data_coordinate(da, coord, in3d=False, method='nearest'):
+def get_data_coordinate(da, coord,
+                        lon_name='lon',
+                        lat_name='lat',
+                        in3d=False, method='nearest'):
 
     if in3d and len(coord) != 3:
         raise ValueError(
             'Coordinate must have 3 elements for 3D dataarray!')
+
+    if lon_name not in da.dims or lat_name not in da.dims:
+        raise ValueError(f'Dataarray must have {lon_name} and {lat_name} dimensions!')
 
     if in3d:
         x_0, y_0, lev_0 = coord
@@ -1489,10 +1495,12 @@ def get_data_coordinate(da, coord, in3d=False, method='nearest'):
     else:
         x_0, y_0 = coord
         if method == 'nearest':
-            da_coord = da.sel(lon=x_0, lat=y_0,
+            da_coord = da.sel({lon_name: x_0,
+                               lat_name: y_0},
                               method=method)
         else:
-            da_coord = da.interp(lon=x_0, lat=y_0,
+            da_coord = da.interp({lon_name: x_0,
+                               lat_name: y_0},
                                  method=method)
 
     return da_coord
