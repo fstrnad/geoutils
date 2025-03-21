@@ -31,7 +31,7 @@ def prepare_cutout(features, ds):
     influx_features = ['influx_direct', 'influx_diffuse', 'influx',
                        'influx_toa', 'solar_altitude', 'solar_azimuth', 'albedo']
     temp_features = ['temperature']
-
+    features += temp_features  # Temperature is always needed as exra feature
     output_feature_dict = {
         "wind": wind_features,
         "influx": influx_features,
@@ -65,4 +65,3 @@ def prepare_cutout(features, ds):
                                var_names=var_names)
 
     return ds
-

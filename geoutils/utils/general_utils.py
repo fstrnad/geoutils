@@ -972,7 +972,8 @@ def add_attribute(ds, attribute_name, attribute_value, var_names=None):
             ds.attrs[attribute_name] = attribute_value
             var_names = get_vars(ds)
         for var_name in var_names:
-            ds[var_name].attrs[attribute_name] = attribute_value
+            if var_name in ds:
+                ds[var_name].attrs[attribute_name] = attribute_value
 
     return ds
 

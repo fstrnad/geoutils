@@ -151,7 +151,8 @@ def generate_new_grid(dataarray, grid_step,
     return init_lat, init_lon
 
 
-def coarse_spatial_grid(da, coarsen_factor, method="mean"):
+def coarse_spatial_grid(da, coarsen_factor, method="mean",
+                        coords='nearest'):
     """
     Coarse an xarray DataArray by spatial averaging.
 
@@ -177,7 +178,8 @@ def coarse_spatial_grid(da, coarsen_factor, method="mean"):
     # Coarse the DataArray based on the coarsen_factor
     if method == "mean":
         coarsened_da = da.coarsen(
-            lon=coarsen_factor, lat=coarsen_factor, boundary="trim").mean()
+            lon=coarsen_factor, lat=coarsen_factor, boundary="trim",
+            side='left').mean()
     elif method == "sum":
         coarsened_da = da.coarsen(
             lon=coarsen_factor, lat=coarsen_factor, boundary="trim").sum()
@@ -187,5 +189,19 @@ def coarse_spatial_grid(da, coarsen_factor, method="mean"):
     else:
         raise ValueError(
             "Invalid method; must be one of 'mean', 'sum', or 'median'")
+
+    if coords == 'nearest':
+        coarsened_da = coarsened_da.assign_coords(
+            lon=da.lon[::coarsen_factor].values,
+            lat=da.lat[::coarsen_factor].values
+        )
+    elif coords == 'center':
+        coarsened_da = coarsened_da.assign_coords(
+            lon=da.lon[coarsen_factor//2::coarsen_factor].values,
+            lat=da.lat[coarsen_factor//2::coarsen_factor].values
+        )
+    else:
+        raise ValueError(
+            "Invalid coords; must be one of 'nearest' or 'center'")
 
     return coarsened_da

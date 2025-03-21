@@ -121,10 +121,10 @@ def my_open_mfdataset(nc_files, decode_times=True, mfdataset=True,
     if isinstance(nc_files, str):
         nc_files = [nc_files]
     if len(nc_files) == 1:
-        print(nc_files)
-        ds = xr.open_dataset(nc_files[0],
+        file = nc_files[0]
+        gut.myprint(f'Open file: {file}')
+        ds = xr.open_dataset(file,
                              decode_times=decode_times,
-                             compat=compat,
                              )
     else:
         if mfdataset:
@@ -135,7 +135,7 @@ def my_open_mfdataset(nc_files, decode_times=True, mfdataset=True,
         else:
             data_array = []
             for file in nc_files:
-                print(f'Open file: {file}')
+                gut.myprint(f'Open file: {file}')
                 data_array.append(xr.open_dataarray(file,
                                                     decode_times=decode_times,
                                                     compat=compat,

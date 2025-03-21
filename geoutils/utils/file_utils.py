@@ -18,12 +18,12 @@ reload(gut)
 # ##################### Assert functions #####################
 
 def assert_folder_exists(folder_path):
-    folder_path_here = f'./{folder_path}'
+    folder_path_here = f'{folder_path}'
     folder_path = os.path.dirname(folder_path)
 
     if not os.path.exists(folder_path):
         if not os.path.exists(folder_path_here):
-            gut.myprint(f"Folder at ./{folder_path} does not exist.")
+            gut.myprint(f"Folder at {folder_path} does not exist.")
             raise ValueError(f"Folder {folder_path} does not exist.")
 
 

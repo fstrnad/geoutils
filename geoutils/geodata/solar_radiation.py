@@ -19,7 +19,7 @@
 The Top-Of-the-Atmosphere (TOA) incident solar radiation is available in the
 ERA5 dataset as the parameter `toa_incident_solar_radiation` (or `tisr`). This
 represents the TOA solar radiation flux integrated over a period of one hour
-ending at the timestamp given by the `datetime` coordinate. See
+ending at the timestamp given by the `time` coordinate. See
 https://confluence.ecmwf.int/display/CKB/ERA5%3A+data+documentation and
 https://codes.ecmwf.int/grib/param-db/?id=212.
 """
