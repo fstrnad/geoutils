@@ -105,7 +105,7 @@ The following features are planned to be implemented:
 - Better documentation
 - Add further tutorials
 - Examples for statistical analysis.
--
+- Add tests for the package
 
 ## Contributing
 We highly encourage contributions to the Geoutils project. Whether you have identified a bug, have suggestions for new features, or want to improve the documentation, your input is invaluable.
