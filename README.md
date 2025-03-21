@@ -14,39 +14,53 @@ git clone git@github.com:fstrnad/geoutils.git
 This will create a local copy of the Geoutils repository in the current directory. Ensure you have the necessary permissions and SSH keys configured for accessing the repository.
 
 
-### 2. Installing packages
-The code runs with python *3.12.8.* and higher. <br>
-We recommend updating your python version to the latest version otherwise some line breaks might cause problems. <br>
+### 2. Installing Required Packages
 
-The following packages are required for running the package: <br>
-- xarray
-- zarr
-- netcdf4
-- cftime
-- pandas
-- numpy
-- matplotlib
-- seaborn
-- cartopy
-- scipy
-- scikit-learn
-- statsmodels
+The Geoutils package is compatible with Python version **3.12.8** or higher. It is strongly recommended to update your Python installation to the latest version to ensure compatibility and avoid potential issues, such as unexpected behavior caused by line break handling or deprecated features.
 
-These packages are not necessary, but needed for some further further functionalities:
-- metpy
-- windspharm
-- palettable (for more colorbars)
-- tqdm
+#### Required Dependencies
 
-To install the packages, we recommend to use a new environment, e.g. by using conda:
-```
-conda create -n geoutils ipykernel netcdf4 xarray zarr cftime scikit-learn scipy statsmodels matplotlib seaborn -c conda-forge
-conda activate geoutils
-```
-Then you can install the geoutils packages on your own python environment by:
-```
-pip install -e .
-```
+The following Python packages are essential for running the Geoutils package and its core functionalities:
+
+- `xarray`
+- `zarr`
+- `netcdf4`
+- `cftime`
+- `pandas`
+- `numpy`
+- `matplotlib`
+- `seaborn`
+- `cartopy`
+- `scipy`
+- `scikit-learn`
+- `statsmodels`
+
+#### Optional Dependencies
+
+For extended functionality, the following optional packages can be installed:
+
+- `metpy` (for meteorological calculations)
+- `windspharm` (for spherical harmonic wind analysis)
+- `palettable` (for additional color palettes)
+- `tqdm` (for progress bar visualization)
+
+#### Installation Instructions
+
+To ensure a clean and isolated environment, it is recommended to create a new Python environment using a tool such as `conda`. Follow these steps to set up the environment and install the required dependencies:
+
+1. Create and activate a new environment:
+    ```bash
+    conda create -n geoutils ipykernel netcdf4 xarray zarr cftime scikit-learn scipy statsmodels matplotlib seaborn -c conda-forge
+    conda activate geoutils
+    ```
+
+2. Install the Geoutils package in editable mode:
+    ```bash
+    pip install -e .
+    ```
+
+This setup ensures that all required dependencies are installed and that the Geoutils package is ready for use. For optional dependencies, you can install them as needed using `pip` or `conda`.
+
 
 ### 3. Download climate data
 Download climate data, e.g. from [ERA5](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-pressure-levels?tab=overview) server and store the merged files in the data folder.
