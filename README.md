@@ -2,13 +2,17 @@
 
 # Geoutils
 
-This is a small package for processing and plotting geodata provided as nc-files and pre- and postprocessing them accordingly.
-It is mostly built upon the xarray package.
+Geoutils is a lightweight package designed for the efficient processing, analysis, and visualization of geospatial data stored in NetCDF (nc) files. It provides tools for both pre- and post-processing workflows, making it a versatile solution for geoscientific applications. The package leverages the powerful capabilities of the [xarray](https://xarray.pydata.org/) library to handle multi-dimensional arrays and datasets with ease.
 
 ### 1. Clone repository:
-```
+To clone the repository to your local machine, execute the following command in your terminal:
+
+```bash
 git clone git@github.com:fstrnad/geoutils.git
 ```
+
+This will create a local copy of the Geoutils repository in the current directory. Ensure you have the necessary permissions and SSH keys configured for accessing the repository.
+
 
 ### 2. Installing packages
 The code runs with python *3.12.8.* and higher. <br>
@@ -46,6 +50,43 @@ pip install -e .
 
 ### 3. Download climate data
 Download climate data, e.g. from [ERA5](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-pressure-levels?tab=overview) server and store the merged files in the data folder.
+To download the data, you will need to register for an account on the Copernicus Climate Data Store (CDS) and install the `cdsapi` package. Follow these steps:
+
+1. Install the `cdsapi` package:
+    ```bash
+    pip install cdsapi
+    ```
+
+2. Configure the CDS API key:
+    After registering on the CDS website, you will receive an API key. Save this key in a file named `.cdsapirc` in your home directory with the following format:
+    ```
+    url: https://cds.climate.copernicus.eu/api/v2
+    key: <your-uid>:<your-api-key>
+    ```
+
+3. Use the following Python script to download ERA5 data:
+    ```python
+    import cdsapi
+
+    c = cdsapi.Client()
+
+    c.retrieve(
+         'reanalysis-era5-pressure-levels',
+         {
+              'product_type': 'reanalysis',
+              'format': 'netcdf',
+              'variable': 'temperature',
+              'pressure_level': '500',
+              'year': '2022',
+              'month': '01',
+              'day': '01',
+              'time': '12:00',
+         },
+         'data/era5_sample.nc'
+    )
+    ```
+
+Replace the parameters in the script as needed to customize the data you want to download. Ensure the downloaded files are stored in the `data` folder for easy access by the package.
 
 ## Using the package
 
