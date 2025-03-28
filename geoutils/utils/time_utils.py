@@ -749,43 +749,50 @@ def get_time_range_data(
     return ds_sel
 
 
-def get_data_timerange(data, time_range=None, verbose=True):
-    """Gets data in a certain time range.
-    Checks as well if time range exists in file!
-
-    Args:
-        data (xr.Dataarray): xarray dataarray
-        time_range (list, optional): List dim 2 that contains the time interval. Defaults to None.
-
-    Raises:
-        ValueError: If time range is not in time range of data
-
+def get_data_sd_ed(da, start_date=None, end_date=None, freq="D",
+                   start_month=None, end_month=None,
+                   verbose=False):
+    """
+    Extracts a subset of data from a time-series dataset based on specified start and end dates,
+    frequency, and optional start and end months.
+    Parameters:
+        da (xarray.DataArray or xarray.Dataset): The input dataset or data array containing time-series data.
+        start_date (str or datetime, optional): The start date for the data subset. If None, the earliest
+            date in the dataset is used. Defaults to None.
+        end_date (str or datetime, optional): The end date for the data subset. If None, the latest date
+            in the dataset is used. Defaults to None.
+        freq (str, optional): The frequency of the data subset (e.g., "D" for daily, "M" for monthly).
+            Defaults to "D".
+        start_month (int, optional): The starting month (1-12) for filtering the data. If None, no
+            filtering by start month is applied. Defaults to None.
+        end_month (int, optional): The ending month (1-12) for filtering the data. If None, no filtering
+            by end month is applied. Defaults to None.
+        verbose (bool, optional): If True, additional information is printed during processing.
+            Defaults to False.
     Returns:
-        xr.Dataarray: xr.Dataarray in seleced time range.
+        xarray.DataArray or xarray.Dataset: A subset of the input data within the specified time range
+        and frequency, optionally filtered by start and end months.
+    Notes:
+        - The function uses helper functions `get_start_end_date`, `str2datetime`, and
+            `get_time_range_data` to process the input data.
+        - If `start_date` or `end_date` is not provided, the function defaults to the earliest or latest
+            date in the dataset, respectively.
+        - The `start_month` and `end_month` parameters allow for additional filtering by specific months
+            within the time range.
     """
 
-    # if isinstance(time_range[0], np.datetime64):
-    #     time_range =
+    sd_data, ed_data = get_start_end_date(da)
+    start_date = str2datetime(
+        start_date, verbose=verbose) if start_date is not None else sd_data
+    end_date = str2datetime(
+        end_date, verbose=verbose) if end_date is not None else ed_data
 
-    td = data.time.data
-    if time_range is not None:
-        if (is_larger_as(td[0], time_range[0])) or (
-            is_larger_as(time_range[1], td[-1])
-        ):
-            raise ValueError(
-                f"Chosen time {time_range} out of range {td[0]} - {td[-1]}!"
-            )
-        else:
-            sd = tp2str(time_range[0])
-            ed = tp2str(time_range[-1])
-            gut.myprint(f"Time steps within {sd} to {ed} selected!")
-        # da = data.interp(time=t, method='nearest')
-        da = data.sel(time=slice(time_range[0], time_range[1]))
-    else:
-        da = data
-    tr = get_time_range(ds=da)
-    gut.myprint(f"Load data in time range {tr}!", verbose=verbose)
-    return da
+    data_range = get_time_range_data(ds=da,
+                                     time_range=[start_date, end_date],
+                                     start_month=start_month,
+                                     end_month=end_month,
+                                     freq=freq)
+    return data_range
 
 
 def split_by_year(ds, start_month="Jan", end_month="Dec"):
@@ -1470,7 +1477,8 @@ def compute_timemean(
     return ds
 
 
-def rolling_timemean(ds, window, dropna=True, verbose=False):
+def rolling_timemean(ds, window, dropna=True, center=True,
+                     method='mean', verbose=False,):
     """Computes the rolling mean of a given xr.dataset
 
     Args:
@@ -1479,8 +1487,21 @@ def rolling_timemean(ds, window, dropna=True, verbose=False):
     Returns:
         xr.dataset: monthly average dataset
     """
-    gut.myprint(f"Compute rolling mean ({window} window)!", verbose=verbose)
-    ds = ds.rolling(time=window, center=True).mean()
+    if method == 'mean':
+        gut.myprint(
+            f"Compute rolling mean ({window} window)!", verbose=verbose)
+        ds = ds.rolling(time=window, center=center).mean()
+    elif method == 'sum':
+        gut.myprint(f"Compute rolling sum ({window} window)!", verbose=verbose)
+        ds = ds.rolling(time=window, center=center).sum()
+    elif method == 'max':
+        gut.myprint(f"Compute rolling max ({window} window)!", verbose=verbose)
+        ds = ds.rolling(time=window, center=center).max()
+    elif method == 'min':
+        gut.myprint(f"Compute rolling min ({window} window)!", verbose=verbose)
+        ds = ds.rolling(time=window, center=center).min()
+    else:
+        raise ValueError(f"Method {method} not available!")
     if dropna:
         ds = ds.dropna(dim="time")
     return ds
@@ -2384,7 +2405,9 @@ def get_periods_tps(tps, start=0, end=1, freq="D", include_start=True):
         return all_time_periods
 
 
-def get_dates_of_time_range(time_range, freq="D", start_month="Jan", end_month="Dec"):
+def get_dates_of_time_range(time_range, freq="D",
+                            start_month="Jan",
+                            end_month="Dec"):
     dtype = f"datetime64[{freq}]"
     if type(time_range[0]) is str:
         gut.myprint("Convert String", verbose=False)
@@ -2408,9 +2431,9 @@ def get_dates_of_time_range(time_range, freq="D", start_month="Jan", end_month="
             start_date=sp, end_date=ep, freq=freq, make_xr=False
         )
         # Include as well last time point
-        date_arr = np.concatenate(
-            [date_arr, [date_arr[-1] + np.timedelta64(1, freq)]], axis=0
-        )
+        # date_arr = np.concatenate(
+        #     [date_arr, [date_arr[-1] + np.timedelta64(1, freq)]], axis=0
+        # )
 
     date_arr = gut.create_xr_ds(
         data=date_arr, dims=["time"], coords={"time": date_arr})
@@ -3032,7 +3055,7 @@ def get_time_count_number(tps, counter="week"):
     return counts
 
 
-def get_week_dates(weeks,linebreak=True):
+def get_week_dates(weeks, linebreak=True):
     """
     Given an array of week numbers, return a list of tuples, where each tuple contains the
     first calendar day of the corresponding week and the month as a string.

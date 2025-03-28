@@ -32,7 +32,7 @@ def open_nc_file(
     reload(gut)
     fut.print_file_location_and_size(nc_files, verbose=verbose)
     if zarr:
-        ds = xr.open_zarr(nc_files)
+        ds = xr.open_zarr(nc_files, consolidated=True)
     else:
         ds = open_ds(
             nc_files=nc_files,

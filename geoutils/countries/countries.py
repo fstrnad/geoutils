@@ -148,3 +148,8 @@ def cutout_country_cells(cutout, country_name, onshore=True, as_xr=True):
         )
 
     return indicator_matrix
+
+
+def get_country_iso(country_name):
+    countries = get_country_table()
+    return countries.loc[country_name].ISO_A2

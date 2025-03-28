@@ -3,12 +3,12 @@ import shutil
 import string
 import random
 import pickle
-import comm
 import numpy as np
 import os
 import xarray as xr
 import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
+from pathlib import Path
 
 from importlib import reload
 reload(tu)
@@ -33,7 +33,8 @@ def assert_file_exists(filepath):
 
 
 def exist_file(filepath, verbose=False):
-    if os.path.exists(filepath):
+    fp = Path(filepath)
+    if fp.exists():
         gut.myprint(f"File {filepath}\n exists!", verbose=verbose)
         return True
     else:
@@ -88,8 +89,8 @@ def exist_folder(filepath, verbose=False):
     Returns:
         bool: True if the folder exists, False otherwise.
     """
-    folder_path = os.path.dirname(filepath)
-    if os.path.isdir(folder_path):
+    folder_path = Path(filepath)
+    if folder_path.exists():
         gut.myprint(f"Folder {filepath} exists!", verbose=verbose)
         return True
     else:
@@ -97,9 +98,16 @@ def exist_folder(filepath, verbose=False):
 
 
 def create_folder(filepath, verbose=True):
-    directory = os.path.dirname(filepath)
-    if not exist_folder(filepath=filepath):
-        os.makedirs(directory)
+    directory = Path(filepath)
+    if directory.is_file():
+        directory = directory.parent
+    elif directory.is_dir() or directory.suffix == '':
+        directory = directory
+    else:
+        raise ValueError(f"Path {filepath} is not a file or directory!")
+
+    if not exist_folder(filepath=directory):
+        directory.mkdir(parents=True, exist_ok=False)
         gut.myprint(f"Created folders for path: {filepath}",
                     verbose=verbose)
 
@@ -149,7 +157,7 @@ def save_ds(ds, filepath, unlimited_dim=None,
     gut.myprint(f"Store to {filepath}...")
     if zlib:
         encoding = {var: {'zlib': zlib,
-                        #   "complevel": compression
+                          #   "complevel": compression
                           }
                     for var in ds.data_vars}
         write_job = ds.to_netcdf(filepath, encoding=encoding,
@@ -319,18 +327,37 @@ def get_human_readable_size(size_in_bytes):
 
 def get_folder_size(folder_path):
     total_size = 0
-
+    fp = Path(folder_path)
+    if not is_file(fp) and not is_folder(fp):
+        raise ValueError(f"Path {folder_path} is not a directory!")
     # Walk through all the files and subdirectories in the given folder
-    for dirpath, dirnames, filenames in os.walk(folder_path):
-        for filename in filenames:
-            # Get the full path to each file
-            file_path = os.path.join(dirpath, filename)
-            # Check the size of each file and add it to the total
-            total_size += os.path.getsize(file_path)
+    for file in folder_path.rglob('*'):
+        if file.is_file():
+            total_size += file.stat().st_size
 
     total_size = get_human_readable_size(total_size)
 
     return total_size
+
+
+def get_folder(filepath):
+    fp = Path(filepath)
+    if fp.is_file():
+        return fp.parent
+    elif fp.is_dir():
+        return fp
+    else:
+        raise ValueError(f"Path {filepath} is not a file or directory!")
+
+
+def is_file(filepath):
+    fp = Path(filepath)
+    return fp.is_file()
+
+
+def is_folder(filepath):
+    fp = Path(filepath)
+    return fp.is_dir()
 
 
 def print_file_location_and_size(filepath, verbose=True):
@@ -343,17 +370,19 @@ def print_file_location_and_size(filepath, verbose=True):
     Returns:
         None
     """
-    if isinstance(filepath, str):
+    if isinstance(filepath, (str, Path)):
         filepath = [filepath]
     for file in filepath:
-        if os.path.isfile(file):
-            # If it's a file, return the size in bytes
-            file_size = os.path.getsize(file)
+        fp = Path(file)
+        if is_file(fp):
+            file_size = fp.stat().st_size
             total_size = get_human_readable_size(file_size)
-        else:
+        elif is_folder(fp):
             total_size = get_folder_size(file)
+        else:
+            total_size = "File not found"
 
-        gut.myprint(f"Total size of '{file}':\n   {total_size} bytes",
+        gut.myprint(f"Total size of '{file}':\n   {total_size}",
                     verbose=verbose)
 
     return None

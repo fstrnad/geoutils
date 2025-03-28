@@ -164,7 +164,7 @@ def plot_2d(
                 ls = ls_arr[idx] if idx < len(ls_arr) else ls_arr[-1]
 
             if len(label_arr) > 0:
-                if len(label_arr) >= idx:
+                if len(label_arr) > idx:
                     label = label_arr[idx]
                 else:
                     label = None
