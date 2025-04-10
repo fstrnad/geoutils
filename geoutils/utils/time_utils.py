@@ -1,3 +1,4 @@
+from calendar import timegm
 import re
 import datetime
 import math
@@ -1159,7 +1160,7 @@ def get_start_end_date_shift(time, sm, em, shift=0):
     return start_date, end_date
 
 
-def get_time_range(ds, asstr=False):
+def get_time_range(ds, asstr=False, freq=None):
     time = ds.time
     if gut.is_datetime360(time=time.data[0]):
         sd = time.data[0]
@@ -1171,6 +1172,9 @@ def get_time_range(ds, asstr=False):
     if asstr:
         sd = tp2str(sd)
         ed = tp2str(ed)
+    if freq is not None:
+        sd = np.datetime64(sd, freq)
+        ed = np.datetime64(ed, freq)
 
     return sd, ed
 
@@ -1232,7 +1236,7 @@ def convert_to_best_unit(diffs):
 
 def get_frequency_resolution(dates, verbose=False):
 
-    if isinstance(dates, xr.DataArray):
+    if isinstance(dates, (xr.DataArray, xr.Dataset)):
         dates = dates.time.data
     if not isinstance(dates, np.ndarray):
         dates = np.array(dates)
@@ -2223,11 +2227,13 @@ def add_time_window(date, time_step=None, freq=None):
     xr.DataArray
         The modified dataarray with the time dimension updated.
     """
+    if isinstance(date, str):
+        date = str2datetime(date)
     if freq is None:
-        td = get_frequency_resolution(date)
-        freq = get_timedelta_unit(td)
-        time_step = td.astype(int)
+        time_step = get_frequency_resolution(date)
+        freq = get_timedelta_unit(time_step)
 
+    time_step = int(time_step)
     # Define the time delta to add based on the frequency parameter
     if freq == "D":
         tdelta = pd.DateOffset(days=time_step)
@@ -2295,24 +2301,6 @@ def get_tps_range(
         ntps = remove_duplicate_times(ntps)
 
         return ntps
-
-
-def add_time_step_tps_old(
-    tps,
-    time_step=1,
-    freq="D",
-):
-    ntps = []
-    if isinstance(tps, xr.DataArray):
-        tps = tps.time
-    if len(np.array([tps.time.data]).shape) == 1:
-        tps = [tps]
-    for tp in tps:
-        ntp = add_time_window(date=tp, time_step=time_step, freq=freq)
-        ntps.append(ntp)
-    ntps = merge_time_arrays(ntps, multiple=None)
-
-    return xr.DataArray(ntps, dims=["time"], coords={"time": ntps})
 
 
 def merge_time_arrays(time_arrays, multiple="duplicate", new_dim=False, verbose=False):
@@ -2461,7 +2449,9 @@ def get_dates_of_time_ranges(time_ranges, freq="D"):
 
 
 def get_dates_in_range(start_date, end_date, freq="D",
-                       time_delta=1, make_xr=True):
+                       time_delta=1,
+                       additional_tps=0,
+                       make_xr=True):
 
     if isinstance(start_date, xr.DataArray):
         start_date = np.datetime64(start_date.time.data)
@@ -2479,9 +2469,10 @@ def get_dates_in_range(start_date, end_date, freq="D",
         td = np.timedelta64(time_delta, freq)
     else:
         td = time_delta
-
+    if additional_tps is not None:
+        additional_tps = np.timedelta64(additional_tps * time_delta, freq)
     # includes start and end date
-    tps = np.arange(start_date, end_date + td, td,
+    tps = np.arange(start_date, end_date + td + additional_tps, td,
                     )
 
     if make_xr:
@@ -2490,7 +2481,8 @@ def get_dates_in_range(start_date, end_date, freq="D",
     return tps
 
 
-def get_dates_for_time_steps(start="0-01-01", num_steps=1, freq="D"):
+def get_dates_for_time_steps(start="0-01-01", num_steps=1,
+                             step_size=1, freq="D"):
     """Computes an array of time steps for a number of steps starting from a
     specified date.
 
@@ -2500,10 +2492,14 @@ def get_dates_for_time_steps(start="0-01-01", num_steps=1, freq="D"):
         timesteps (day, month, year...). Defaults to 'D'.
     """
     dates = []
+    step_size = int(step_size)
     for step in np.arange(num_steps):
         dates.append(add_time_window(
-            start, time_step=step, freq=freq).time.data)
-    return np.array(dates)
+            start, time_step=step*step_size, freq=freq).time.data)
+
+    dates = create_xr_tps(times=dates)
+
+    return dates
 
 
 def get_dates_arr_for_time_steps(tps, num_steps=1, freq="D"):
@@ -2632,8 +2628,8 @@ def lead_lag_corr(ts1, ts2, maxlags=20, corr_method="spearman", cutoff=1, cutoff
 
 
 def create_xr_tp(tp, name="time"):
-    if isinstance(tp, (list, np.ndarray)):
-        raise ValueError("ERROR! tp has to be a single time point!")
+    if isinstance(tp, (list)):
+        raise ValueError(f"ERROR! {tp} has to be a single time point!")
     if isinstance(tp, str):
         tp = str2datetime(tp)
         return tp
@@ -2643,11 +2639,7 @@ def create_xr_tp(tp, name="time"):
 
 def create_xr_tps(times, name="time"):
     if isinstance(times, (list, np.ndarray)):
-        if isinstance(times[0], str):
-            tps = []
-            for tp in times:
-                tps.append(create_xr_tp(tp))
-            times = xr.concat(tps, dim=name)
+        times = xr.DataArray(data=times, coords={f"{name}": times})
     else:
         # single time point
         times = create_xr_tp(times)
@@ -2738,6 +2730,92 @@ def select_time_snippets(ds, time_snippets):
 def convert_datetime64_to_datetime(usert: np.datetime64) -> datetime.datetime:
     t = np.datetime64(usert, "us").astype(datetime.datetime)
     return t
+
+
+def count_unique_years(ds, time_dim="time"):
+    """
+    Count the number of unique years in the time coordinate of an xarray Dataset.
+
+    Parameters:
+        ds (xr.Dataset): The input Dataset with a time dimension.
+        time_dim (str): The name of the time dimension. Defaults to "time".
+
+    Returns:
+        int: Number of unique years in the dataset.
+    """
+    years = pd.to_datetime(ds[time_dim].values).year
+    return np.unique(years).size
+
+
+def split_time_into_year_string_ranges(ds, n, time_dim="time"):
+    """
+    Split the time span of an xarray Dataset into `n` approximately equal date ranges (as strings),
+    each covering full calendar years from Jan 1 to Dec 31.
+
+    Parameters:
+        ds (xr.Dataset): Dataset with a time dimension.
+        n (int): Number of subsets to divide into.
+        time_dim (str): Name of the time dimension.
+
+    Returns:
+        list of tuples: List of (start_date_str, end_date_str) like ('1999-01-01', '2004-12-31')
+    """
+    times = pd.to_datetime(ds[time_dim].values)
+    years = times.year
+
+    start_year = years.min()
+    end_year = years.max()
+
+    total_years = end_year - start_year + 1
+    years_per_chunk = total_years // n
+    remainder = total_years % n
+
+    date_ranges = []
+    current_start_year = start_year
+
+    for i in range(n):
+        extra = 1 if i < remainder else 0
+        current_end_year = current_start_year + years_per_chunk - 1 + extra
+
+        start_date = f"{current_start_year}-01-01"
+        end_date = f"{current_end_year}-12-31"
+
+        date_ranges.append((start_date, end_date))
+        current_start_year = current_end_year + 1
+
+    return date_ranges
+
+
+def split_time_by_year_span(ds, span_years=10, time_dim="time"):
+    """
+    Split the time span of an xarray Dataset into chunks of a given number of years.
+    Each range covers full years (Jan 1 to Dec 31), and the last chunk may be shorter.
+
+    Parameters:
+        ds (xr.Dataset): Dataset with a time dimension.
+        span_years (int): Number of years in each time chunk.
+        time_dim (str): Name of the time dimension.
+
+    Returns:
+        list of tuples: List of (start_date_str, end_date_str), e.g., ('2000-01-01', '2009-12-31')
+    """
+    times = pd.to_datetime(ds[time_dim].values)
+    start_year = times.year.min()
+    end_year = times.year.max()
+
+    date_ranges = []
+
+    current_start_year = start_year
+    while current_start_year <= end_year:
+        current_end_year = min(current_start_year + span_years - 1, end_year)
+
+        start_date = f"{current_start_year}-01-01"
+        end_date = f"{current_end_year}-12-31"
+
+        date_ranges.append((start_date, end_date))
+        current_start_year = current_end_year + 1
+
+    return date_ranges
 
 
 def fill_time_series_val(

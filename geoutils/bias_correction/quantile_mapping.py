@@ -59,9 +59,8 @@ def quantile_correction(obs_data, mod_data, sce_data, modified=True):
 
         f = np.true_divide(iqr_obs_data, iqr_mod_data)
         cor = g * mid + f * (cor - mid)
-        return sce_data + cor
-    else:
-        return sce_data + cor
+
+    return sce_data + cor
 
 
 def gamma_correction(

@@ -218,7 +218,9 @@ def prepare_axis(ax, log=False, **kwargs):
     xlim = kwargs.pop("xlim", None)
     ylim = kwargs.pop("ylim", None)
     xticks = kwargs.pop('xticks', None)
+    yticks = kwargs.pop('yticks', None)
     xticklabels = kwargs.pop('xticklabels', None)
+    yticklabels = kwargs.pop('yticklabels', None)
     ylabel = kwargs.pop("ylabel", None)
     ylabel_color = kwargs.pop("ylabel_color", "k")
     xlabel = kwargs.pop("xlabel", None)
@@ -227,12 +229,20 @@ def prepare_axis(ax, log=False, **kwargs):
     ylabel_pos = kwargs.pop("ylabel_pos", None)
     x_ints = kwargs.pop("x_ints", False)
     y_ints = kwargs.pop("y_ints", False)
+    set_yaxis = kwargs.pop("set_yaxis", True)
+    set_xaxis = kwargs.pop("set_xaxis", True)
     set_twinx = kwargs.pop("set_twinx", False)
     set_twiny = kwargs.pop("set_twiny", False)
     set_spines = kwargs.pop("set_spines", False)
     spines_color = kwargs.pop("spines_color", "black")
     reset_axis = kwargs.pop("reset_axis", False)
     face_color = kwargs.pop("face_color", 'none')
+    set_ticks = kwargs.pop("set_ticks", True)
+    set_xticks = kwargs.pop("set_xticks", True)
+    set_yticks = kwargs.pop("set_yticks", True)
+    top_ticks = kwargs.pop("top_ticks", False)
+    right_ticks = kwargs.pop("right_ticks", False)
+    left_ticks = kwargs.pop("left_ticks", True)
 
     ax.set_facecolor(face_color)
     if set_twinx:
@@ -242,6 +252,15 @@ def prepare_axis(ax, log=False, **kwargs):
     if set_twiny:
         ax = ax.twiny()
     if plot_type != 'polar':
+        ax.spines['bottom'].set_visible(set_xaxis)
+        ax.spines['left'].set_visible(set_yaxis)
+        if not set_yaxis:
+            ylabel = None
+            set_yticks = False
+        if not set_xaxis:
+            xlabel = None
+            set_xticks = False
+
         if not set_twinx:
             ax.spines["right"].set_visible(False)
         else:
@@ -280,12 +299,7 @@ def prepare_axis(ax, log=False, **kwargs):
 
         rot = kwargs.pop("rot", 0)
         rot_y = kwargs.pop("rot_y", 0)
-        set_ticks = kwargs.pop("set_ticks", True)
-        set_xticks = kwargs.pop("set_xticks", True)
-        set_yticks = kwargs.pop("set_yticks", True)
-        top_ticks = kwargs.pop("top_ticks", False)
-        right_ticks = kwargs.pop("right_ticks", False)
-        left_ticks = kwargs.pop("left_ticks", True)
+
         if set_ticks is False:
             left_ticks = False
             right_ticks = False
@@ -854,7 +868,7 @@ def enumerate_subplots(axs, pos_x=-0.12,
 
 
 def plot_text(ax, text, xpos=0, ypos=0,
-             **kwargs):
+              **kwargs):
 
     color = kwargs.pop("color", "k")
     zorder = kwargs.pop('zorder', 10)

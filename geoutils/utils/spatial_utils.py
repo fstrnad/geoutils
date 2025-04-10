@@ -1264,7 +1264,7 @@ def check_dimensions(ds, datetime_ts=True,
     return ds
 
 
-def rename_dims(ds, verbose):
+def rename_dims(ds, verbose=True):
     rename_dict = {
         'longitude': 'lon',
         'latitude': 'lat',

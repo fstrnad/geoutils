@@ -1032,10 +1032,10 @@ def rename_da(da, name):
 def rename_cmip2era5(da, verbose=True):
     names = get_vars(da)
     rename_dict = {
-        'tas': 'temperature',
-        'uas': 'u10',
-        'vas': 'v10',
-        'rsds': 'ssrd',
+        'tas': '2m_temperature',
+        'uas': '10m_u_component_of_wind',
+        'vas': '10m_v_component_of_wind',
+        'rsds': 'surface_solar_radiation_downwards', # ssrd
         'rsns': 'ssr',
         'ps': 'sp',
         'pr': 'tp',

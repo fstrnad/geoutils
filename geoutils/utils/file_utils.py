@@ -63,6 +63,18 @@ def exist_files(filepath_arr, verbose=False):
     return True
 
 
+def list_files_with_extension(directory: Path, extension: str):
+    files = [file for file in directory.rglob(
+        f"*{extension}") if file.is_file()]
+    if len(files) == 0:
+        gut.myprint(
+            f"No files with extension {extension} found in {directory}")
+    elif len(files) == 1:
+        files = files[0]
+
+    return files
+
+
 def delete_path(filepath):
     """Delete a file or directory, regardless of type."""
     try:
@@ -97,14 +109,15 @@ def exist_folder(filepath, verbose=False):
         return False
 
 
+def get_full_folder_path(path_str: str) -> Path:
+    path = Path(path_str).resolve()
+    # If it looks like a file (has a suffix), get its parent folder
+    return path.parent if path.suffix else path
+
+
 def create_folder(filepath, verbose=True):
     directory = Path(filepath)
-    if directory.is_file():
-        directory = directory.parent
-    elif directory.is_dir() or directory.suffix == '':
-        directory = directory
-    else:
-        raise ValueError(f"Path {filepath} is not a file or directory!")
+    directory = get_full_folder_path(directory)
 
     if not exist_folder(filepath=directory):
         directory.mkdir(parents=True, exist_ok=False)
@@ -138,6 +151,7 @@ def save_ds(ds, filepath, unlimited_dim=None,
             only_dim_corrds=False,
             show_progress=False,
             compression=9,
+            encoding='float32',
             backup=False):
     if os.path.exists(filepath):
         gut.myprint(f"File {filepath} already exists!")
@@ -149,18 +163,25 @@ def save_ds(ds, filepath, unlimited_dim=None,
     dirname = os.path.dirname(filepath)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
-    if isinstance(ds, xr.DataArray):
-        zlib = False   # because dataarray has no var attibute
     if only_dim_corrds:
         ds = gut.delete_all_non_dimension_attributes(ds)
 
     gut.myprint(f"Store to {filepath}...")
     if zlib:
-        encoding = {var: {'zlib': zlib,
-                          #   "complevel": compression
-                          }
-                    for var in ds.data_vars}
-        write_job = ds.to_netcdf(filepath, encoding=encoding,
+        if isinstance(ds, xr.DataArray):
+            enc = {ds.name: {'zlib': zlib,
+                   'dtype': encoding,
+                             }
+                   }
+        elif isinstance(ds, xr.Dataset):
+            enc = {var: {'zlib': zlib,
+                         'dtype': encoding,
+                         }
+                   for var in ds.data_vars}
+        else:
+            raise ValueError(f"Data type {type(ds)} not supported!")
+        gut.myprint(f'Store as NETCDF4 with encoding {encoding}!')
+        write_job = ds.to_netcdf(filepath, encoding=enc,
                                  compute=False)
     else:
         if classic_nc:
@@ -168,8 +189,14 @@ def save_ds(ds, filepath, unlimited_dim=None,
             write_job = ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
                                      format='NETCDF4_CLASSIC')
         else:
+            if encoding is not None:
+                encoding = {var: {'dtype': encoding}
+                            for var in ds.data_vars}
+                gut.myprint(f'Store as NETCDF4 with encoding {encoding}!')
             write_job = ds.to_netcdf(filepath, unlimited_dims=unlimited_dim,
-                                     engine='netcdf4', compute=False)
+                                     engine='netcdf4',
+                                     encoding=encoding,
+                                     compute=False)
 
     if show_progress:
         from dask.diagnostics import ProgressBar

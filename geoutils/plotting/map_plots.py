@@ -463,7 +463,7 @@ def plot_map(dmap: xr.DataArray,
     reload(sput)
     plt.rcParams["pcolor.shading"] = "nearest"  # For pcolormesh
     if label is None and isinstance(dmap, xr.DataArray):
-        unset_label = kwargs.pop('unset_label', False)
+        unset_label = kwargs.pop('unset_label', True)
         label = dmap.name if not unset_label else None
     if isinstance(dmap, xr.Dataset):
         dmap = dmap[list(dmap.data_vars)[0]] # take the first variable
