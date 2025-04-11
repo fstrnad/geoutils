@@ -262,6 +262,11 @@ class XBiasCorrection(object):
         self.obs_data, self.mod_data = tu.equalize_time_points(
             self.obs_data, self.mod_data
         )
+        print(f'Shape of obs_data: {self.obs_data.shape}')
+        print(f'Shape of mod_data: {self.mod_data.shape}')
+
+        # print(f'Obs Time dimension: {self.obs_data.time}')
+        # print(f'Mod Time dimension: {self.mod_data.time}')
 
     def correct(
         self,

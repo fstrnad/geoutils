@@ -10,6 +10,21 @@ import xarray as xr
 SEED = 42
 
 
+cmip2era5_dict = {
+    'tas': '2m_temperature',
+    'uas': '10m_u_component_of_wind',
+    'vas': '10m_v_component_of_wind',
+    'rsds': 'surface_solar_radiation_downwards',  # ssrd
+    'rsns': 'ssr',
+    'ps': 'sp',
+    'pr': 'tp',
+    'evspsbl': 'e',  # evaporation
+    'sfcWind': 'si10'  # surface wind
+}
+
+era52cmip_dict = {v: k for k, v in cmip2era5_dict.items()}
+
+
 def myprint(str, verbose=True, lines=False, bold=False, italic=False, color=None):
     # ANSI escape codes for styling text
     if verbose:
@@ -1031,22 +1046,15 @@ def rename_da(da, name):
 
 def rename_cmip2era5(da, verbose=True):
     names = get_vars(da)
-    rename_dict = {
-        'tas': '2m_temperature',
-        'uas': '10m_u_component_of_wind',
-        'vas': '10m_v_component_of_wind',
-        'rsds': 'surface_solar_radiation_downwards', # ssrd
-        'rsns': 'ssr',
-        'ps': 'sp',
-        'pr': 'tp',
-        'evspsbl': 'e',  # evaporation
-        'sfcWind': 'si10'  # surface wind
-    }
+    rename_dict = cmip2era5_dict
     for name in names:
         if name in rename_dict:
             da = da.rename({name: rename_dict[name]})
             myprint(f'Rename {name} to {rename_dict[name]}!', verbose=verbose)
     return da
+
+
+
 
 
 def rename_var_era5(ds, verbose=True, **kwargs):

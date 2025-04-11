@@ -339,6 +339,12 @@ def prepare_axis(ax, log=False, **kwargs):
     set_title(title=title, ax=ax, **kwargs)
 
     ylog = kwargs.pop("ylog", False)
+    yscale = kwargs.pop("yscale", None)
+    if yscale == 'log':
+        ylog = True
+    elif yscale == 'symlog':
+        ysymlog = True
+    
     ysymlog = kwargs.pop("ysymlog", False)
     if ylog and ysymlog:
         raise ValueError('ylog and ysymlog cannot be True at the same time!')

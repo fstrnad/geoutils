@@ -704,13 +704,18 @@ def is_larger_as(t1, t2):
 
 
 def get_time_range_data(
-    ds, time_range=None, start_month=None, end_month=None,
-    freq="D", verbose=False, check=True,
+    ds, time_range=None,
+    start_date=None, end_date=None, start_month=None, end_month=None,
+    freq="h", time_delta=1, verbose=False, check=True, include_enddate=True,
 ):
-    if time_range is None:
+    if time_range is None and end_date is None and start_date is None:
         return ds
+    sd, ed = get_time_range(ds)
+    if time_range is None:
+        start_date = sd if start_date is None else start_date
+        end_date = ed if end_date is None else end_date
+        time_range = [start_date, end_date]
     if check:
-        sd, ed = get_time_range(ds)
         if isinstance(time_range[0], str):
             time_range_0 = str2datetime(time_range[0], verbose=False)
         else:
@@ -734,10 +739,16 @@ def get_time_range_data(
         if gut.is_datetime360(time_range_0):
             time_range_1 = add_time_window(time_range_1, freq=freq)
 
+        if freq == "h":
+            time_delta = get_frequency_resolution_hours(ds)
         tps = get_dates_of_time_range(
-            time_range=[time_range_0, time_range_1], freq=freq
+            time_range=[time_range_0, time_range_1],
+            freq=freq,
+            time_delta=time_delta,
+            include_enddate=include_enddate,
         )
         time_range = [tps[0], tps[-1]]
+
     if time_range is not None:
         ds_sel = ds.sel(time=slice(*time_range))
     else:
@@ -1253,7 +1264,7 @@ def get_frequency_resolution(dates, verbose=False):
 def get_frequency_resolution_hours(dates):
     frequency_delta = get_frequency_resolution(dates)
     hours = frequency_delta / np.timedelta64(1, 'h')
-    return float(hours)
+    return int(hours)
 
 
 def get_frequency(x):
@@ -2394,6 +2405,8 @@ def get_periods_tps(tps, start=0, end=1, freq="D", include_start=True):
 
 
 def get_dates_of_time_range(time_range, freq="D",
+                            time_delta=1,
+                            include_enddate=True,
                             start_month="Jan",
                             end_month="Dec"):
     dtype = f"datetime64[{freq}]"
@@ -2416,7 +2429,9 @@ def get_dates_of_time_range(time_range, freq="D",
 
         sp, ep = np.sort([sp, ep])  # Order in time
         date_arr = get_dates_in_range(
-            start_date=sp, end_date=ep, freq=freq, make_xr=False
+            start_date=sp, end_date=ep, freq=freq, make_xr=False,
+            time_delta=time_delta,
+            include_enddate=include_enddate
         )
         # Include as well last time point
         # date_arr = np.concatenate(
@@ -2451,6 +2466,7 @@ def get_dates_of_time_ranges(time_ranges, freq="D"):
 def get_dates_in_range(start_date, end_date, freq="D",
                        time_delta=1,
                        additional_tps=0,
+                       include_enddate=True,
                        make_xr=True):
 
     if isinstance(start_date, xr.DataArray):
@@ -2469,11 +2485,16 @@ def get_dates_in_range(start_date, end_date, freq="D",
         td = np.timedelta64(time_delta, freq)
     else:
         td = time_delta
-    if additional_tps is not None:
+    if additional_tps > 0:
         additional_tps = np.timedelta64(additional_tps * time_delta, freq)
+        include_enddate = True
     # includes start and end date
-    tps = np.arange(start_date, end_date + td + additional_tps, td,
-                    )
+    if include_enddate:
+        tps = np.arange(start_date, end_date + td + additional_tps, td,
+                        )
+    else:
+        tps = np.arange(start_date, end_date, td,
+                        )
 
     if make_xr:
         tps = create_xr_ts(data=tps, times=tps)
