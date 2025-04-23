@@ -2097,7 +2097,7 @@ def tp2str(tp, m=True, d=True, h=True):
     return date
 
 
-def tps2str(tps, m=True, d=True, h=True):
+def tps2str(tps, m=True, d=True, h=True, full_str=False):
     if isinstance(tps, (xr.DataArray, xr.Dataset)):
         if gut.is_single_tp(tps=tps):
             return tp2str(tp=tps, m=m, d=d, h=h)
@@ -2105,6 +2105,8 @@ def tps2str(tps, m=True, d=True, h=True):
         tps_str = []
         for tp in tps:
             tps_str.append(tp2str(tp=tp, m=m, d=d, h=h))
+        if full_str:
+            tps_str = gut.list2str(tps_str, sep="_")
         return tps_str
 
 
@@ -2127,15 +2129,18 @@ def get_ymdh_date(date):
     return y, m, d, h
 
 
-def get_year(data):
+def get_year(data, as_str=False):
     if isinstance(data, xr.DataArray):
         data = data.time.data
     if isinstance(data, np.datetime64):
         data = np.datetime_as_string(data, unit='Y')
     if isinstance(data, str):
         data = np.datetime64(data)
-    years = data.astype("M8[Y]")
-    return years.astype(str)
+    if as_str:
+        years = data.astype("M8[Y]").astype(str)
+    else:
+        years = data.astype("M8[Y]")
+    return years
 
 
 def get_date2ymdh(date):
@@ -2361,7 +2366,8 @@ def get_tw_periods(
     return {"range": all_time_periods, "tps": np.array(all_tps)}
 
 
-def get_periods_tps(tps, start=0, end=1, freq="D", include_start=True):
+def get_periods_tps(tps, start=0, end=1, freq="D",
+                    include_start=True):
     """Gives the all time points from tps to end."""
     if end == 0:
         return tps
@@ -2402,6 +2408,31 @@ def get_periods_tps(tps, start=0, end=1, freq="D", include_start=True):
         all_time_periods = remove_duplicate_times(all_time_periods)
 
         return all_time_periods
+
+
+def get_tps_start(start_date, steps, freq='h', time_delta=1,
+                  to_xr=False):
+    """Get the start time points for a given number of steps.
+
+    Args:
+        start_date (str): The start date in 'YYYY-MM-DD' format.
+        steps (int): The number of steps to take.
+        freq (str, optional): The frequency of the time steps. Defaults to 'h'.
+        time_delta (int, optional): The time delta for each step. Defaults to 1.
+
+    Returns:
+        list: A list of start time points.
+    """
+    start_date = create_xr_tp(start_date)
+    tps = []
+    for step in range(steps):
+        tp = add_time_window(start_date, time_step=step*time_delta, freq=freq)
+        tps.append(tp)
+
+    if to_xr:
+        tps = create_xr_tps(times=tps)
+
+    return tps
 
 
 def get_dates_of_time_range(time_range, freq="D",

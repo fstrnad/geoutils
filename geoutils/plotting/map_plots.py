@@ -466,7 +466,7 @@ def plot_map(dmap: xr.DataArray,
         unset_label = kwargs.pop('unset_label', True)
         label = dmap.name if not unset_label else None
     if isinstance(dmap, xr.Dataset):
-        dmap = dmap[list(dmap.data_vars)[0]] # take the first variable
+        dmap = dmap[list(dmap.data_vars)[0]]  # take the first variable
     if isinstance(dmap, xr.DataArray):
         data_dims = gut.get_dims(dmap)
         point_dims = 'points' in data_dims
@@ -1263,6 +1263,7 @@ def create_multi_plot(nrows, ncols, projection=None,
 
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx
+    rem_idx = kwargs.pop('rem_idx', None)
     full_length_row = kwargs.pop('full_length_row', False)
     map_axis = kwargs.pop('map_axis', [])
     if len(map_axis) == 0:
@@ -1356,6 +1357,17 @@ def create_multi_plot(nrows, ncols, projection=None,
             if run_idx >= end_idx:
                 break
     # fig.tight_layout()
+    if rem_idx is not None:
+        if not isinstance(rem_idx, list):
+            raise ValueError(
+                f'rem_idx has to be of type list but is of type {type(rem_idx)}!')
+        for idx in rem_idx:
+            gut.myprint(f'WARNING! Remove axis {idx}!')
+            if idx < len(axs):
+                axs[idx].axis('off')
+        enum_axis = gut.remove_elements_by_indices(axs, rem_idx)
+    else:
+        enum_axis = axs
     if nrows > 1 or ncols > 1:
         enumerate_subplots = kwargs.pop('enumerate_subplots', True)
         if enumerate_subplots:
@@ -1366,10 +1378,10 @@ def create_multi_plot(nrows, ncols, projection=None,
                 pos_x = gut.replicate_object(pos_x, end_idx)
                 indices_proj = gut.get_not_None_indices(proj_arr)
                 pos_x[indices_proj] = pos_x_proj
-            put.enumerate_subplots(axs, pos_x=pos_x, pos_y=pos_y,
+            put.enumerate_subplots(axs=enum_axis, pos_x=pos_x, pos_y=pos_y,
                                    )
     else:
-        axs = axs[0]
+        axs = [axs[0]]
 
     y_title_pos = 1.1 - 0.05*(nrows-1)
     title = kwargs.pop('title', None)

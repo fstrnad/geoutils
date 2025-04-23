@@ -1044,17 +1044,19 @@ def rename_da(da, name):
     return da
 
 
-def rename_cmip2era5(da, verbose=True):
+def translate_cmip2era5(da, verbose=True):
     names = get_vars(da)
     rename_dict = cmip2era5_dict
     for name in names:
         if name in rename_dict:
             da = da.rename({name: rename_dict[name]})
             myprint(f'Rename {name} to {rename_dict[name]}!', verbose=verbose)
+
+            if name == 'rsds':
+                da[name] = da[name] * 3600
+                da[name].attrs.update({'units': 'J m**2'})
+
     return da
-
-
-
 
 
 def rename_var_era5(ds, verbose=True, **kwargs):
@@ -1323,6 +1325,10 @@ def sum_up_list(arr):
     15
     """
     return sum(arr)
+
+
+def remove_elements_by_indices(main_list, exclude_list):
+    return [item for index, item in enumerate(main_list) if index not in exclude_list]
 
 
 def make_arr_negative(arr):
@@ -1717,3 +1723,33 @@ def check_any_type(items, data_type):
     bool: True if at least one element is of the specified type, False otherwise.
     """
     return any(isinstance(x, data_type) for x in items)
+
+
+def add_mean_along_dim(da: xr.DataArray, dim_name='sample_id',
+                       mean_label='mean') -> xr.DataArray:
+    """
+    Computes the mean over a specified dimension and adds it back into the DataArray
+    along that same dimension with a new coordinate value.
+
+    Parameters:
+    - da: xr.DataArray — Input DataArray
+    - dim_name: str — Name of the dimension to compute the mean over
+    - mean_label: str or int — Label to assign to the new mean entry in the dimension
+
+    Returns:
+    - xr.DataArray — Modified DataArray with the mean added along the specified dimension
+    """
+    # Compute the mean over the specified dimension
+    mean_da = da.mean(dim=dim_name, keep_attrs=True)
+
+    # Add back the dimension with a single new coordinate value
+    mean_da = mean_da.expand_dims({dim_name: [mean_label]})
+
+    # Combine with original data
+    result = xr.concat([mean_da, da], dim=dim_name)
+
+    # Resort only if mean_label is a float
+    if isinstance(mean_label, float):
+        result = result.sortby(dim_name)
+
+    return result

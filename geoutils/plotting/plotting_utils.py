@@ -227,8 +227,8 @@ def prepare_axis(ax, log=False, **kwargs):
     x_label_color = kwargs.pop("x_label_color", "k")
     xlabel_pos = kwargs.pop("xlabel_pos", None)
     ylabel_pos = kwargs.pop("ylabel_pos", None)
-    x_ints = kwargs.pop("x_ints", False)
-    y_ints = kwargs.pop("y_ints", False)
+    set_xint = kwargs.pop("set_xint", False)
+    set_yint = kwargs.pop("set_yint", False)
     set_yaxis = kwargs.pop("set_yaxis", True)
     set_xaxis = kwargs.pop("set_xaxis", True)
     set_twinx = kwargs.pop("set_twinx", False)
@@ -319,9 +319,9 @@ def prepare_axis(ax, log=False, **kwargs):
 
         if xticklabels is not None and set_xticks:
             ax.set_xticklabels(xticklabels)
-        if x_ints:
+        if set_xint:
             ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
-        if y_ints:
+        if set_yint:
             ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
 
     else:
@@ -344,7 +344,7 @@ def prepare_axis(ax, log=False, **kwargs):
         ylog = True
     elif yscale == 'symlog':
         ysymlog = True
-    
+
     ysymlog = kwargs.pop("ysymlog", False)
     if ylog and ysymlog:
         raise ValueError('ylog and ysymlog cannot be True at the same time!')

@@ -48,13 +48,12 @@ def plot_2d(
     if y is None:
         raise ValueError("y must be provided!")
 
-    if isinstance(y[0], (list, np.ndarray, xr.DataArray)):
+    if isinstance(y, (list)):
         y_arr = y
     else:
         y_arr = [y]
-
     if x is not None:
-        if isinstance(x[0], (list, np.ndarray)):
+        if isinstance(x, (list)):
             x_arr = x
         else:
             x_arr = [x]
@@ -106,7 +105,7 @@ def plot_2d(
             label_arr = [label]
         else:
             label_arr = label
-    # ############# Plotting  Scatter ################
+
     if plot_type == 'xy' or plot_type == 'scatter':
         if lcmap is not None:
             lcmap, evenly_spaced_interval, ccolors = put.get_arr_colorbar(
@@ -403,8 +402,8 @@ def plot_hist(data, ax=None, fig=None,
     return dict(
         ax=ax,
         be=be,
-        bc=bc_arr,
-        hc=hc_arr,
+        bc=bc_arr[0],
+        hc=hc_arr[0],
         fig=fig,
     )
 
