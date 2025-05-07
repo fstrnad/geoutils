@@ -1,4 +1,5 @@
 """General Util functions."""
+import datetime
 from tabnanny import check
 import pkg_resources
 from collections import Counter
@@ -25,7 +26,8 @@ cmip2era5_dict = {
 era52cmip_dict = {v: k for k, v in cmip2era5_dict.items()}
 
 
-def myprint(str, verbose=True, lines=False, bold=False, italic=False, color=None):
+def myprint(str, verbose=True,
+            end=None, lines=False, bold=False, italic=False, color=None):
     # ANSI escape codes for styling text
     if verbose:
         style = "\033[1m" if bold else ""
@@ -52,7 +54,7 @@ def myprint(str, verbose=True, lines=False, bold=False, italic=False, color=None
         styled_text = f"{style}{italic_code}{color_code}{str}{reset_style}"
         if lines:
             styled_text = pprint(styled_text)
-        print(styled_text, flush=True)
+        print(styled_text, end=end, flush=True)
         return styled_text
     else:
         return
@@ -1044,19 +1046,77 @@ def rename_da(da, name):
     return da
 
 
-def translate_cmip2era5(da, verbose=True):
-    names = get_vars(da)
+def reset_time(dataset, time_dim="time"):
+    """
+    Resets the time dimension of an xarray dataset to always have 0 hours.
+
+    Parameters:
+    -----------
+    dataset: xarray dataset
+        The dataset to reset the time dimension for.
+
+    Returns:
+    --------
+    xarray dataset
+        The dataset with the time dimension reset.
+    """
+    # Set the hour of each time value to 0
+    time_values = dataset.time.values.astype("M8[s]").astype(datetime.datetime)
+    time_values = np.array([dt.replace(hour=0) for dt in time_values])
+    time_values = time_values.astype("M8[s]")
+
+    # Update the dataset with the new time dimension
+    dataset = dataset.assign_coords({time_dim: time_values})
+
+    return dataset
+
+
+era5_unit_dict = {'surface_solar_radiation_downwards': 'J/m**2',
+                  '10m_u_component_of_wind': 'm/s',
+                  '10m_v_component_of_wind': 'm/s',
+                  '100m_u_component_of_wind': 'm/s',
+                  '100m_v_component_of_wind': 'm/s',
+                  '2m_temperature': 'K',
+                  'surface_pressure': 'hPa',
+                  'total_cloud_cover': '%',
+                  'total_column_water_vapour': 'kg/m**2',
+                  'total_column_water': 'kg/m**2',
+                  'total_column_ozone': 'DU',
+                  'surface_net_solar_radiation': 'J/m**2',
+                  'surface_net_thermal_radiation': 'J/m**2'
+                  }
+
+
+def translate_cmip2era5(ds, set_hours2zero=True,
+                        verbose=True):
+    names = get_vars(ds)
     rename_dict = cmip2era5_dict
     for name in names:
         if name in rename_dict:
-            da = da.rename({name: rename_dict[name]})
+            ds = ds.rename({name: rename_dict[name]})
             myprint(f'Rename {name} to {rename_dict[name]}!', verbose=verbose)
-
+            attrs = ds[rename_dict[name]].attrs
             if name == 'rsds':
-                da[name] = da[name] * 3600
-                da[name].attrs.update({'units': 'J m**2'})
+                myprint('Also update units from W/m2 to J/m2!',
+                        verbose=verbose)
+                ds[rename_dict[name]] = ds[rename_dict[name]] * 3600
+                ds[rename_dict[name]].attrs = attrs
+                ds[rename_dict[name]].attrs["units"] = 'J m**2'
+    # Assuming that CMIP is delivered in daily average values
+    if set_hours2zero:
+        ds = reset_time(ds, time_dim="time")
 
-    return da
+    return ds
+
+
+def add_era5_units(ds, verbose=True):
+    names = get_vars(ds)
+    for name in names:
+        if name in era5_unit_dict:
+            ds[name].attrs['units'] = era5_unit_dict[name]
+            myprint(f'Add units {era5_unit_dict[name]} to {name}!',
+                    verbose=verbose)
+    return ds
 
 
 def rename_var_era5(ds, verbose=True, **kwargs):

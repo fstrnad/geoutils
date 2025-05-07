@@ -1171,7 +1171,8 @@ def get_start_end_date_shift(time, sm, em, shift=0):
     return start_date, end_date
 
 
-def get_time_range(ds, asstr=False, freq=None):
+def get_time_range(ds, asstr=False, freq=None,
+                   m=True, d=True, h=False):
     time = ds.time
     if gut.is_datetime360(time=time.data[0]):
         sd = time.data[0]
@@ -1181,8 +1182,8 @@ def get_time_range(ds, asstr=False, freq=None):
         ed = np.datetime64(time.data[-1])
 
     if asstr:
-        sd = tp2str(sd)
-        ed = tp2str(ed)
+        sd = tp2str(sd, m=m, d=d, h=h)
+        ed = tp2str(ed, m=m, d=d, h=h)
     if freq is not None:
         sd = np.datetime64(sd, freq)
         ed = np.datetime64(ed, freq)
@@ -1468,6 +1469,7 @@ def compute_timemean(
     Returns:
         xr.dataset: monthly average dataset
     """
+    ds.load()  # It is required to load the data into memory
 
     if groupby:
         ds = ds.groupby(f"time.{timemean}").mean(dim="time")
@@ -1850,10 +1852,6 @@ def get_ee_ds(
         data_quantile = xr.where(data_quantile > th_eev, data_quantile, np.nan)
     ee_map = data_quantile.count(dim="time")
 
-    if verbose:
-        tot_frac_events = float(ee_map.sum()) / dataarray.size
-        gut.myprint(f"Fraction of events: {tot_frac_events}!")
-
     rel_frac_q_map = data_quantile.sum(dim="time") / dataarray.sum(dim="time")
 
     return q_val_map, ee_map, data_quantile, rel_frac_q_map
@@ -1879,6 +1877,12 @@ def get_ee_count_ds(ds, q=0.95):
     return evs_cnt
 
 
+def get_mask_rel_share(mask, verbose=True):
+    fraction_masked = float(mask.sum()) / mask.size
+    gut.myprint(f"Fraction of defined cells: {fraction_masked:.2f}!",
+                verbose=verbose)
+
+
 def compute_evs(
     dataarray,
     q=None,
@@ -1887,6 +1891,8 @@ def compute_evs(
     min_threshold=None,
     th_eev=None,
     min_num_events=0,
+    # Percentage of events that are allowed to be considered as events per time series
+    max_rel_share=1,
     verbose=True,
     get_mask=True,
 ):
@@ -1919,18 +1925,31 @@ def compute_evs(
         th_eev=th_eev,
         verbose=verbose,
     )
-    # Create mask for which cells are left out
     mask = ee_map > min_num_events
+    rel_share = ee_map / len(data_quantile["time"])
+
+    get_mask_rel_share(mask=mask, verbose=verbose)
+
+    if max_rel_share < 1:
+        # Remove all values that are not in the top x% of the time series
+        # This is important for example for the monsoon season, where only a few days
+        # are extreme events, but they are extreme events!
+        rel_share = ee_map / len(data_quantile["time"])
+        print(float(np.min(rel_share)),
+              float(np.max(rel_share)))
+        mask = xr.where(rel_share > max_rel_share, 0, mask)
+        get_mask_rel_share(mask=mask, verbose=verbose)
+
+    # Create mask for which cells are left out
     final_data = data_quantile.where(mask, np.nan)
 
-    event_series = xr.where(~np.isnan(final_data[:]), 1, 0)
+    event_series = xr.where(~np.isnan(final_data), 1, 0)
     event_series = event_series.rename("evs")
 
-    # Create new mask for dataset: Masked values are areas with no events!
-    if min_num_events > 0:
-        mask = xr.where(ee_map > min_num_events, 1, 0)
-        fraction_masked = 1 - float(mask.sum()) / mask.size
-        gut.myprint(f"Fraction of masked values: {fraction_masked:.2f}!")
+    if verbose:
+        tot_frac_events = float(event_series.sum()) / dataarray.size
+        gut.myprint(f"Fraction of events: {tot_frac_events}!")
+
     if get_mask:
         return event_series, mask
     else:
