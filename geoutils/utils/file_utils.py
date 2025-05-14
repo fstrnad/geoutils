@@ -152,12 +152,16 @@ def save_ds(ds, filepath, unlimited_dim=None,
             show_progress=False,
             compression=9,
             encoding='float32',
+            overwrite=True,
             backup=False):
     if os.path.exists(filepath):
         gut.myprint(f"File {filepath} already exists!")
         if backup:
             backup_file(filepath)
         else:
+            if not overwrite:
+                gut.myprint(f"Return, file will not be overwritten!")
+                return None
             gut.myprint(f"File {filepath} will be overwritten!")
             delete_path(filepath)
     dirname = os.path.dirname(filepath)
@@ -409,9 +413,10 @@ def print_file_location_and_size(filepath, verbose=True):
         else:
             total_size = "File not found"
 
-        gut.myprint(f"Total size of '{file}':\n   {total_size}",
+        # gut.myprint(f"Total size of '{file}':\n   {total_size}",
+        #             verbose=verbose)
+        gut.myprint(f"Total size: \n   {total_size}",
                     verbose=verbose)
-
     return None
 
 
@@ -556,6 +561,10 @@ def get_files_in_folder(folder_path: str,
 
     gut.myprint(f'Found {len(file_list)} files!',
                 verbose=verbose)
+    if len(file_list) == 0:
+        gut.myprint(f'No files found in {folder_path}!',
+                    color='red', verbose=verbose)
+        return []
 
     return np.array(file_list)
 

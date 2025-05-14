@@ -1162,7 +1162,7 @@ def check_dimensions(ds, datetime_ts=True,
                      set_netcdf_encoding=False,
                      check_vars=False,
                      validate_dims=True,
-                     verbose=True):
+                     verbose=False):
     """
     Checks whether the dimensions are the correct ones for xarray!
     """

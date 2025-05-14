@@ -27,7 +27,7 @@ era52cmip_dict = {v: k for k, v in cmip2era5_dict.items()}
 
 
 def myprint(str, verbose=True,
-            end=None, lines=False, bold=False, italic=False, color=None):
+            end=None, lines=False, bold=False, italic=False, color='black'):
     # ANSI escape codes for styling text
     if verbose:
         style = "\033[1m" if bold else ""
@@ -45,6 +45,7 @@ def myprint(str, verbose=True,
                 'magenta': "\033[95m",
                 'cyan': "\033[96m",
                 'white': "\033[97m",
+                'black': "\033[30m",
             }
             if color not in colors:
                 raise ValueError(
@@ -89,11 +90,25 @@ def is_single_tp(tps):
     return False
 
 
+def is_datetime360_ds(ds, verbose=True):
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise ValueError('Input has to be xr.Dataset!')
+
+    if not is_datetime360(time=ds.time.data[0]):
+        calender360 = False
+    else:
+        myprint('WARNING: 360 day calender is used!',
+                    color='yellow', verbose=verbose)
+        calender360 = True
+    return calender360
+
+
 def is_datetime360(time):
     import cftime
 
     if not is_single_tp(tps=time):
         time = time[0]
+
     return isinstance(time, cftime._cftime.Datetime360Day)
 
 
@@ -1046,7 +1061,7 @@ def rename_da(da, name):
     return da
 
 
-def reset_time(dataset, time_dim="time"):
+def reset_hours(dataset, time_dim="time"):
     """
     Resets the time dimension of an xarray dataset to always have 0 hours.
 
@@ -1061,12 +1076,7 @@ def reset_time(dataset, time_dim="time"):
         The dataset with the time dimension reset.
     """
     # Set the hour of each time value to 0
-    time_values = dataset.time.values.astype("M8[s]").astype(datetime.datetime)
-    time_values = np.array([dt.replace(hour=0) for dt in time_values])
-    time_values = time_values.astype("M8[s]")
-
-    # Update the dataset with the new time dimension
-    dataset = dataset.assign_coords({time_dim: time_values})
+    dataset[time_dim] = dataset[time_dim].dt.floor('D').astype('datetime64[ns]')
 
     return dataset
 
@@ -1087,8 +1097,10 @@ era5_unit_dict = {'surface_solar_radiation_downwards': 'J/m**2',
                   }
 
 
-def translate_cmip2era5(ds, set_hours2zero=True,
-                        verbose=True):
+def translate_cmip2era5(ds,
+                        set_hours2zero=False,
+                        add_units=True,
+                        verbose=False):
     names = get_vars(ds)
     rename_dict = cmip2era5_dict
     for name in names:
@@ -1104,7 +1116,10 @@ def translate_cmip2era5(ds, set_hours2zero=True,
                 ds[rename_dict[name]].attrs["units"] = 'J m**2'
     # Assuming that CMIP is delivered in daily average values
     if set_hours2zero:
-        ds = reset_time(ds, time_dim="time")
+        myprint('Set hours to zero!')
+        ds = reset_hours(ds, time_dim="time")
+    if add_units:
+        ds = add_era5_units(ds, verbose=verbose)
 
     return ds
 

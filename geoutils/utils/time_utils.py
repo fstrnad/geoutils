@@ -304,8 +304,6 @@ def get_sel_tps_ds(
         tps = create_xr_tps(times=tps)
     stp = gut.is_single_tp(tps=tps)
     if not stp:
-        start_month, end_month = get_month_range(tps)
-    if not stp:
         if len(tps) == 0:
             gut.myprint(f"Empty list of time points")
             return []
@@ -340,12 +338,12 @@ def get_sel_tps_ds(
             if not stp:
                 ds_sel = remove_duplicate_times(da=ds_sel)
                 # restrict to month range
-                ds_sel = get_month_range_data(
-                    dataset=ds_sel,
-                    start_month=start_month,
-                    end_month=end_month,
-                    verbose=False,
-                )
+                # ds_sel = get_month_range_data(
+                #     dataset=ds_sel,
+                #     start_month=start_month,
+                #     end_month=end_month,
+                #     verbose=False,
+                # )
             else:
                 if drop_dim:
                     if "time" in list(ds_sel.dims):
@@ -872,7 +870,8 @@ def get_month_range_data(dataset,
                                              start_month=start_month,
                                              end_month=end_month)
     else:
-        gut.myprint('Attention. Data is read into memory for month range!')
+        gut.myprint('Attention. Data is read into memory for month range!',
+                    verbose=verbose)
         dataset = dataset.compute()
         seasonal_data = dataset.sel(
             time=is_in_month_range(
@@ -1459,7 +1458,7 @@ def get_mean_time_series(da, lon_range, lat_range, time_roll=0, q=None):
 
 
 def compute_timemean(
-    ds, timemean, dropna=True, groupby=False, verbose=True, reset_time=False
+    ds, timemean, dropna=True, groupby=False, verbose=False, reset_time=False
 ):
     """Computes the monmean average on a given xr.dataset
 
@@ -3393,7 +3392,7 @@ def are_same_time_points(dataarray1, dataarray2):
     return set(dataarray1.time.values) == set(dataarray2.time.values)
 
 
-def equalize_time_points(ts1, ts2, verbose=True):
+def equalize_time_points(ts1, ts2, verbose=False):
     """Equalize the time points of two xarray dataarrays.
 
     Args:
@@ -3531,3 +3530,39 @@ def sliding_window_mean(da, length):
         result, coords=da.coords, dims=da.dims, attrs=da.attrs)
 
     return sliding_mean
+
+
+def get_leap_days(ds):
+    """
+    Return all time entries that fall on February 29 (leap days) from the 'time' dimension.
+
+    Parameters:
+        ds (xarray.Dataset or xarray.DataArray): Input data with a time dimension.
+
+    Returns:
+        xarray.DataArray: A subset of the time coordinate containing only February 29 dates.
+    """
+    if "time" not in ds.coords:
+        raise ValueError("The dataset does not contain a 'time' coordinate.")
+
+    time = ds.time
+    is_feb29 = (time.dt.month == 2) & (time.dt.day == 29)
+    return time.where(is_feb29, drop=True)
+
+
+def remove_leap_days(ds):
+    """
+    Remove all February 29 (leap days) from an xarray Dataset or DataArray.
+
+    Parameters:
+        ds (xarray.Dataset or xarray.DataArray): Input data with a 'time' coordinate.
+
+    Returns:
+        xarray.Dataset or xarray.DataArray: The dataset without February 29 entries.
+    """
+    if "time" not in ds.coords:
+        raise ValueError("The dataset does not contain a 'time' coordinate.")
+
+    time = ds.time
+    not_feb29 = ~((time.dt.month == 2) & (time.dt.day == 29))
+    return ds.sel(time=not_feb29)

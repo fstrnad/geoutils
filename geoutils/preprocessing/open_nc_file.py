@@ -18,7 +18,7 @@ def open_nc_file(
         plevels=None,
         decode_times=True,
         datetime_ts=True,
-        verbose=True,
+        verbose=False,
         var_name=None,
         lat_range=None,
         lon_range=None,
@@ -122,7 +122,7 @@ def my_open_mfdataset(nc_files, decode_times=True, mfdataset=True,
         nc_files = [nc_files]
     if len(nc_files) == 1:
         file = nc_files[0]
-        gut.myprint(f'Open file: {file}')
+        gut.myprint(f'Open file: {file}', verbose=True)
         ds = xr.open_dataset(file,
                              decode_times=decode_times,
                              )
@@ -135,7 +135,7 @@ def my_open_mfdataset(nc_files, decode_times=True, mfdataset=True,
         else:
             data_array = []
             for file in nc_files:
-                gut.myprint(f'Open file: {file}')
+                gut.myprint(f'Open file: {file}', verbose=True)
                 data_array.append(xr.open_dataarray(file,
                                                     decode_times=decode_times,
                                                     compat=compat,
@@ -199,7 +199,7 @@ def add_dummy_dim(xda, set_hours_zero=True):
     return xda
 
 
-def check_dimensions(ds, verbose=True, **kwargs):
+def check_dimensions(ds, verbose=False, **kwargs):
     """
     Checks whether the dimensions are the correct ones for xarray!
     """
@@ -244,7 +244,8 @@ def check_time(ds, **kwargs):
         if not gut.is_datetime360(time=ds.time.data[0]):
             calender360 = False
         else:
-            gut.myprint('WARNING: 360 day calender is used!')
+            gut.myprint('WARNING: 360 day calender is used!',
+                        color='yellow')
             calender360 = True
     else:
         gut.myprint('WARNING! No standard calender is used!')
