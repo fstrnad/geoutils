@@ -22,8 +22,10 @@ def set_legend(ax,
     if fig is None:
         fig = ax
     loc = kwargs.pop("loc", "upper right")
-    box_loc = kwargs.pop('box_loc', (0.96, 1))
-    box_loc = (0.1, 0) if loc == 'under' else box_loc
+    box_loc_default = (0.96, 1)
+    box_loc = kwargs.pop('box_loc', None)
+    if box_loc is None:
+        box_loc = (-0.05, -0.15) if loc == 'under' else box_loc_default
     bbox_to_anchor = box_loc if loc == "outside" or loc == 'under' else None
     ncol_legend = kwargs.pop('ncol_legend', 1)
     ncol_legend = 2 if ncol_legend == 1 and loc == 'under' else ncol_legend

@@ -15,6 +15,27 @@ not_europe_countries = ['Russia',
                         ]
 
 
+country_lon_lat_ranges = {
+    'Germany': {'lon': [3, 18.75], 'lat':  [43, 58.75]},
+    'Britain': {'lon': [-12, 3.75], 'lat': [46.5, 62.25]}
+}
+
+
+def get_country_lon_lat_range(country_name):
+    """
+    Function to get the longitude and latitude range of a country.
+
+    Parameters:
+    country_name (str): The name of the country.
+
+    Returns:
+    dict: A dictionary with 'lon' and 'lat' keys containing the respective ranges.
+    """
+    if country_name in country_lon_lat_ranges:
+        return country_lon_lat_ranges[country_name]
+    else:
+        raise ValueError(f"Longitude and latitude range for {country_name} is not defined.")
+
 def get_country_file():
     shpfilename = shpreader.natural_earth(
         resolution="10m", category="cultural", name="admin_0_countries"
@@ -42,13 +63,13 @@ def get_countries_offshore():
     import country_converter as coco
     file = os.path.abspath(__file__)
     wd = os.path.dirname(file)
-    countries = gpd.read_file(f'{wd}/offshore_shapes.geojson')
+    offshore_countries = gpd.read_file(f'{wd}/offshore_shapes.geojson')
     cc = coco.CountryConverter()
-    country_names = list(countries.name)
+    country_names = list(offshore_countries.name)
     countries_en = cc.convert(names=country_names, to='name_short')
-    countries['name'] = countries_en
+    offshore_countries['name'] = countries_en
 
-    return countries
+    return offshore_countries
 
 
 def get_countries(onshore=True):

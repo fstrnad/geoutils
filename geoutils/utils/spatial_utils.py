@@ -1094,7 +1094,7 @@ def remove_single_dim(ds):
         for dim, num in dims.items():
             if num < 2:
                 # Time and pressure level dimension is the only one that is allowed to be kept
-                if dim not in ['time', 'lev', 'plevel', 'points']:
+                if dim not in ['time', 'lev', 'plevel', 'points', 'sample_id']:
                     ds = ds.mean(dim=dim)  # Removes the single variable axis
                     gut.myprint(f'Remove single value dimension {dim}!')
                 else:
@@ -1159,7 +1159,7 @@ def check_dimensions(ds, datetime_ts=True,
                      freq='D',
                      transpose_dims=False,
                      hours_to_zero=False,
-                     set_netcdf_encoding=False,
+                     set_netcdf_encoding=True,
                      check_vars=False,
                      validate_dims=True,
                      verbose=False):
@@ -1220,6 +1220,8 @@ def check_dimensions(ds, datetime_ts=True,
 
     if 'time' in dims:
         # create a time index deepending if a datetime time series is provided or not
+        if hours_to_zero:
+            ds = tu.set_hours_to_zero(ds)
         if datetime_ts:
             if gut.is_datetime360(time=ds.time.data[0]) or keep_time:
                 ds = ds
@@ -1264,7 +1266,7 @@ def check_dimensions(ds, datetime_ts=True,
     return ds
 
 
-def rename_dims(ds, verbose=True):
+def rename_dims(ds, verbose=False):
     rename_dict = {
         'longitude': 'lon',
         'latitude': 'lat',
@@ -1293,7 +1295,8 @@ def rename_dims(ds, verbose=True):
             coords_lon_lat = ds.coords[lon_lat]
             if rename_dict[lon_lat] in coords_lon_lat.coords:
                 gut.myprint(
-                    f'WARNING: {rename_dict[lon_lat]} already in coordinates!', verbose=verbose)
+                    f'WARNING: {rename_dict[lon_lat]} already in coordinates!',
+                    verbose=verbose)
                 ds = ds.drop(rename_dict[lon_lat])
             ds = ds.rename({lon_lat: rename_dict[lon_lat]})
             dims = list(ds.dims)

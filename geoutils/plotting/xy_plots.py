@@ -31,6 +31,7 @@ def plot_2d(
     lw_arr=[1],
     mk_arr=[""],
     ls_arr=['-'],
+    alpha_arr=[1],
     color_arr=None,
     color=None,
     lcmap=None,
@@ -95,11 +96,11 @@ def plot_2d(
                 ax, plot_type=plot_type, **kwargs)
 
     num_items = len(y_arr)
-    alpha = kwargs.pop('alpha', 1)
     inverted_z_order = kwargs.pop('inv_z_order', False)
     linearize_xaxis = kwargs.pop('linearize_xaxis', False)
     label = kwargs.pop('label', None)
-    label_arr = kwargs.get("label_arr", [])  # to account that both label or label_arr can be used
+    # to account that both label or label_arr can be used
+    label_arr = kwargs.get("label_arr", [])
     if label is not None:
         if not isinstance(label, (list, np.ndarray)):
             label_arr = [label]
@@ -144,9 +145,12 @@ def plot_2d(
                         y_ub_arr[idx]) if y_lb_arr[idx] is not None else None
 
             lw = kwargs.get('lw', None)
+            alpha = kwargs.get('alpha', None)
+
             if lw is None:
                 lw = lw_arr[idx] if idx < len(lw_arr) else lw_arr[-1]
-
+            if alpha is None:
+                alpha = alpha_arr[idx] if idx < len(alpha_arr) else alpha_arr[-1]
             mk = kwargs.get('mk', None)
             if mk is None:
                 mk = mk_arr[idx] if idx < len(mk_arr) else mk_arr[-1]
@@ -163,10 +167,13 @@ def plot_2d(
                 ls = ls_arr[idx] if idx < len(ls_arr) else ls_arr[-1]
 
             if len(label_arr) > 0:
-                if len(label_arr) > idx:
+                if len(label_arr) >= len(y_arr):
                     label = label_arr[idx]
+                elif len(label_arr) == idx-1:  # only plot last label in case of only 1 for multiple datasets
+                    label = label_arr[0]
                 else:
                     label = None
+
             if lcmap is None:
                 if color is None:
                     if color_arr is None:
@@ -380,6 +387,7 @@ def plot_hist(data, ax=None, fig=None,
 
     hc_arr = []
     bc_arr = []
+    label = kwargs.pop("label", None)
     for idx, arr in enumerate(data_arr):
         arr = gut.remove_nans(arr)
         if log:
@@ -397,7 +405,8 @@ def plot_hist(data, ax=None, fig=None,
         bc_arr.append(bc)
 
     im = plot_2d(x=bc_arr, y=hc_arr,
-                 ax=ax, plot_type=plot_type, **kwargs)
+                 ax=ax, plot_type=plot_type,
+                 label=label, **kwargs)
 
     return dict(
         ax=ax,

@@ -1,3 +1,6 @@
+from scipy.stats import linregress
+import matplotlib.pyplot as plt
+import pandas as pd
 from scipy.signal import find_peaks
 from sklearn.preprocessing import minmax_scale
 from importlib import reload
@@ -116,6 +119,11 @@ def normalize(data, min=0, max=1):
     return norm
 
 
+def relative_share(data, min=0, max=1):
+    sum_data = np.sum(data)
+    return data/sum_data if sum_data > 0 else 0
+
+
 def count_occ(occ_arr, count_arr, rel_freq=False, norm_fac=1.):
     """Counts the occurences of certain objects (eg. floats, ints, strs etc.)
 
@@ -215,7 +223,6 @@ def standardize_along_time(data, dim='time'):
     standardized_data = (data - mean) / std
 
     return standardized_data
-
 
 
 def standardize_dataset(dataset, dim='time'):
@@ -793,6 +800,43 @@ def polyfit_regressor(data_array, predictor,  order=1):
                               ] = np.polyval(coef, this_ts)
 
     return regressed_arr
+
+
+def lin_reg_xr(da):
+    import xarray as xr
+
+
+# Function to perform linear regression on a 1D xarray DataArray (time series) and plot results
+
+
+def linear_regression_xarray(da: xr.DataArray):
+    """
+    Perform linear regression on a time series stored in a 1D xarray DataArray
+    and plot the original data points along with the regression line.
+
+    Parameters:
+    - da: xarray.DataArray with one dimension (e.g., 'time'). The coordinate of this dimension can be numeric or datetime.
+    """
+    # Extract coordinate
+
+    time = da.time.values
+
+    # Convert datetime to numeric (days since start) if needed
+    if np.issubdtype(time.dtype, np.datetime64):
+        # Compute numeric values as days since first timestamp
+        numeric = (time - time[0]) / np.timedelta64(1, 'D')
+    else:
+        numeric = time.astype(float)
+
+    # Perform linear regression
+    slope, intercept, r_value, p_value, std_err = linregress(
+        numeric, da.values)
+
+    # Compute fitted values
+    fit_vals = intercept + slope * numeric
+
+    return fit_vals, slope, p_value
+
 
 
 def find_and_sort_peaks(time_series):

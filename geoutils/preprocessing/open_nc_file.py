@@ -211,6 +211,7 @@ def check_dimensions(ds, verbose=False, **kwargs):
     freq = kwargs.pop('freq', 'D')
     transpose = kwargs.pop('transpose_dims', False)
     check_vars = kwargs.pop('check_vars', False)
+    hours_to_zero = kwargs.pop('hours_to_zero', False)
     ds = sput.check_dimensions(ds=ds,
                                datetime_ts=datetime_ts,
                                lon360=lon360,
@@ -219,6 +220,7 @@ def check_dimensions(ds, verbose=False, **kwargs):
                                freq=freq,
                                check_vars=check_vars,
                                transpose_dims=transpose,
+                               hours_to_zero=hours_to_zero,
                                verbose=verbose)
     # Set time series to days
     dims = gut.get_dims(ds=ds)

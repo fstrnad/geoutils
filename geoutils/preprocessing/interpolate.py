@@ -85,7 +85,8 @@ def interpolate_grid(dataarray, grid_step=None,
 
 def generate_new_grid(dataarray, grid_step,
                       min_lon, max_lon, min_lat, max_lat,
-                      grid_step_lon, grid_step_lat):
+                      grid_step_lon, grid_step_lat,
+                      verbose=False):
     correct_max_lon = True if max_lon is None else False
     correct_min_lon = True if min_lon is None else False
     correct_min_lat = True if min_lat is None else False
@@ -138,6 +139,7 @@ def generate_new_grid(dataarray, grid_step,
     gut.myprint(
         f"Interpolte grid from {min(init_lon)} to {max(init_lon)},{min(init_lat)} to {
             max(init_lat)}  with grid_step {grid_step}!",
+        verbose=verbose
     )
 
     nlat = len(init_lat)
@@ -145,7 +147,7 @@ def generate_new_grid(dataarray, grid_step,
         # Odd number of latitudes includes the poles.
         gut.myprint(
             f"WARNING: Poles might be included: {min_lat} and {min_lat}!",
-            color='yellow'
+            color='yellow', verbose=verbose
         )
 
     return init_lat, init_lon

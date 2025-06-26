@@ -1,4 +1,4 @@
-"""setup.py for climnet."""
+"""setup.py for geoutils."""
 
 from setuptools import find_packages
 from setuptools import setup

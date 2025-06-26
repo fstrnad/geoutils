@@ -237,10 +237,9 @@ def get_netcdf_encoding(
     gut.myprint("Set time to np.datetime[ns] time format!", verbose=verbose)
     ds["time"] = time.data.astype("datetime64[ns]")
     freq = get_frequency(ds)
-    if freq != "hour":
-        gut.myprint("set hours to 0", verbose=hours_to_zero)
+    if freq != "hour" and hours_to_zero:
         # This avoids problems with time encoding at 0h and 11h!
-        ds = set_hours_to_zero(x=ds) if hours_to_zero else ds
+        ds = set_hours_to_zero(x=ds)
 
     # ds = ds.transpose('time', 'lat', 'lon
     ds.time.attrs.pop("calendar", None)
@@ -1471,7 +1470,14 @@ def compute_timemean(
     ds.load()  # It is required to load the data into memory
 
     if groupby:
-        ds = ds.groupby(f"time.{timemean}").mean(dim="time")
+        if timemean == 'hourofyear':
+            hour_of_year = (ds['time'].dt.dayofyear - 1) * \
+                24 + ds['time'].dt.hour
+            group_mean = hour_of_year
+            timemean = 'group'  # for later renameing
+        else:
+            group_mean = f"time.{timemean}"
+        ds = ds.groupby(group_mean).mean(dim="time")
         if reset_time:
             ds = gut.rename_dim(ds, timemean, name="time")
     else:
@@ -1795,6 +1801,32 @@ def compute_anomalies_ds(
     return ds
 
 
+def get_q_val_map(dataarray, q=0.95, dim='time'):
+    if q > 1 or q < 0:
+        raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
+
+    if 'time' not in dataarray.dims:
+        raise ValueError("ERROR! No time dimension found!")
+    q_val_map = dataarray.quantile(q, dim=dim)
+    return q_val_map
+
+
+def get_ee_count_ds(ds, q=0.95):
+    varnames = gut.get_varnames_ds(ds)
+    if "evs" in varnames:
+        evs = ds["evs"]
+        evs_cnt = evs.sum(dim="time")
+    else:
+        raise ValueError("No Evs in dataset found!")
+    return evs_cnt
+
+
+def get_mask_rel_share(mask, verbose=False):
+    fraction_masked = float(mask.sum()) / mask.size
+    gut.myprint(f"Fraction of defined cells: {fraction_masked:.2f}!",
+                verbose=verbose)
+
+
 def get_ee_ds(
     dataarray,
     q=None,
@@ -1802,7 +1834,7 @@ def get_ee_ds(
     min_threshold=None,
     threshold_type='upper',
     th_eev=None,
-    verbose=True,
+    verbose=False,
 ):
     if threshold is not None and q is not None:
         raise ValueError("ERROR! Either q OR threshold has to be provided!")
@@ -1822,10 +1854,11 @@ def get_ee_ds(
             raise ValueError(
                 f"ERROR! threshold_type {threshold_type} not recognized!")
 
-        gut.myprint(f'Compute extreme events with threshold {threshold}!')
+        gut.myprint(f'Compute extreme events with threshold {threshold}!',
+                    verbose=verbose)
         if q is not None:
             gut.myprint(f'q is given, but will be ignored!',
-                        color='yellow', verbose=verbose)
+                        color='yellow')
         if threshold_type == 'upper':
             data_quantile = xr.where(dataarray >= threshold, dataarray, np.nan)
         elif threshold_type == 'lower':
@@ -1834,7 +1867,8 @@ def get_ee_ds(
             raise ValueError(
                 f"ERROR! threshold_type {threshold_type} not recognized!")
     elif q is not None:
-        gut.myprint(f"Compute extreme events with quantile {q}!")
+        gut.myprint(f"Compute extreme events with quantile {q}!",
+                    verbose=verbose)
         # Gives the quanile value for each cell
         q_val_map = get_q_val_map(dataarray=dataarray, q=q)
         # Set values below quantile to 0
@@ -1856,32 +1890,6 @@ def get_ee_ds(
     return q_val_map, ee_map, data_quantile, rel_frac_q_map
 
 
-def get_q_val_map(dataarray, q=0.95, dim='time'):
-    if q > 1 or q < 0:
-        raise ValueError(f"ERROR! q = {q} has to be in range [0, 1]!")
-
-    if 'time' not in dataarray.dims:
-        raise ValueError("ERROR! No time dimension found!")
-    q_val_map = dataarray.quantile(q, dim=dim)
-    return q_val_map
-
-
-def get_ee_count_ds(ds, q=0.95):
-    varnames = gut.get_varnames_ds(ds)
-    if "evs" in varnames:
-        evs = ds["evs"]
-        evs_cnt = evs.sum(dim="time")
-    else:
-        raise ValueError("No Evs in dataset found!")
-    return evs_cnt
-
-
-def get_mask_rel_share(mask, verbose=True):
-    fraction_masked = float(mask.sum()) / mask.size
-    gut.myprint(f"Fraction of defined cells: {fraction_masked:.2f}!",
-                verbose=verbose)
-
-
 def compute_evs(
     dataarray,
     q=None,
@@ -1892,7 +1900,7 @@ def compute_evs(
     min_num_events=0,
     # Percentage of events that are allowed to be considered as events per time series
     max_rel_share=1,
-    verbose=True,
+    verbose=False,
     get_mask=True,
 ):
     """Creates an event series from an input time series.
@@ -1924,7 +1932,7 @@ def compute_evs(
         th_eev=th_eev,
         verbose=verbose,
     )
-    mask = ee_map > min_num_events
+    mask = ee_map >= min_num_events
     rel_share = ee_map / len(data_quantile["time"])
 
     get_mask_rel_share(mask=mask, verbose=verbose)
@@ -1947,7 +1955,8 @@ def compute_evs(
 
     if verbose:
         tot_frac_events = float(event_series.sum()) / dataarray.size
-        gut.myprint(f"Fraction of events: {tot_frac_events}!")
+        gut.myprint(f"Fraction of events: {tot_frac_events}!",
+                    verbose=verbose)
 
     if get_mask:
         return event_series, mask
@@ -2856,13 +2865,18 @@ def split_time_into_year_string_ranges(ds, n, time_dim="time"):
     return date_ranges
 
 
-def split_time_by_year_span(ds, span_years=10, time_dim="time"):
+def split_time_by_year_span(ds,
+                            start_year=None,
+                            end_year=None,
+                            span_years=10, time_dim="time"):
     """
     Split the time span of an xarray Dataset into chunks of a given number of years.
     Each range covers full years (Jan 1 to Dec 31), and the last chunk may be shorter.
 
     Parameters:
         ds (xr.Dataset): Dataset with a time dimension.
+        start_year (int): The starting year for the split. Defaults to None.
+        end_year (int): The ending year for the split. Defaults to None.
         span_years (int): Number of years in each time chunk.
         time_dim (str): Name of the time dimension.
 
@@ -2870,8 +2884,8 @@ def split_time_by_year_span(ds, span_years=10, time_dim="time"):
         list of tuples: List of (start_date_str, end_date_str), e.g., ('2000-01-01', '2009-12-31')
     """
     times = pd.to_datetime(ds[time_dim].values)
-    start_year = times.year.min()
-    end_year = times.year.max()
+    start_year = times.year.min() if start_year is None else start_year
+    end_year = times.year.max() if end_year is None else end_year
 
     date_ranges = []
 

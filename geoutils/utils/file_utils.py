@@ -173,6 +173,9 @@ def save_ds(ds, filepath, unlimited_dim=None,
     gut.myprint(f"Store to {filepath}...")
     if zlib:
         if isinstance(ds, xr.DataArray):
+            if ds.name is None:
+                gut.myprint("DataArray has no name, setting to 'data'.")
+                ds.name = 'data'
             enc = {ds.name: {'zlib': zlib,
                    'dtype': encoding,
                              }
@@ -241,9 +244,8 @@ def load_pkl(sp):
     return all_stats
 
 
-def load_np_dict(sp):
-    gut.myprint('Load...')
-    print_file_location_and_size(filepath=sp)
+def load_np_dict(sp, verbose=False):
+    print_file_location_and_size(filepath=sp, verbose=verbose)
     return np.load(sp, allow_pickle=True).item()
 
 
@@ -256,7 +258,6 @@ def load_npy(fname):
     Returns:
         converted_dic [dict]: dictionary of stored objects
     """
-    gut.myprint('Load...')
     print_file_location_and_size(filepath=fname)
     dic = np.load(fname,
                   allow_pickle=True).item()
@@ -535,7 +536,10 @@ def get_files_in_folder(folder_path: str,
     Returns:
         list: A list of file paths.
     """
-    assert_folder_exists(folder_path)
+    if not exist_folder(folder_path):
+        gut.myprint(f'Folder {folder_path} does not exist!',
+                    color='red', verbose=verbose)
+        return []
 
     file_list = []
     for root, dirs, files in os.walk(folder_path):
@@ -581,7 +585,6 @@ def find_files_with_string(folder_path: str, search_string: str = None,
     Returns:
         list: A list of file paths that contain the search string.
     """
-    print(folder_path)
     assert_folder_exists(folder_path)
 
     file_list = []

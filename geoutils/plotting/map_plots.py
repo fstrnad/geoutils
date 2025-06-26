@@ -667,6 +667,8 @@ def plot_array(
             x = np.arange(0, len(z[0]))
             y = np.arange(0, len(z))
     # plotting
+    centercolor = kwargs.pop('centercolor', None)
+    leftcolor = kwargs.pop('leftcolor', None)
     color = kwargs.pop("color", None)
     cmap = None if color is not None else cmap
     alpha = kwargs.pop("alpha", 1.0)
@@ -758,8 +760,6 @@ def plot_array(
                 levels = this_levels
             if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
                 # norm = mpl.colors.LogNorm(levels=levels)
-                centercolor = kwargs.pop('centercolor', None)
-                leftcolor = kwargs.pop('leftcolor', None)
                 cmap, norm = put.create_cmap(cmap, levels,
                                              centercolor=centercolor,
                                              leftcolor=leftcolor,

@@ -23,6 +23,23 @@ cmip2era5_dict = {
     'sfcWind': 'si10'  # surface wind
 }
 
+rename_dict = {
+    'precipitation': 'pr',
+    'precip': 'pr',
+    '10m_u_component_of_wind': 'u10',
+    '10m_v_component_of_wind': 'v10',
+    '100m_u_component_of_wind': 'u100',
+    '100m_v_component_of_wind': 'v100',
+    'forecast_surface_roughness': 'fsr',
+    'total_sky_direct_solar_radiation_at_surface': 'fdir',  # used in atlite
+    'toa_incident_solar_radiation': 'tisr',  # used in atlite
+    'surface_solar_radiation_downwards': 'ssrd',  # used in atlite
+    'surface_net_solar_radiation': 'ssr',  # used in atlite
+    '2m_temperature': 'temperature',  # used in atlite
+}
+
+longname_rename_dict = {v: k for k, v in rename_dict.items()}
+
 era52cmip_dict = {v: k for k, v in cmip2era5_dict.items()}
 
 
@@ -98,7 +115,7 @@ def is_datetime360_ds(ds, verbose=True):
         calender360 = False
     else:
         myprint('WARNING: 360 day calender is used!',
-                    color='yellow', verbose=verbose)
+                color='yellow', verbose=verbose)
         calender360 = True
     return calender360
 
@@ -1076,13 +1093,13 @@ def reset_hours(dataset, time_dim="time"):
         The dataset with the time dimension reset.
     """
     # Set the hour of each time value to 0
-    dataset[time_dim] = dataset[time_dim].dt.floor('D').astype('datetime64[ns]')
+    dataset[time_dim] = dataset[time_dim].dt.floor(
+        'D').astype('datetime64[ns]')
 
     return dataset
 
 
-era5_unit_dict = {'surface_solar_radiation_downwards': 'J/m**2',
-                  '10m_u_component_of_wind': 'm/s',
+era5_unit_dict = {'10m_u_component_of_wind': 'm/s',
                   '10m_v_component_of_wind': 'm/s',
                   '100m_u_component_of_wind': 'm/s',
                   '100m_v_component_of_wind': 'm/s',
@@ -1092,8 +1109,10 @@ era5_unit_dict = {'surface_solar_radiation_downwards': 'J/m**2',
                   'total_column_water_vapour': 'kg/m**2',
                   'total_column_water': 'kg/m**2',
                   'total_column_ozone': 'DU',
-                  'surface_net_solar_radiation': 'J/m**2',
-                  'surface_net_thermal_radiation': 'J/m**2'
+                  'surface_net_solar_radiation': 'J m**-2',
+                  'surface_net_thermal_radiation': 'J m**-2',
+                  'surface_solar_radiation_downwards': 'J m**-2',
+                  'toa_incident_solar_radiation': 'J m**-2',
                   }
 
 
@@ -1137,20 +1156,6 @@ def add_era5_units(ds, verbose=True):
 def rename_var_era5(ds, verbose=True, **kwargs):
     names = get_vars(ds=ds)
 
-    rename_dict = {
-        'precipitation': 'pr',
-        'precip': 'pr',
-        '10m_u_component_of_wind': 'u10',
-        '10m_v_component_of_wind': 'v10',
-        '100m_u_component_of_wind': 'u100',
-        '100m_v_component_of_wind': 'v100',
-        'forecast_surface_roughness': 'fsr',
-        'total_sky_direct_solar_radiation_at_surface': 'fdir',  # used in atlite
-        'toa_incident_solar_radiation': 'tisr',  # used in atlite
-        'surface_solar_radiation_downwards': 'ssrd',  # used in atlite
-        'surface_net_solar_radiation': 'ssr',  # used in atlite
-        '2m_temperature': 'temperature',  # used in atlite
-    }
     for name in names:
         if name in rename_dict:
             ds = ds.rename({name: rename_dict[name]})
@@ -1223,6 +1228,16 @@ def rename_var_era5(ds, verbose=True, **kwargs):
         myprint(
             "Rename ar_binary_tag (atmospheric rivers) to: ar!",
             verbose=verbose)
+    return ds
+
+
+def rename_longera5(ds, verbose=True):
+    names = get_vars(ds)
+
+    for name in names:
+        if name in longname_rename_dict:
+            ds = ds.rename({name: longname_rename_dict[name]})
+            myprint(f'Rename {name} to {longname_rename_dict[name]}!', verbose=verbose)
     return ds
 
 
