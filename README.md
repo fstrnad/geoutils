@@ -50,7 +50,7 @@ To ensure a clean and isolated environment, it is recommended to create a new Py
 
 1. Create and activate a new environment:
     ```bash
-    conda create -n geoutils ipykernel netcdf4 xarray zarr cftime scikit-learn scipy statsmodels matplotlib seaborn -c conda-forge
+    conda create -n geoutils ipykernel netcdf4 xarray zarr cftime scikit-learn scipy statsmodels matplotlib seaborn cartopy -c conda-forge
     conda activate geoutils
     ```
 
