@@ -28,11 +28,11 @@ def parse_cf(ds):
     return ds.metpy.parse_cf().squeeze()
 
 
-def compute_windspeed(u, v, ws_name='windspeed'):
+def compute_windspeed(u, v, ws_name='windspeed', verbose=False):
     windspeed = np.sqrt(u ** 2 + v ** 2)
     windspeed = windspeed.rename(ws_name)
     gut.myprint(
-        f"Computed windspeed of wind dataset as {ws_name}.")
+        f"Computed windspeed of wind dataset as {ws_name}.", verbose=verbose)
     return windspeed
 
 

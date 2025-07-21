@@ -863,6 +863,25 @@ def zip_3_lists(list1, list2, list3):
     return np.array(list(zip(list1, list2, list3)))
 
 
+def arr2list(arr, to_str=False):
+    """Converts an array to a list.
+
+    Args:
+        arr (np.ndarray): The input array.
+        to_str (bool, optional): If True, converts the elements to strings. Defaults to False.
+
+    Returns:
+        list: The converted list.
+    """
+    if isinstance(arr, np.ndarray):
+        if to_str:
+            return [str(elem) for elem in arr.tolist()]
+        else:
+            return arr.tolist()
+    else:
+        raise ValueError('Input has to be a numpy array!')
+
+
 def create_xr_ds(data, dims, coords, name=None):
     return xr.DataArray(data=data,
                         dims=dims,
@@ -1237,7 +1256,8 @@ def rename_longera5(ds, verbose=True):
     for name in names:
         if name in longname_rename_dict:
             ds = ds.rename({name: longname_rename_dict[name]})
-            myprint(f'Rename {name} to {longname_rename_dict[name]}!', verbose=verbose)
+            myprint(
+                f'Rename {name} to {longname_rename_dict[name]}!', verbose=verbose)
     return ds
 
 

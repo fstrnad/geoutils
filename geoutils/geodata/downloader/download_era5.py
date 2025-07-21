@@ -1,4 +1,4 @@
-import re
+
 import cdsapi
 import sys
 import geoutils.utils.general_utils as gut
@@ -7,23 +7,12 @@ import geoutils.utils.time_utils as tu
 import geoutils.preprocessing.open_nc_file as onf
 import os
 import numpy as np
-from cdo import Cdo
 import argparse
 from importlib import reload
 reload(tu)
 reload(fut)
 reload(onf)
 
-
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 dict_era5 = {'t2m': '2m_temperature',
@@ -37,39 +26,39 @@ dict_era5 = {'t2m': '2m_temperature',
              'olr': 'top_net_thermal_radiation',
              'z': 'geopotential',
              }
-times_all = [
-    '00:00', '01:00', '02:00',
-    '03:00', '04:00', '05:00',
-    '06:00', '07:00', '08:00',
-    '09:00', '10:00', '11:00',
-    '12:00', '13:00', '14:00',
-    '15:00', '16:00', '17:00',
-    '18:00', '19:00', '20:00',
-    '21:00', '22:00', '23:00',
-]
-times3h = [
-    '00:00',
-    '03:00',
-    '06:00',
-    '09:00',
-    '12:00',
-    '15:00',
-    '18:00',
-    '21:00',
-]
-times6h = [
-    '00:00',
-    '06:00',
-    '12:00',
-    '18:00',
-]
-times12h = [
-    '00:00',
-    '12:00',
-]
-times24h = [
-    '12:00',
-]
+
+
+def era5_request(variable, years, months, days, times, **kwargs):
+    if not isinstance(variable, list):
+        variable = [variable]
+    if not isinstance(years, (list, np.ndarray)):
+        if not isinstance(years, (float, int)):
+            gut.myprint(f"Invalid year format: {years}")
+            raise ValueError(
+                f"Invalid year format: {years}. Must be a (list of) number.")
+        years = [years]
+
+    request = {
+        'product_type': ['reanalysis'],
+        'data_format': 'netcdf',
+        'download_format': 'unarchived',
+        'variable': variable,
+        'year': years,
+        'month': months,
+        'day': days,
+        'time': times,
+    }
+    if 'pressure_level' in kwargs:
+        request['pressure_level'] = kwargs['pressure_level']
+
+    return request
+
+
+def get_dataset(request):
+    if 'pressure_level' in request:
+        return 'reanalysis-era5-pressure-levels'
+    else:
+        return 'reanalysis-era5-single-levels'
 
 
 def rename_era5(variable):
@@ -77,6 +66,24 @@ def rename_era5(variable):
         return dict_era5[variable]
     else:
         return variable
+
+
+def get_filename(variable, plevel, start_month, end_month, timestr, years,
+                 **kwargs):
+    if isinstance(years, (list, np.ndarray)):
+        year = f'{years[0]}_{years[-1]}'
+    else:
+        year = f'{years}'
+    if plevel is not None:
+        dir = f'multi_pressure_level/{variable}/{plevel}/'
+        prefix = f'{variable}_{plevel}_{start_month}_{end_month}'
+    else:
+        dir = f'single_pressure_level/{variable}/'
+        if start_month != 'Jan' or end_month != 'Dec':
+            prefix = f'{variable}_{start_month}_{end_month}'
+        else:
+            prefix = f'{variable}'
+    return f'{dir}/{prefix}_{timestr}_{year}.nc'
 
 
 def download_era5(variable, plevel=None,
@@ -94,6 +101,8 @@ def download_era5(variable, plevel=None,
     Args:
         variable (str): Variable to be downloaded.
     """
+    from cdo import Cdo
+
     tstr = times
     if times == '1h':
         times = times_all
@@ -126,7 +135,7 @@ def download_era5(variable, plevel=None,
     else:
         run = True
 
-    years = np.arange(starty, endy+1, 1) # include last year as well
+    years = np.arange(starty, endy+1, 1)  # include last year as well
     smonths = tu.get_month_number(start_month)
     emonths = tu.get_month_number(end_month)
     marray = np.arange(smonths, emonths+1, 1)
