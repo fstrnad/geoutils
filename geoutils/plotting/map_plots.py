@@ -361,15 +361,18 @@ def create_map(
 
     if set_map:
         # axes properties
-        # coast_color = kwargs.pop("coast_color", "k")
-        ax.coastlines(alpha=alpha,
-                      #   color=coast_color
-                      )
+        coast_color = kwargs.pop("coast_color", "k")
         plot_borders = kwargs.pop("plot_borders", False)
+        lw_borders = kwargs.pop("lw_borders", 1)
+        ax.coastlines(alpha=alpha,
+                      color=coast_color,
+                      lw=lw_borders
+                      )
         if plot_borders:
             ax.add_feature(ctp.feature.BORDERS,
-                           linestyle="--",
-                           #    color="grey",
+                           linestyle="-",
+                           color=coast_color,
+                           lw=lw_borders,
                            alpha=alpha)
         land_ocean = kwargs.pop("land_ocean", False)
         if land_ocean:
@@ -433,6 +436,7 @@ def plot_map(dmap: xr.DataArray,
              label: str = None,
              title: str = None,
              significance_mask: xr.DataArray = None,
+             mask: xr.DataArray = None,
              lat_range: tuple[float, float] = None,
              lon_range: tuple[float, float] = None,
              dateline: bool = False,
@@ -454,6 +458,7 @@ def plot_map(dmap: xr.DataArray,
       label (str): Label for the colorbar.
       title (str): Title for the plot.
       significance_mask (xr.DataArray): Significance mask to apply on the plot.
+      mask (xr.DataArray): Mask to apply on the plot. 1 for masked data
       lat_range (Tuple[float, float]): Latitude range for the plot.
       lon_range (Tuple[float, float]): Longitude range for the plot.
       **kwargs: Additional keyword arguments.
@@ -489,6 +494,12 @@ def plot_map(dmap: xr.DataArray,
                                          transpose_dims=True,
                                          verbose=False,
                                          lon360=trafo_lon)
+        if mask is not None:
+            mask = sput.check_dimensions(mask,
+                                         transpose_dims=True,
+                                         verbose=False)
+            dmap = xr.where(mask, dmap, np.nan)
+            significance_mask = xr.where(mask, np.nan, 1)  # flip the mask
 
     put.check_plot_type(plot_type)
     projection = put.check_projection(ax=ax, projection=projection)

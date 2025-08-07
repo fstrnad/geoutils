@@ -1,6 +1,7 @@
 """Basic plotting functions for maps"""
 # import matplotlib.cm as cm
 import copy
+from venv import create
 import xarray as xr
 import pandas as pd
 import geoutils.utils.time_utils as tu
@@ -39,9 +40,7 @@ def plot_2d(
     all_x=False,
     norm=False,
     standardize=False,
-    ts_axis=False,
     plot_type='xy',
-    set_axis=True,
     **kwargs,
 ):
     reload(sut)
@@ -74,26 +73,10 @@ def plot_2d(
     y_err_arr = y_err if isinstance(y_err, list) else [y_err]
     x_err = kwargs.pop('x_err', [])
     x_err_arr = x_err if isinstance(x_err, list) else [x_err]
-
-    if ax is None:
-        figsize = kwargs.pop("figsize",
-                             (8, 5))
-        set_axis = True
-        if plot_type != 'polar':
-            fig, ax = plt.subplots(figsize=(figsize), nrows=1, ncols=1)
-        else:
-            fig, ax = plt.subplots(figsize=(figsize), nrows=1, ncols=1,
-                                   subplot_kw={'projection': 'polar'})
-    else:
-        fig = ax.get_figure()
     zorder = kwargs.pop('zorder', 0)
     kwargs_init = copy.deepcopy(kwargs)
-    if set_axis:
-        if ts_axis:
-            ax = prepare_ts_x_axis(ax, dates=x_arr[0], **kwargs)
-        else:
-            ax, kwargs = put.prepare_axis(
-                ax, plot_type=plot_type, **kwargs)
+    ax, fig, kwargs = create_axis(
+        ax, plot_type, **kwargs)
 
     num_items = len(y_arr)
     inverted_z_order = kwargs.pop('inv_z_order', False)
@@ -150,7 +133,8 @@ def plot_2d(
             if lw is None:
                 lw = lw_arr[idx] if idx < len(lw_arr) else lw_arr[-1]
             if alpha is None:
-                alpha = alpha_arr[idx] if idx < len(alpha_arr) else alpha_arr[-1]
+                alpha = alpha_arr[idx] if idx < len(
+                    alpha_arr) else alpha_arr[-1]
             mk = kwargs.get('mk', None)
             if mk is None:
                 mk = mk_arr[idx] if idx < len(mk_arr) else mk_arr[-1]
@@ -169,10 +153,8 @@ def plot_2d(
             if len(label_arr) > 0:
                 if len(label_arr) >= len(y_arr):
                     label = label_arr[idx]
-                elif len(label_arr) == idx-1:  # only plot last label in case of only 1 for multiple datasets
-                    label = label_arr[0]
                 else:
-                    label = None
+                    label = label_arr[0] if idx == len(y_arr)-1 else None
 
             if lcmap is None:
                 if color is None:
@@ -190,46 +172,33 @@ def plot_2d(
                     c = color
             else:
                 c = ccolors[idx]
-            if ts_axis:
-                x_0 = np.array(x[0], dtype="datetime64[D]")
-                x_end = np.array(x[-1], dtype="datetime64[D]") + \
-                    np.timedelta64(int(1), "D")
-                x_ts = np.arange(x_0, x_end, dtype="datetime64[D]")
-                y_ids = np.nonzero(
-                    np.in1d(x_ts, np.array(x, dtype="datetime64[D]")))[0]
 
-                y_ts = np.empty(x_ts.shape)
-                y_ts[:] = np.nan
-                y_ts[y_ids] = y
-                im = ax.plot(x_ts, y_ts, label=label, lw=lw,
-                             marker=mk, ls=ls, color=c, alpha=alpha)
+            if z is not None:
+                cmap = kwargs.pop("cmap", "viridis")
+                vmin = kwargs.pop('vmin', None)
+                vmax = kwargs.pop('vmax', None)
+                cm = plt.cm.get_cmap(cmap)
+                im = ax.scatter(x, y, c=z,
+                                label=label,
+                                lw=lw,
+                                marker=mk,
+                                markersize=mk_size,
+                                cmap=cm,
+                                vmin=vmin, vmax=vmax,
+                                alpha=alpha
+                                )
+                plt.colorbar(im, orientation='horizontal', label=label)
             else:
-                if z is not None:
-                    cmap = kwargs.pop("cmap", "viridis")
-                    vmin = kwargs.pop('vmin', None)
-                    vmax = kwargs.pop('vmax', None)
-                    cm = plt.cm.get_cmap(cmap)
-                    im = ax.scatter(x, y, c=z,
-                                    label=label,
-                                    lw=lw,
-                                    marker=mk,
-                                    markersize=mk_size,
-                                    cmap=cm,
-                                    vmin=vmin, vmax=vmax,
-                                    alpha=alpha
-                                    )
-                    plt.colorbar(im, orientation='horizontal', label=label)
-                else:
-                    im = ax.plot(x, y,
-                                 lw=lw,
-                                 marker=mk,
-                                 markersize=mk_size,
-                                 ls=ls,
-                                 color=c,
-                                 zorder=zorder,
-                                 alpha=alpha,
-                                 label=label
-                                 )
+                im = ax.plot(x, y,
+                             lw=lw,
+                             marker=mk,
+                             markersize=mk_size,
+                             ls=ls,
+                             color=c,
+                             zorder=zorder,
+                             alpha=alpha,
+                             label=label
+                             )
 
                 if len(y_lb_arr) > idx:
                     y_lb = y_lb_arr[idx] if y_lb_arr[idx] is not None else None
@@ -335,6 +304,21 @@ def plot_2d(
     return {"ax": ax, "im": im, "fig": fig}
 
 
+def create_axis(ax, plot_type, **kwargs):
+    if ax is None:
+        figsize = kwargs.pop("figsize",
+                             (8, 5))
+        fig, ax = plt.subplots(figsize=(figsize), nrows=1, ncols=1)
+
+    else:
+        fig = ax.get_figure()
+
+    ax, kwargs = put.prepare_axis(
+        ax, plot_type=plot_type, **kwargs)
+
+    return ax, fig, kwargs
+
+
 def fill_between(ax, x, y, y2, thresh=0, larger=True,
                  **kwargs):
     if larger:
@@ -367,7 +351,8 @@ def plot_hist(data, ax=None, fig=None,
               **kwargs):
     reload(sut)
     reload(gut)
-
+    ax, fig, kwargs = create_axis(
+        ax, plot_type, **kwargs)
     density = kwargs.pop("density", False)
     nbins = kwargs.pop("nbins", None)
     bw = kwargs.pop("bw", None)

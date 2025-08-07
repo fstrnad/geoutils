@@ -286,6 +286,23 @@ def get_max_num_tps(ds, q=None):
     return max_num_events
 
 
+def get_max(da, dim="time"):
+    """
+    Returns an xarray object with the maximum value and its corresponding time point.
+
+    Parameters:
+        da (xarray.DataArray or xarray.Dataset): Input data with a time dimension.
+        dim (str): The dimension along which to find the maximum (default: "time").
+
+    Returns:
+        xarray.DataArray: An xarray object with the maximum value and its time coordinate.
+    """
+    max_idx = da.argmax(dim=dim)
+    max_time = da[dim][max_idx]
+    max_val = da.isel({dim: max_idx})
+    return max_val
+
+
 def get_sel_tps_ds(
     ds,
     tps,
@@ -1411,7 +1428,7 @@ def get_tm_name(timemean):
         timemean == "season"
     ):  # This is not just 3MS!  found here: https://github.com/pydata/xarray/issues/810
         tm = "Q-FEB"
-    elif timemean == "year":
+    elif timemean == "year" or timemean == "1Y" or timemean == "Y":
         tm = "1Y"
     elif timemean == "pentad" or timemean == "5D" or timemean == "5d":
         tm = "5D"
@@ -1457,7 +1474,9 @@ def get_mean_time_series(da, lon_range, lat_range, time_roll=0, q=None):
 
 
 def compute_timemean(
-    ds, timemean, dropna=True, groupby=False, verbose=False, reset_time=False
+    ds, timemean, dropna=True,
+    groupby=False, verbose=False, reset_time=False,
+    fill_val=0,
 ):
     """Computes the monmean average on a given xr.dataset
 
@@ -1481,6 +1500,19 @@ def compute_timemean(
         if reset_time:
             ds = gut.rename_dim(ds, timemean, name="time")
     else:
+        # map logical freq to pandas offset alias
+        rule_map = {
+            'year':  'AS',      # Annual start = Jan 1
+            'month': 'MS',      # Month start = 1st of month
+            'week':  'W-MON',   # Weekly bins anchored on Mondays (ISO style)
+            'day':   '1D',      # Daily
+        }
+        freq = timemean.lower()
+        if freq not in rule_map:
+            raise ValueError(f"freq must be one of {list(rule_map)}; got {freq!r}")
+
+        rule = rule_map[freq]
+
         if timemean is None:
             return ds
         tm = get_tm_name(timemean)
@@ -1491,10 +1523,9 @@ def compute_timemean(
         gut.myprint(
             f"Compute {timemean}ly means of all variables!", verbose=verbose)
         if dropna:
-            ds = ds.resample(time=tm).mean(
-                dim="time", skipna=True).dropna(dim="time")
+            ds = ds.resample(time=rule).mean().fillna(fill_val).astype(ds.dtype).dropna(dim="time")
         else:
-            ds = ds.resample(time=tm).mean(dim="time", skipna=True)
+            ds = ds.resample(time=rule).mean().fillna(fill_val).astype(ds.dtype)
 
     return ds
 
@@ -1962,6 +1993,55 @@ def compute_evs(
         return event_series, mask
     else:
         return event_series
+
+
+def analyze_binary_event_series(ts: xr.DataArray):
+    """
+    Vectorized detection of binary “events” in an xarray DataArray of 0s and 1s:
+      1. Find the time-points of each event's first 1.
+      2. Count how many events.
+      3. Compute the average run-length of 1s.
+
+    Parameters
+    ----------
+    ts : xr.DataArray
+        1D time series of 0s and 1s, indexed by `.time`
+
+    Returns
+    -------
+    start_times : np.ndarray
+        The timestamps of each event's first 1.
+    n_events : int
+        How many events were found.
+    avg_length : float
+        Mean length (in consecutive 1s) of those events.
+    """
+    # 1) Raw array + time coord
+    arr = ts.values.astype(int)
+
+    # 2) Pad with zeros at both ends
+    padded = np.concatenate([[0], arr, [0]])
+
+    # 3) Compute diff: +1 marks run‐starts, -1 run‐ends
+    d = np.diff(padded)
+    starts_idx = np.flatnonzero(d == 1)  # indices into original arr
+
+    # 4) Map run‐ends → lengths
+    ends_idx = np.flatnonzero(d == -1)
+    lengths = ends_idx - starts_idx
+
+    # 5) Build outputs
+    start_times = ts['time'].isel(time=starts_idx)
+    n_events = lengths.size
+    avg_length = float(lengths.mean()) if n_events else 0.0
+    lengths_da = xr.DataArray(
+        lengths,
+        coords={'time': start_times},
+        dims=['time'],
+        name='event_length'
+    )
+
+    return start_times, lengths_da, n_events, avg_length
 
 
 def get_quantile_of_ts(ts, q=0.9,
@@ -3153,6 +3233,47 @@ def count_tps_occ(tps_arr, count_arr=None, counter='year',
     res_c_occ = np.mean(res_c_occ_arr, axis=0)/norm_fac
 
     return res_c_occ, count_arr
+
+
+def count_tps(ts: xr.DataArray, counter: str) -> xr.DataArray:
+    """
+    Count the number of time-points in each calendar “bucket” of a DataArray.
+
+    Parameters
+    ----------
+    ts : xr.DataArray
+        1D array with a datetime64 ‘time’ coordinate.
+    counter : {'year','month','day','week'}
+        Which calendar component to group by.
+
+        - 'year'  → calendar year (2000, 2001, …)
+        - 'month' → calendar month (1–12)
+        - 'day'   → day of month (1–31)
+        - 'week'  → ISO week number (1–53, across all years)
+
+    Returns
+    -------
+    counts : xr.DataArray
+        1D DataArray with a new index named after your counter,
+        containing the count of points in each bucket.
+    """
+    freq = counter.lower()
+    mapping = {
+        'year':  'AS',      # year start
+        'month': 'MS',      # month start
+        'week':  'W-MON',   # weekly on Mondays (ISO‐style)
+        'day':   '1D',      # daily
+    }
+    if freq not in mapping:
+        raise ValueError(f"freq must be one of {list(mapping)}; got {freq!r}")
+
+    rule = mapping[freq]
+    # resample → counts, indexed by real time stamps
+    counts = ts.resample(time=rule).count()
+    counts = counts.fillna(0).astype(int)
+    counts.name = f'count_per_{freq}'
+    counts.attrs['description'] = f'Number of datapoints per {freq}'
+    return counts
 
 
 def count_tps_occ_evs(evs, counter='month', count_arr=None,
