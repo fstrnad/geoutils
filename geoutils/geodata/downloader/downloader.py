@@ -157,17 +157,22 @@ def download_copernicus(variable,
     fut.create_folder(folder)
     gut.myprint(f'Download to folder {folder}...')
 
-    savepath = f'{folder}/{filename}'
+    files = []
+    for year in years:
 
-    if not fut.exist_file(savepath, verbose=True):
-        # This runs the ERA5 downloader
-        if run is True:
+        gut.myprint(f'Processing file for {year}')
+        if filename is None:
+            filename = get_filename(dataset, variable,
+                                    start_month, end_month,
+                                    timestr=tstr, years=year, **kwargs)
+        savepath = f'{folder}/{filename}'
 
-            for year in years:
+        if not fut.exist_file(savepath, verbose=True):
 
-                filename = get_filename(dataset, variable,
-                                        start_month, end_month,
-                                        timestr=tstr, years=year, **kwargs)
+            fut.create_folder(savepath)
+
+            # This runs the ERA5 downloader
+            if run:
                 gut.myprint(f"Download file {filename}...")
 
                 request = get_request(dataset=dataset,
@@ -183,3 +188,8 @@ def download_copernicus(variable,
                     client.retrieve(dataset, request, savepath)
                 except Exception as e:
                     gut.myprint(f"Error during download: {e}", color='red')
+            else:
+                gut.myprint(f"Dry run: {savepath}")
+
+        files.append(savepath)
+    return files

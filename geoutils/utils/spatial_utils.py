@@ -1037,7 +1037,8 @@ def average_num_eres(data):
     return num_eres/N
 
 
-valid_dims = ['time', 'lat', 'lon', 'plevel', 'lev', 'plev',
+valid_dims = ['time', 'valid_time'
+              'lat', 'lon', 'plevel', 'lev', 'plev',
               'level', 'hour', 'dayofyear',
               'dimx_lon', 'dimy_lon', 'dimz_lon', 'x',
               'Year', 'year', 'month', 'day', 'points']

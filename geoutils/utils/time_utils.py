@@ -1295,6 +1295,8 @@ def get_frequency(x):
     """
     # Convert the time dimension to a pandas Series
     time_series = pd.Series(x.time.values)
+    if len(time_series) < 2:
+        return "none"
 
     # Compute the time differences between consecutive timestamps
     time_diff = time_series.diff()
