@@ -1509,7 +1509,8 @@ def compute_timemean(
         }
         freq = timemean.lower()
         if freq not in rule_map:
-            raise ValueError(f"freq must be one of {list(rule_map)}; got {freq!r}")
+            raise ValueError(
+                f"freq must be one of {list(rule_map)}; got {freq!r}")
 
         rule = rule_map[freq]
 
@@ -1523,15 +1524,19 @@ def compute_timemean(
         gut.myprint(
             f"Compute {timemean}ly means of all variables!", verbose=verbose)
         if dropna:
-            ds = ds.resample(time=rule).mean().fillna(fill_val).astype(ds.dtype).dropna(dim="time")
+            ds = ds.resample(time=rule).mean().fillna(
+                fill_val).astype(ds.dtype).dropna(dim="time")
         else:
-            ds = ds.resample(time=rule).mean().fillna(fill_val).astype(ds.dtype)
+            ds = ds.resample(time=rule).mean().fillna(
+                fill_val).astype(ds.dtype)
 
     return ds
 
 
 def rolling_timemean(ds, window, dropna=True, center=True,
-                     method='mean', verbose=False,):
+                     method='mean', verbose=False,
+                     fill_lims=True
+                     ):
     """Computes the rolling mean of a given xr.dataset
 
     Args:
@@ -1540,6 +1545,45 @@ def rolling_timemean(ds, window, dropna=True, center=True,
     Returns:
         xr.dataset: monthly average dataset
     """
+    if fill_lims:
+        gut.myprint(
+            'Fills the limits of the rolling mean the start/end values!',
+            verbose=verbose)
+        # Fill the first and last (window-1)//2 elements with the first/last value
+        # how many samples to pad on each side?
+        if center:
+            left = window // 2
+            right = window - left - 1
+        else:
+            left = window - 1
+            right = 0
+        # quick no‐op if window == 1
+        if window == 1:
+            return ds.copy()
+
+        # grab first & last “frames”
+        first = ds.isel(time=0)
+        last = ds.isel(time=-1)
+
+        # build left‐padding by concatenating `left` copies of first.frame
+        if left > 0:
+            left_idx = pd.Index([ds.time.values[0]] * left, name="time")
+            pad_left = xr.concat([first] * left, dim=left_idx)
+
+        # build right‐padding by concatenating `right` copies of last.frame
+        if right > 0:
+            right_idx = pd.Index([ds.time.values[-1]] * right, name="time")
+            pad_right = xr.concat([last] * right, dim=right_idx)
+        # stitch them together
+        pieces = []
+        if left > 0:
+            pieces.append(pad_left)
+        pieces.append(ds)
+        if right > 0:
+            pieces.append(pad_right)
+
+        ds = xr.concat(pieces, dim="time")
+
     if method == 'mean':
         gut.myprint(
             f"Compute rolling mean ({window} window)!", verbose=verbose)
@@ -1557,6 +1601,7 @@ def rolling_timemean(ds, window, dropna=True, center=True,
         raise ValueError(f"Method {method} not available!")
     if dropna:
         ds = ds.dropna(dim="time")
+
     return ds
 
 
