@@ -205,7 +205,7 @@ def has_labels(ax):
     return bool(ax.get_xlabel()) or bool(ax.get_ylabel())
 
 
-def prepare_axis(ax, log=False, **kwargs):
+def prepare_axis(ax, **kwargs):
     """Prepares an axis for any type x to y plot
 
     Args:
@@ -215,84 +215,85 @@ def prepare_axis(ax, log=False, **kwargs):
         ax: ax matplotlib object
     """
     reload(pst)
-    set_grid = kwargs.pop('set_grid', False)
-    plot_type = kwargs.pop('plot_type', 'xy')
-    xlim = kwargs.pop("xlim", None)
-    ylim = kwargs.pop("ylim", None)
-    xticks = kwargs.pop('xticks', None)
-    yticks = kwargs.pop('yticks', None)
-    xticklabels = kwargs.pop('xticklabels', None)
-    yticklabels = kwargs.pop('yticklabels', None)
-    ylabel = kwargs.pop("ylabel", None)
-    ylabel_color = kwargs.pop("ylabel_color", "k")
-    xlabel = kwargs.pop("xlabel", None)
-    x_label_color = kwargs.pop("x_label_color", "k")
-    xlabel_pos = kwargs.pop("xlabel_pos", None)
-    ylabel_pos = kwargs.pop("ylabel_pos", None)
-    set_xint = kwargs.pop("set_xint", False)
-    set_yint = kwargs.pop("set_yint", False)
-    set_yaxis = kwargs.pop("set_yaxis", True)
-    set_xaxis = kwargs.pop("set_xaxis", True)
-    set_twinx = kwargs.pop("set_twinx", False)
-    set_twiny = kwargs.pop("set_twiny", False)
-    set_spines = kwargs.pop("set_spines", False)
-    spines_color = kwargs.pop("spines_color", "black")
-    reset_axis = kwargs.pop("reset_axis", False)
-    face_color = kwargs.pop("face_color", 'none')
-    set_ticks = kwargs.pop("set_ticks", True)
-    set_xticks = kwargs.pop("set_xticks", True)
-    set_yticks = kwargs.pop("set_yticks", True)
-    top_ticks = kwargs.pop("top_ticks", False)
-    right_ticks = kwargs.pop("right_ticks", False)
-    left_ticks = kwargs.pop("left_ticks", True)
+    set_grid = kwargs.get('set_grid', False)
+    xlim = kwargs.get("xlim", None)
+    ylim = kwargs.get("ylim", None)
+    xticks = kwargs.get('xticks', None)
+    yticks = kwargs.get('yticks', None)
+    xticklabels = kwargs.get('xticklabels', None)
+    yticklabels = kwargs.get('yticklabels', None)
+    ylabel = kwargs.get("ylabel", None)
+    ylabel_color = kwargs.get("ylabel_color", "k")
+    xlabel = kwargs.get("xlabel", None)
+    x_label_color = kwargs.get("x_label_color", "k")
+    xlabel_pos = kwargs.get("xlabel_pos", None)
+    ylabel_pos = kwargs.get("ylabel_pos", None)
+    set_xint = kwargs.get("set_xint", False)
+    set_yint = kwargs.get("set_yint", False)
+    set_yaxis = kwargs.get("set_yaxis", True)
+    set_xaxis = kwargs.get("set_xaxis", True)
+    set_twinx = kwargs.get("set_twinx", False)
+    set_twiny = kwargs.get("set_twiny", False)
+    set_spines = kwargs.get("set_spines", False)
+    spines_color = kwargs.get("spines_color", "black")
+    reset_axis = kwargs.get("reset_axis", False)
+    set_ticks = kwargs.get("set_ticks", True)
+    set_xticks = kwargs.get("set_xticks", True)
+    set_yticks = kwargs.get("set_yticks", True)
+    top_ticks = kwargs.get("top_ticks", False)
+    right_ticks = kwargs.get("right_ticks", False)
+    left_ticks = kwargs.get("left_ticks", True)
+    # face_color = kwargs.pop("face_color", 'none')
+    # ax.set_facecolor(face_color)
 
-    ax.set_facecolor(face_color)
+
+
     if set_twinx:
         ax.set_zorder(1)
         ax = ax.twinx()
         ax.set_zorder(1)
     if set_twiny:
         ax = ax.twiny()
-    if plot_type != 'polar':
-        ax.spines['bottom'].set_visible(set_xaxis)
-        ax.spines['left'].set_visible(set_yaxis)
-        if not set_yaxis:
-            ylabel = None
-            set_yticks = False
-        if not set_xaxis:
-            xlabel = None
-            set_xticks = False
 
-        if not set_twinx:
-            ax.spines["right"].set_visible(False)
-        else:
-            ax.spines["left"].set_visible(False)
-        ax.spines["top"].set_visible(set_spines)
-        if set_spines:
-            ax.spines['bottom'].set_color(spines_color)
-            ax.spines['top'].set_color(spines_color)
-            ax.spines['left'].set_color(spines_color)
-            ax.spines['right'].set_color(spines_color)
+    ax.spines['bottom'].set_visible(set_xaxis)
+    ax.spines['left'].set_visible(set_yaxis)
+    if not set_yaxis:
+        ylabel = None
+        set_yticks = False
+    if not set_xaxis:
+        xlabel = None
+        set_xticks = False
 
-        ax.grid(set_grid)
-        ax.tick_params(
-            direction="out",
-            length=pst.SMALL_SIZE / 2, width=1,
-            colors=ylabel_color, grid_alpha=0.5
-        )
+    if not set_twinx:
+        ax.spines["right"].set_visible(False)
+    else:
+        ax.spines["left"].set_visible(False)
+    ax.spines["top"].set_visible(set_spines)
+    if set_spines:
+        ax.spines['bottom'].set_color(spines_color)
+        ax.spines['top'].set_color(spines_color)
+        ax.spines['left'].set_color(spines_color)
+        ax.spines['right'].set_color(spines_color)
 
-        if not has_labels(ax) or reset_axis:
-            ax.set_xlabel(xlabel, color=x_label_color)
-            ax.set_ylabel(ylabel, color=ylabel_color)
+    ax.grid(set_grid)
+    ax.tick_params(
+        direction="out",
+        length=pst.SMALL_SIZE / 2, width=1,
+        colors=ylabel_color, grid_alpha=0.5
+    )
 
-            if xlabel_pos is not None:
-                if xlabel_pos == "right":
-                    ax.xaxis.set_label_coords(1.0, -0.2)
-                else:
-                    ax.xaxis.set_label_coords(xlabel_pos)
-            if ylabel_pos is not None:
-                ax.yaxis.set_label_coords(x=ylabel_pos[0],
-                                          y=ylabel_pos[1])
+    if not has_labels(ax):
+        ax.set_xlabel(xlabel, color=x_label_color)
+        ax.set_ylabel(ylabel, color=ylabel_color)
+
+        if xlabel_pos is not None:
+            if xlabel_pos == "right":
+                ax.xaxis.set_label_coords(1.0, -0.2)
+            else:
+                ax.xaxis.set_label_coords(xlabel_pos)
+        if ylabel_pos is not None:
+            ax.yaxis.set_label_coords(x=ylabel_pos[0],
+                                        y=ylabel_pos[1])
 
         if xlim is not None:
             ax.set_xlim(xlim)
@@ -326,17 +327,6 @@ def prepare_axis(ax, log=False, **kwargs):
         if set_yint:
             ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
 
-    else:
-        ax.margins(y=0)
-        # x_pos = np.deg2rad(np.arange(0, 360, 360/len(xticks)))
-        x_pos = np.deg2rad(np.linspace(0, 360, len(xticks)))
-        ax.set_xticks(x_pos)
-        ax.set_xticklabels(xticklabels)
-        ax.set_rlabel_position(60)  # get radial labels away from plotted line
-        # ax.set_rticks([0., 0.1, 0.2, .3, 0.4])  # Less radial ticks
-        ax.set_rlim(ylim)
-        # rotate the axis arbitrarily, just replace pi with the angle you want.
-        # ax.set_theta_offset(np.pi)
     title = kwargs.pop("title", None)
     set_title(title=title, ax=ax, **kwargs)
 
@@ -359,6 +349,7 @@ def prepare_axis(ax, log=False, **kwargs):
     if xlog is True:
         ax.set_xscale("log")
 
+    log = kwargs.pop("log", False)
     if log:
         ax.set_xscale("log")
         ax.set_yscale("log")

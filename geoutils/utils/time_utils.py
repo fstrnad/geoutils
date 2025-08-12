@@ -2,6 +2,8 @@ from calendar import timegm
 import re
 import datetime
 import math
+
+from torch import isin
 import geoutils.utils.spatial_utils as sput
 import geoutils.tsa.filters as flt
 import scipy.stats as st
@@ -1441,7 +1443,7 @@ def get_tm_name(timemean):
     elif timemean in ["1D", "1W", "1MS", "Q-FEB", "1Y", "5D", "3D", "2D"]:
         tm = timemean
     elif timemean == "all":
-        tm = None
+        tm = 'all'
     else:
         raise ValueError(
             f"{timemean} does not exist! Choose week, month, season, year!"
@@ -1508,7 +1510,16 @@ def compute_timemean(
             'month': 'MS',      # Month start = 1st of month
             'week':  'W-MON',   # Weekly bins anchored on Mondays (ISO style)
             'day':   '1D',      # Daily
+            'all': 'all'
         }
+
+        if timemean is None:
+            return ds
+        tm = get_tm_name(timemean)
+
+        if tm is None or tm == 'all':
+            return ds.mean(dim="time")
+
         freq = timemean.lower()
         if freq not in rule_map:
             raise ValueError(
@@ -1516,26 +1527,21 @@ def compute_timemean(
 
         rule = rule_map[freq]
 
-        if timemean is None:
-            return ds
-        tm = get_tm_name(timemean)
-
-        if tm is None:
-            return ds.mean(dim="time")
-
         gut.myprint(
             f"Compute {timemean}ly means of all variables!", verbose=verbose)
+        var_names = list(ds.data_vars) if isinstance(ds, xr.Dataset) else [ds.name]
+        this_dtype = ds.dtype if isinstance(ds, xr.DataArray) else ds[var_names[0]].dtype
         if dropna:
             ds = ds.resample(time=rule).mean().fillna(
-                fill_val).astype(ds.dtype).dropna(dim="time")
+                fill_val).astype(this_dtype).dropna(dim="time")
         else:
             ds = ds.resample(time=rule).mean().fillna(
-                fill_val).astype(ds.dtype)
+                fill_val).astype(this_dtype)
 
     return ds
 
 
-def rolling_timemean(ds, window, dropna=True, center=True,
+def rolling_timemean(ds, window, dropna=False, center=True,
                      method='mean', verbose=False,
                      fill_lims=True
                      ):

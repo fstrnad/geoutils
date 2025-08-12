@@ -1,10 +1,6 @@
 # %%
-import geoutils.plotting.plots as cplt
-import geoutils.utils.statistic_utils as sut
-import geoutils.indices.indices_utils as iut
 import numpy as np
 import xarray as xr
-import geoutils.utils.time_utils as tu
 from importlib import reload
 import pandas as pd
 import requests
@@ -48,14 +44,15 @@ def get_current_nao_data():
 
     return ds
 
-
+# %%
 if __name__ == '__main__':
     # Get the current NAO data
     nao_index = get_current_nao_data()
 
-    time_range = ['1979-01-01', '1985-12-31']
+    time_range = ['1979-01-01', '2024-12-31']
     nao_index = nao_index.sel(time=slice(*time_range))
-    nao_index = tu.compute_timemean(nao_index, timemean='month')
-    cplt.plot_2d(x=nao_index.time,
-                 y=nao_index.NAO,
-                 label_arr=['NAO Index'])
+    # nao_index = tu.compute_timemean(nao_index, timemean='month')
+    # cplt.plot_2d(x=nao_index.time,
+    #              y=nao_index.NAO,
+    #              label_arr=['NAO Index'])
+    # %%

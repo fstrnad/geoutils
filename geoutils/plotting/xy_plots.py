@@ -75,6 +75,8 @@ def plot_2d(
     x_err_arr = x_err if isinstance(x_err, list) else [x_err]
     zorder = kwargs.pop('zorder', 0)
     kwargs_init = copy.deepcopy(kwargs)
+
+    # Create the axis and figure
     ax, fig, kwargs = create_axis(
         ax, plot_type, **kwargs)
 
@@ -313,8 +315,10 @@ def create_axis(ax, plot_type, **kwargs):
     else:
         fig = ax.get_figure()
 
-    ax, kwargs = put.prepare_axis(
-        ax, plot_type=plot_type, **kwargs)
+    prepare_axis = kwargs.pop('prepare_axis', True)
+    if prepare_axis:
+        ax, kwargs = put.prepare_axis(
+            ax=ax, **kwargs)
 
     return ax, fig, kwargs
 
@@ -352,7 +356,7 @@ def plot_hist(data, ax=None, fig=None,
     reload(sut)
     reload(gut)
     ax, fig, kwargs = create_axis(
-        ax, plot_type, **kwargs)
+        ax=ax, plot_type=plot_type, **kwargs)
     density = kwargs.pop("density", False)
     nbins = kwargs.pop("nbins", None)
     bw = kwargs.pop("bw", None)
@@ -390,8 +394,11 @@ def plot_hist(data, ax=None, fig=None,
         bc_arr.append(bc)
 
     im = plot_2d(x=bc_arr, y=hc_arr,
-                 ax=ax, plot_type=plot_type,
-                 label=label, **kwargs)
+                 ax=ax,
+                 plot_type=plot_type,
+                 label=label,
+                 prepare_axis=False,
+                 **kwargs)
 
     return dict(
         ax=ax,
