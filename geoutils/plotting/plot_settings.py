@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings("ignore", message="facecolor will have no effect")
 TINY_SIZE = 8
 MINI_SIZE = 10
 SMALL_SIZE = 12

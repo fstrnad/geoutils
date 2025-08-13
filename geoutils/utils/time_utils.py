@@ -2097,6 +2097,37 @@ def analyze_binary_event_series(ts: xr.DataArray):
     return start_times, lengths_da, n_events, avg_length
 
 
+def keep_only_first_ones(da: xr.DataArray) -> xr.DataArray:
+    """
+    For a binary (0/1) DataArray with dims (..., lon, lat, time),
+    set all but the first 1 in each consecutive run (along time) to 0.
+
+    Parameters
+    ----------
+    da : xr.DataArray
+        Binary (0/1) DataArray with at least dimensions 'time', 'lon', 'lat'.
+
+    Returns
+    -------
+    xr.DataArray
+        Same shape as input, but consecutive 1s along time are replaced
+        by a single 1 at the run's first timestep.
+    """
+    if "time" not in da.dims:
+        raise ValueError("Input must have a 'time' dimension")
+
+    # ensure boolean
+    arr_bool = da.astype(bool)
+
+    # shift by 1 along time to compare with previous timestep
+    shifted = arr_bool.shift(time=1, fill_value=False)
+
+    # first-1s are where current is True and previous is False
+    first_only = arr_bool & (~shifted)
+
+    return first_only.astype(da.dtype)
+
+
 def get_quantile_of_ts(ts, q=0.9,
                        max_quantile=False,
                        return_indices=False,
