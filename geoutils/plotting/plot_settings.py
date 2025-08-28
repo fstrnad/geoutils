@@ -39,12 +39,12 @@ colors = [
     "tomato",
     "c",
     "tab:orange",
-    "tab:purple",
     "y",
-    "slategray",
-    "darkviolet",
     "tab:blue",
+    "darkviolet",
+    "tab:purple",
     "m",
+    "slategray",
 ]
 
 

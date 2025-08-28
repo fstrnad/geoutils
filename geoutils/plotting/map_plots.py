@@ -1270,7 +1270,7 @@ def create_multi_plot(nrows, ncols, projection=None,
     reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
-        figsize = (6*ncols, 6*nrows)
+        figsize = (6*ncols, 4*nrows)
 
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx
@@ -1295,7 +1295,7 @@ def create_multi_plot(nrows, ncols, projection=None,
     fig = plt.figure(figsize=(figsize[0], figsize[1]))
 
     hspace = kwargs.pop('hspace', 0.)
-    wspace = kwargs.pop('wspace', 0.3)
+    wspace = kwargs.pop('wspace', 0.2)
 
     gs = fig.add_gridspec(gs_rows, gs_cols,
                           height_ratios=ratios_h,
@@ -1338,7 +1338,9 @@ def create_multi_plot(nrows, ncols, projection=None,
                                           dateline=dateline)
 
                     if run_idx == end_idx-1 and full_length_row:
-                        axs.append(fig.add_subplot(gs[i, j:], projection=proj,
+                        end_row_idx = kwargs.pop('end_row_idx', ncols)
+                        axs.append(fig.add_subplot(gs[i, j:end_row_idx],
+                                                   projection=proj,
                                                    ))
                     else:
                         axs.append(fig.add_subplot(gs[i, j], projection=proj))
@@ -1358,7 +1360,8 @@ def create_multi_plot(nrows, ncols, projection=None,
                 else:
                     # Make a row at full length until the end of the columns
                     if run_idx == end_idx-1 and full_length_row:
-                        axs.append(fig.add_subplot(gs[i, j:]))
+                        end_row_idx = kwargs.pop('end_row_idx', ncols)
+                        axs.append(fig.add_subplot(gs[i, j:end_row_idx]))
                     else:
                         axs.append(fig.add_subplot(gs[i, j]))
             else:
