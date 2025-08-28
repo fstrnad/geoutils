@@ -2097,7 +2097,7 @@ def analyze_binary_event_series(ts: xr.DataArray):
     return start_times, lengths_da, n_events, avg_length
 
 
-def keep_only_first_ones(da: xr.DataArray) -> xr.DataArray:
+def remove_consecutive_ones(da: xr.DataArray) -> xr.DataArray:
     """
     For a binary (0/1) DataArray with dims (..., lon, lat, time),
     set all but the first 1 in each consecutive run (along time) to 0.
