@@ -36,7 +36,6 @@ colors = [
     'firebrick',
     "steelblue",
     "tab:green",
-    "m",
     "tomato",
     "c",
     "tab:orange",
@@ -45,6 +44,7 @@ colors = [
     "slategray",
     "darkviolet",
     "tab:blue",
+    "m",
 ]
 
 
