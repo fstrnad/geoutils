@@ -3,7 +3,6 @@ import re
 import datetime
 import math
 
-from torch import isin
 import geoutils.utils.spatial_utils as sput
 import geoutils.tsa.filters as flt
 import scipy.stats as st

@@ -1270,7 +1270,7 @@ def create_multi_plot(nrows, ncols, projection=None,
     reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
-        figsize = (6*ncols, 4*nrows)
+        figsize = (5*ncols, 4*nrows)
 
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx
@@ -1343,7 +1343,8 @@ def create_multi_plot(nrows, ncols, projection=None,
                                                    projection=proj,
                                                    ))
                     else:
-                        axs.append(fig.add_subplot(gs[i, j], projection=proj))
+                        axs.append(fig.add_subplot(gs[i, j],
+                                                   projection=proj))
                     if run_idx in map_axis:
                         map_dict = create_map(
                             ax=axs[run_idx],
@@ -1370,7 +1371,7 @@ def create_multi_plot(nrows, ncols, projection=None,
             run_idx += 1
             if run_idx >= end_idx:
                 break
-    # fig.tight_layout()
+
     if rem_idx is not None:
         if not isinstance(rem_idx, list):
             raise ValueError(
@@ -1403,6 +1404,8 @@ def create_multi_plot(nrows, ncols, projection=None,
     if title is not None:
         put.set_title(title=title, ax=None, fig=fig,
                       y_title=y_title)
+
+
 
     return {"ax": axs, "fig": fig, "projection": projection}
 
