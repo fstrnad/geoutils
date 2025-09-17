@@ -1266,7 +1266,8 @@ def plot_trajectory(lon_lat_pairs,
 
 def create_multi_plot(nrows, ncols, projection=None,
                       lon_range=None, lat_range=None,
-                      plot_grid=False, **kwargs):
+                      plot_grid=False,
+                      verbose=False, **kwargs):
     reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
@@ -1377,7 +1378,7 @@ def create_multi_plot(nrows, ncols, projection=None,
             raise ValueError(
                 f'rem_idx has to be of type list but is of type {type(rem_idx)}!')
         for idx in rem_idx:
-            gut.myprint(f'WARNING! Remove axis {idx}!')
+            gut.myprint(f'WARNING! Remove axis {idx}!', verbose=verbose)
             if idx < len(axs):
                 axs[idx].axis('off')
         enum_axis = gut.remove_elements_by_indices(axs, rem_idx)
