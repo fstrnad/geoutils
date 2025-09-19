@@ -104,9 +104,11 @@ def get_available_palettable_colormaps():
     scientific_div = [cmap for cmap in dir(
         pt.scientific.diverging) if not cmap.startswith("__")]
 
-    return (np.array(diverging_lst + qualitative_lst + sequential_lst +
-                     cmocean_div + cmocean_seq +
-                     scientific_seq + scientific_div),
+    all_maps = sorted(plt.colormaps() + diverging_lst + qualitative_lst +
+                      sequential_lst + cmocean_div + cmocean_seq +
+                      scientific_seq + scientific_div)
+
+    return (all_maps,
             diverging_lst,
             qualitative_lst,
             sequential_lst,
@@ -116,20 +118,17 @@ def get_available_palettable_colormaps():
             scientific_div)
 
 
-def get_cmap(cmap, levels=None, all=pst.enable_all_cmaps):
+def get_cmap(cmap, levels=None):
     mpl_cmaps = get_available_mpl_colormaps()
     if cmap in mpl_cmaps:
         colormap = cmap
-    elif not all:
-        raise ValueError(
-            f'Colormap {cmap} not found. Please choose from {mpl_cmaps}!')
-    if all and cmap not in mpl_cmaps:
+    else:
         import palettable as pt
         pt_cmaps, d_cmaps, q_cmaps, s_cmaps, cmocean_div, cmocean_seq, scientific_seq, scientific_div = get_available_palettable_colormaps()
+        cmap_strs = cmap.split("_")
+        reverse = True if 'r' in cmap_strs else False
 
         if cmap in pt_cmaps:
-            cmap_strs = cmap.split("_")
-            reverse = True if 'r' in cmap_strs else False
             if cmap in d_cmaps:
                 colormap = pt.colorbrewer.get_map(
                     cmap_strs[0], 'diverging',  number=int(cmap_strs[1]),
@@ -154,7 +153,7 @@ def get_cmap(cmap, levels=None, all=pst.enable_all_cmaps):
                     cmap, reverse=reverse)
         else:
             raise ValueError(
-                f'Colormap {cmap} not found. Please choose from {mpl_cmaps} or {pt_cmaps}')
+                f'Special colormap {cmap} not found. Please choose from {pt_cmaps}')
         colormap = colormap.mpl_colormap
 
     n_colors = len(levels) if levels is not None else None
@@ -246,8 +245,6 @@ def prepare_axis(ax, **kwargs):
     # face_color = kwargs.pop("face_color", 'none')
     # ax.set_facecolor(face_color)
 
-
-
     if set_twinx:
         ax.set_zorder(1)
         ax = ax.twinx()
@@ -293,7 +290,7 @@ def prepare_axis(ax, **kwargs):
                 ax.xaxis.set_label_coords(xlabel_pos)
         if ylabel_pos is not None:
             ax.yaxis.set_label_coords(x=ylabel_pos[0],
-                                        y=ylabel_pos[1])
+                                      y=ylabel_pos[1])
 
         if xlim is not None:
             ax.set_xlim(xlim)

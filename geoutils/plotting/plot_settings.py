@@ -1,4 +1,6 @@
+from matplotlib import rcParams, font_manager
 import matplotlib.pyplot as plt
+import scienceplots
 import warnings
 warnings.filterwarnings("ignore", message="facecolor will have no effect")
 TINY_SIZE = 8
@@ -9,15 +11,35 @@ BIGGER_SIZE = 16
 MAXIMUM_SIZE = 22
 MAX_ZORDER = 100
 
-set_new_font = False
+set_new_font = True
 enable_all_cmaps = True
 
 plt.rcdefaults()
 
+default_font = 'Liberation Sans'
+preferred_font = 'Lato'
+preferred_font = 'Liberation Sans'
+
+
+def set_font_or_fallback(preferred: str = preferred_font,
+                         fallback: str = default_font):
+    """Set Matplotlib font to `preferred` if available, else to `fallback`."""
+    available_fonts = {f.name for f in font_manager.fontManager.ttflist}
+
+    if preferred in available_fonts:
+        rcParams["font.family"] = preferred
+    elif fallback in available_fonts:
+        rcParams["font.family"] = fallback
+    else:
+        # fallback to default (DejaVu Sans) if neither is found
+        rcParams["font.family"] = "DejaVu Sans"
+
+
 # Choose 'serif', 'sans-serif', or 'monospace'
 plt.style.use('bmh')
+# plt.style.use(['science'])
 if set_new_font:
-    plt.rcParams['font.family'] = 'Lato'
+    set_font_or_fallback()
     plt.rcParams['font.serif'] = 'Ubuntu'
 plt.rcParams['axes.facecolor'] = 'white'
 plt.rc("font", size=SMALL_SIZE)  # controls default text sizes

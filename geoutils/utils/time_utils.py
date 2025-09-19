@@ -319,6 +319,14 @@ def get_sel_tps_ds(
         tps = tps.time
     else:
         tps = create_xr_tps(times=tps)
+
+    # Assure normalize the coordinate to numpy datetime64[ns]
+    # and normalize the selector to the same dtype
+    ds = ds.assign_coords(
+        time=("time", ds.time.values.astype("datetime64[ns]"))
+    )
+    tps = tps.time.values.astype("datetime64[ns]")
+
     stp = gut.is_single_tp(tps=tps)
     if not stp:
         if len(tps) == 0:
@@ -1528,8 +1536,10 @@ def compute_timemean(
 
         gut.myprint(
             f"Compute {timemean}ly means of all variables!", verbose=verbose)
-        var_names = list(ds.data_vars) if isinstance(ds, xr.Dataset) else [ds.name]
-        this_dtype = ds.dtype if isinstance(ds, xr.DataArray) else ds[var_names[0]].dtype
+        var_names = list(ds.data_vars) if isinstance(
+            ds, xr.Dataset) else [ds.name]
+        this_dtype = ds.dtype if isinstance(
+            ds, xr.DataArray) else ds[var_names[0]].dtype
         if dropna:
             ds = ds.resample(time=rule).mean().fillna(
                 fill_val).astype(this_dtype).dropna(dim="time")
@@ -1542,7 +1552,9 @@ def compute_timemean(
 
 def rolling_timemean(ds, window, dropna=False, center=True,
                      method='mean', verbose=False,
-                     fill_lims=True
+                     fill_lims=True,
+                     rolling_std=False,
+                     method_std='std',
                      ):
     """Computes the rolling mean of a given xr.dataset
 
@@ -1591,6 +1603,28 @@ def rolling_timemean(ds, window, dropna=False, center=True,
 
         ds = xr.concat(pieces, dim="time")
 
+    # Before overwritting ds first compute std
+    if rolling_std:
+        gut.myprint(
+            f"Compute rolling std ({window} window)!", verbose=verbose)
+        if method_std == 'std':
+            ds_std = ds.rolling(time=window, center=center).var()
+        elif method_std == 'minmax':
+            ds_std = ds.rolling(time=window, center=center).max() - ds.rolling(
+                time=window, center=center).min()
+        elif method_std == 'quantile':
+            q = 0.95
+            ds_std = ds.rolling(time=window, center=center).construct("window").quantile(q, dim="window") - ds.rolling(
+                time=window, center=center).construct("window").quantile(1-q, dim="window")
+        else:
+            raise ValueError(f"Method {method} not available!")
+
+        if isinstance(ds, xr.Dataset):
+            for var in list(ds.data_vars):
+                ds_std[var] = ds_std[var].rename(f"{var}_std")
+        elif isinstance(ds, xr.DataArray):
+            ds_std = ds_std.rename(f"{ds.name}_std")
+
     if method == 'mean':
         gut.myprint(
             f"Compute rolling mean ({window} window)!", verbose=verbose)
@@ -1608,6 +1642,8 @@ def rolling_timemean(ds, window, dropna=False, center=True,
         raise ValueError(f"Method {method} not available!")
     if dropna:
         ds = ds.dropna(dim="time")
+
+    ds = xr.merge([ds, ds_std]) if rolling_std else ds
 
     return ds
 
