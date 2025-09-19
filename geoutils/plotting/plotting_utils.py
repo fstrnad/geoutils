@@ -645,7 +645,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
         cax = ax
 
     label = kwargs.pop('label', None)
-
+    print(sci)
     if sci is not None:
         fmt = mpl.ticker.ScalarFormatter(useMathText=True)
         fmt.set_powerlimits((sci, sci))
@@ -659,6 +659,21 @@ def make_colorbar(ax, im, fig=None, **kwargs):
             extend=extend,
             **kwargs,
         )
+        # Get the offset text
+        offset = cbar.ax.yaxis.get_offset_text()
+
+        # --- Reposition depending on orientation ---
+        if cbar.orientation == "vertical":
+            offset.set_va("center")
+            offset.set_ha("left")
+            offset.set_x(1.5)   # shift right of the colorbar
+        elif cbar.orientation == "horizontal":
+            offset.set_va("bottom")
+            offset.set_ha("center")
+            offset.set_y(-2.0)  # shift below the colorbar
+            offset.set_x(1.5)   # shift right of the colorbar
+            print(offset.get_position())
+
     else:
         norm = kwargs.pop('norm', None)
         if norm == 'log':
