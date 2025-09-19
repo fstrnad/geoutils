@@ -151,6 +151,8 @@ def get_cmap(cmap, levels=None):
             elif cmap in scientific_div:
                 colormap = pt.scientific.diverging.get_map(
                     cmap, reverse=reverse)
+            else:
+                raise ValueError(f'Colormap {cmap} not found in palettable!')
         else:
             raise ValueError(
                 f'Special colormap {cmap} not found. Please choose from {pt_cmaps}')

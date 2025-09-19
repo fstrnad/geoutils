@@ -1271,7 +1271,7 @@ def create_multi_plot(nrows, ncols, projection=None,
     reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
-        figsize = (5*ncols, 4*nrows)
+        figsize = (4*ncols, 3*nrows)
 
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx
