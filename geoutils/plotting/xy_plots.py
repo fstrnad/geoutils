@@ -217,12 +217,13 @@ def plot_2d(
                 if y_lb is not None:
                     color_arr_ci = kwargs.pop('color_arr_ci', None)
                     c = color_arr_ci if color_arr_ci is not None else c
+                    alpha_err = kwargs.get('alpha_err', 0.3)
                     im = ax.fill_between(
                         x,
                         y_lb,
                         y_ub,
                         color=c,
-                        alpha=0.5,
+                        alpha=alpha_err,
                     )
 
                 plot_errorbar = kwargs.pop('plot_errorbars', False)

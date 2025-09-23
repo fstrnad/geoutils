@@ -968,7 +968,7 @@ def plot_array(
     #     raise ValueError(f"Plot type {plot_type} does not exist!")
     if put.check_geoaxis(ax):
         # set distance of plot to the title
-        y_title = kwargs.pop('y_title', 1.1)
+        y_title = kwargs.pop('y_title', 1.15)
     else:
         y_title = kwargs.pop('y_title', 1.05)
     kwargs = put.set_title(title=title, ax=ax,

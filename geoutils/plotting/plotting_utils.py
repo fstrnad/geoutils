@@ -603,11 +603,11 @@ def make_colorbar(ax, im, fig=None, **kwargs):
         ticks = ticks[::tick_step]
     else:
         ticks = None
-    # if sci is not None:
-    #     if sci < 0:
-    #         round_dec = abs(sci) + 1
-    #     else:
-    #         round_dec = 0
+    if sci is not None:
+        if sci < 0:
+            round_dec = abs(sci) + 1
+        else:
+            round_dec = 0
     round_dec = kwargs.pop("round_dec", None)
     set_int = kwargs.pop("set_int", False)
     if round_dec is not None:
@@ -644,7 +644,6 @@ def make_colorbar(ax, im, fig=None, **kwargs):
         cax = ax
 
     label = kwargs.pop('label', None)
-    print(sci)
     if sci is not None:
         fmt = mpl.ticker.ScalarFormatter(useMathText=True)
         fmt.set_powerlimits((sci, sci))
@@ -659,19 +658,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
             **kwargs,
         )
         # Get the offset text
-        offset = cbar.ax.yaxis.get_offset_text()
-
-        # --- Reposition depending on orientation ---
-        if cbar.orientation == "vertical":
-            offset.set_va("center")
-            offset.set_ha("left")
-            offset.set_x(1.5)   # shift right of the colorbar
-        elif cbar.orientation == "horizontal":
-            offset.set_va("bottom")
-            offset.set_ha("center")
-            offset.set_y(-2.0)  # shift below the colorbar
-            offset.set_x(1.5)   # shift right of the colorbar
-            print(offset.get_position())
+        # offset = place_colorbar_offset_text(cbar)
 
     else:
         norm = kwargs.pop('norm', None)
@@ -703,6 +690,44 @@ def make_colorbar(ax, im, fig=None, **kwargs):
         cbar.set_label(label=label, size=fsize)
 
     return cbar
+
+
+def place_colorbar_offset_text(cbar, pad_x=0.0, pad_y=0.02):
+    """
+    Place the ScalarFormatter offset text of a colorbar relative to the colorbar axes.
+
+    Vertical colorbar → above the colorbar (centered horizontally)
+    Horizontal colorbar → right of the colorbar (centered vertically)
+
+    Parameters
+    ----------
+    cbar : matplotlib.colorbar.Colorbar
+        The colorbar whose offset text will be repositioned.
+    pad_x : float, optional
+        Horizontal offset in axes coordinates (default=0).
+    pad_y : float, optional
+        Vertical offset in axes coordinates (default=0.02).
+
+    Returns
+    -------
+    matplotlib.text.Text
+        The offset text object (you can further style it).
+    """
+    # choose offset text depending on orientation
+    if cbar.orientation == "vertical":
+        txt = cbar.ax.yaxis.get_offset_text()
+        # txt.set_transform(cbar.ax.transAxes)  # use axes coordinates
+        txt.set_position((0.5 + pad_x, 1 + pad_y))  # above bar
+        txt.set_ha("center")
+        txt.set_va("bottom")
+    else:
+        txt = cbar.ax.xaxis.get_offset_text()
+        # txt.set_transform(cbar.ax.transAxes)
+        txt.set_position((1 + pad_x, pad_y))  # right of bar
+        txt.set_ha("left")
+        txt.set_va("center")
+
+    return txt
 
 
 def discrete_norm_ticks(vmin, vmax, shift_ticks=False, num_ticks=None):
