@@ -1,3 +1,4 @@
+from geoutils.utils.general_utils import load_package
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.offsetbox import AnchoredText
 import matplotlib as mpl
@@ -9,6 +10,7 @@ import string
 import cartopy.crs as ccrs
 import cartopy as ctp
 import cartopy.mpl as cmpl
+import geoutils.utils.general_utils as gut
 import geoutils.plotting.plot_settings as pst
 from importlib import reload
 reload(pst)
@@ -75,6 +77,8 @@ def get_available_mpl_colormaps():
     Returns:
         list: A list of strings containing the names of available colormaps.
     """
+    gut.load_package('cmocean')
+    gut.load_package('cmweather')
     colormaps = plt.colormaps()
     return np.array(colormaps)
 
@@ -87,8 +91,7 @@ def get_available_palettable_colormaps():
         list: A list of strings containing the names of available colormaps.
     """
     import palettable as pt
-    import cmocean as cmo
-    import cmweather
+
     diverging_lst = [cmap for cmap in dir(
         pt.colorbrewer.diverging) if not cmap.startswith("__")]
     qualitative_lst = [cmap for cmap in dir(
@@ -658,7 +661,7 @@ def make_colorbar(ax, im, fig=None, **kwargs):
             **kwargs,
         )
         # Get the offset text
-        # offset = place_colorbar_offset_text(cbar)
+        offset = place_colorbar_offset_text(cbar)
 
     else:
         norm = kwargs.pop('norm', None)
