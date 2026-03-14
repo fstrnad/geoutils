@@ -265,7 +265,10 @@ def plot_2d(
                              ax=ax,
                              edgecolor=edgecolor,
                              )
+            ax.set_xlabel(kwargs_init.pop("xlabel", "") or "")
+            ax.set_ylabel(kwargs_init.pop("ylabel", "") or "")
         # set again axis, because sns changes it
+
         ax, kwargs = put.prepare_axis(ax, reset_axis=True, **kwargs_init)
     # ############# Plotting  density ################
     elif plot_type == 'density':

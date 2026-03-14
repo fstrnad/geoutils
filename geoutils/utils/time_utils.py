@@ -3355,7 +3355,9 @@ def count_tps_occ(tps_arr, count_arr=None, counter='year',
     return res_c_occ, count_arr
 
 
-def count_tps(ts: xr.DataArray, counter: str) -> xr.DataArray:
+def count_tps(ts: xr.DataArray, counter: str,
+              start_time=None,
+              end_time=None) -> xr.DataArray:
     """
     Count the number of time-points in each calendar “bucket” of a DataArray.
 
@@ -3391,6 +3393,29 @@ def count_tps(ts: xr.DataArray, counter: str) -> xr.DataArray:
     # resample → counts, indexed by real time stamps
     counts = ts.resample(time=rule).count()
     counts = counts.fillna(0).astype(int)
+
+    # Step 2: normalize boundaries
+    if isinstance(start_time, xr.DataArray):
+        start_time = pd.to_datetime(start_time.item())
+    elif start_time is not None:
+        start_time = pd.to_datetime(start_time)
+
+    if isinstance(end_time, xr.DataArray):
+        end_time = pd.to_datetime(end_time.item())
+    elif end_time is not None:
+        end_time = pd.to_datetime(end_time)
+
+    # Step 3: construct full index if extension needed
+    first_bin = pd.to_datetime(counts.time.values[0])
+    last_bin = pd.to_datetime(counts.time.values[-1])
+
+    new_start = start_time if (start_time is not None and start_time < first_bin) else first_bin
+    new_end   = end_time   if (end_time   is not None and end_time   > last_bin)  else last_bin
+
+    if new_start != first_bin or new_end != last_bin:
+        full_index = pd.date_range(start=new_start, end=new_end, freq=rule)
+        counts = counts.reindex(time=full_index, fill_value=0)
+
     counts.name = f'count_per_{freq}'
     counts.attrs['description'] = f'Number of datapoints per {freq}'
     return counts

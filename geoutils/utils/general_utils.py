@@ -1,4 +1,6 @@
 """General Util functions."""
+import importlib
+import importlib.util
 import datetime
 from tabnanny import check
 import pkg_resources
@@ -41,6 +43,30 @@ rename_dict = {
 longname_rename_dict = {v: k for k, v in rename_dict.items()}
 
 era52cmip_dict = {v: k for k, v in cmip2era5_dict.items()}
+
+
+def load_package(package_name, verbose=False):
+    """
+    Check if a package is installed and import it dynamically.
+
+    Args:
+        package_name (str): The name of the package to check and import.
+
+    Returns:
+        module | None: The imported module if available, otherwise None.
+    """
+    # Check if the package is installed
+    spec = importlib.util.find_spec(package_name)
+    if spec is None:
+        myprint(f"Package '{package_name}' is not installed.",
+                color='red', verbose=verbose)
+        return None
+
+    # Import the package dynamically
+    module = importlib.import_module(package_name)
+    myprint(f"Package '{package_name}' successfully loaded.",
+            verbose=verbose)
+    return module
 
 
 def myprint(str, verbose=True,
