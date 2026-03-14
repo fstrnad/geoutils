@@ -644,6 +644,9 @@ def make_colorbar(ax, im, fig=None, **kwargs):
         cax = ax
 
     label = kwargs.pop('label', None)
+    kwargs_bar = kwargs.pop('kwargs_bar', {})
+    kwargs_bar['ticks'] = ticks
+    kwargs, kwargs_bar = set_kwargs_bar(kwargs, kwargs_bar)
     if sci is not None:
         fmt = mpl.ticker.ScalarFormatter(useMathText=True)
         fmt.set_powerlimits((sci, sci))
@@ -653,9 +656,8 @@ def make_colorbar(ax, im, fig=None, **kwargs):
             orientation=orientation,
             label=label,
             format=fmt,
-            ticks=ticks,
             extend=extend,
-            **kwargs,
+            **kwargs_bar,
         )
         # Get the offset text
         # offset = place_colorbar_offset_text(cbar)
@@ -672,10 +674,9 @@ def make_colorbar(ax, im, fig=None, **kwargs):
             cax=cax,
             orientation=orientation,
             label=label,
-            ticks=ticks,
             format=fmt,
             extend=extend,
-            **kwargs
+            **kwargs_bar
         )
 
     if shift_ticks is not None:
@@ -690,6 +691,16 @@ def make_colorbar(ax, im, fig=None, **kwargs):
         cbar.set_label(label=label, size=fsize)
 
     return cbar
+
+
+def set_kwargs_bar(kwargs, kwargs_bar):
+    if 'vmin' in kwargs.keys():
+        kwargs_bar['vmin'] = kwargs.pop('vmin')
+    if 'vmax' in kwargs.keys():
+        kwargs_bar['vmax'] = kwargs.pop('vmax')
+    if 'cmap' in kwargs.keys():
+        kwargs_bar['cmap'] = kwargs.pop('cmap')
+    return kwargs, kwargs_bar
 
 
 def place_colorbar_offset_text(cbar, pad_x=0.0, pad_y=0.02):
@@ -1008,3 +1019,35 @@ def get_grid_figure(fig=None, ax_ratios=None, **kwargs):
         ax_arr.append(plt.subplot(gs[ax_ratio[0], ax_ratio[1]]))
 
     return {'fig': fig, 'ax': ax_arr}
+
+
+def remove_colorbars(ax):
+    fig = ax.figure
+
+    # Find and remove a colorbar linked to this axis
+    for cb_ax in fig.axes[:]:      # copy list because we may modify it
+        if isinstance(cb_ax, mpl.colorbar.Colorbar):
+            # If this colorbar belongs to our axis, remove it
+            if cb_ax.ax == ax:
+                cb_ax.remove()
+                print('Colorbar removed.')
+        
+
+    # Clear the axis
+    ax.cla()
+    ax.set_axis_off()
+    return ax
+
+
+def full_reset_ax(ax, fig=None):
+    ax.cla()                  # clear all artists (content)
+    ax.set_xticks([])         # remove ticks
+    ax.set_yticks([])
+    ax.set_xticklabels([])    # remove tick labels
+    ax.set_yticklabels([])
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    ax.set_title('')
+    ax = remove_colorbars(ax=ax)
+
+    return ax

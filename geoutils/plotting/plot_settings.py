@@ -1,6 +1,5 @@
 from matplotlib import rcParams, font_manager
 import matplotlib.pyplot as plt
-import scienceplots
 import warnings
 warnings.filterwarnings("ignore", message="facecolor will have no effect")
 TINY_SIZE = 8

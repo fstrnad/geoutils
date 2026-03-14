@@ -1766,11 +1766,11 @@ def find_optimal_subrange(ds, lat_name="lat", lon_name="lon",
 
 
 def rapsd(field: np.ndarray,
-                           fft_method=np.fft,
-                           return_freq: bool = True,
-                           d: float = 1.0,
-                           normalize: bool = False
-                           ) -> np.ndarray:
+          fft_method=np.fft,
+          return_freq: bool = True,
+          d: float = 1.0,
+          normalize: bool = False
+          ) -> np.ndarray:
     """
 
     Adapted from https://github.com/pySTEPS/pysteps/blob/57ece4335acffb111d4de7665fb678b875d844ac/pysteps/utils/spectral.py#L100

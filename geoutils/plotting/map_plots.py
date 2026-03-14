@@ -327,7 +327,7 @@ def create_map(
                           central_longitude=central_longitude,
                           central_latitude=central_latitude,
                           dateline=dateline)
-    figsize = kwargs.pop("figsize", (9, 6))
+    figsize = kwargs.pop("figsize", (6, 4))
     # create figure
     if ax is None:
         # better working in cartopy and matplotlib=3.8.2
@@ -1283,24 +1283,24 @@ def create_multi_plot(nrows, ncols, projection=None,
     if nrows*ncols/end_idx >= nrows:
         nrows = nrows - 1 if nrows > 1 else nrows
 
-    ratios_w = kwargs.pop('ratios_w', np.ones(ncols))
-    ratios_h = kwargs.pop('ratios_h', np.ones(nrows))
+    width_ratios = kwargs.pop('width_ratios', np.ones(ncols))
+    height_ratios = kwargs.pop('height_ratios', np.ones(nrows))
     gs_rows = nrows
     gs_cols = ncols
-    if len(ratios_w) != ncols:
+    if len(width_ratios) != ncols:
         raise ValueError(
-            f'Length of ratios_w {len(ratios_w)} does not match number of columns {ncols}!')
-    if len(ratios_h) != nrows:
+            f'Length of width_ratios {len(width_ratios)} does not match number of columns {ncols}!')
+    if len(height_ratios) != nrows:
         raise ValueError(
-            f'Length of ratios_h {len(ratios_h)} does not match number of rows {nrows}!')
+            f'Length of height_ratios {len(height_ratios)} does not match number of rows {nrows}!')
     fig = plt.figure(figsize=(figsize[0], figsize[1]))
 
     hspace = kwargs.pop('hspace', 0.)
     wspace = kwargs.pop('wspace', 0.2)
 
     gs = fig.add_gridspec(gs_rows, gs_cols,
-                          height_ratios=ratios_h,
-                          width_ratios=ratios_w,
+                          height_ratios=height_ratios,
+                          width_ratios=width_ratios,
                           hspace=hspace, wspace=wspace)
     proj_arr = kwargs.pop('proj_arr', None)
     if proj_arr is None:

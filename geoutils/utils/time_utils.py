@@ -2238,7 +2238,7 @@ def threshold_ts(dataarray, th=None, th_=None, q=None, dim='time'):
 
 def detrend_dim(da, dim="time", deg=1, startyear=None, freq="D"):
     import cftime
-
+    da_name = da.name
     if startyear is None:
         p = da.polyfit(dim=dim, deg=deg)
         fit = xr.polyval(da[dim], p.polyfit_coefficients)
@@ -2268,6 +2268,7 @@ def detrend_dim(da, dim="time", deg=1, startyear=None, freq="D"):
         start_val = fit[0]
         detrended_da = da_detrend - fit + start_val
         detrended_da = xr.concat([da_no_detrend, detrended_da], dim="time")
+    detrended_da = gut.rename_da(da=detrended_da, name=f"{da_name}")
 
     return detrended_da
 
