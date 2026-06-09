@@ -43,9 +43,7 @@ dependencies = [
     "joblib",
     "tqdm",
     "palettable",
-    # Provides pkg_resources, imported by utils/general_utils.py for version
-    # parsing. TODO: migrate that call to packaging.version and drop this dep.
-    "setuptools",
+    "packaging",
 ]
 
 [project.optional-dependencies]

@@ -3,7 +3,7 @@ import importlib
 import importlib.util
 import datetime
 from tabnanny import check
-import pkg_resources
+from packaging.version import parse as parse_version
 from collections import Counter
 from pprint import pprint
 import contextlib
@@ -193,7 +193,7 @@ def check_xarray_version():
     installed_version = xr.__version__
 
     # Compare the installed version with the required version
-    if pkg_resources.parse_version(installed_version) >= pkg_resources.parse_version(required_version):
+    if parse_version(installed_version) >= parse_version(required_version):
         return True
     else:
         return False
