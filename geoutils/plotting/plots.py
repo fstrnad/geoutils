@@ -2,7 +2,7 @@ from importlib import reload
 import os
 import matplotlib.pyplot as plt
 import geoutils.utils.general_utils as gut
-
+reload(gut)
 
 # plotting utils
 import geoutils.plotting.plot_settings

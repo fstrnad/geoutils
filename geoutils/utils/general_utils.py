@@ -45,7 +45,7 @@ longname_rename_dict = {v: k for k, v in rename_dict.items()}
 era52cmip_dict = {v: k for k, v in cmip2era5_dict.items()}
 
 
-def load_package(package_name, verbose=False):
+def load_package_avail(package_name, verbose=False):
     """
     Check if a package is installed and import it dynamically.
 

@@ -1,4 +1,3 @@
-from geoutils.utils.general_utils import load_package
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.offsetbox import AnchoredText
 import matplotlib as mpl
@@ -77,8 +76,8 @@ def get_available_mpl_colormaps():
     Returns:
         list: A list of strings containing the names of available colormaps.
     """
-    gut.load_package('cmocean')
-    gut.load_package('cmweather')
+    gut.load_package_avail('cmocean')
+    gut.load_package_avail('cmweather')
     colormaps = plt.colormaps()
     return np.array(colormaps)
 
@@ -1034,7 +1033,7 @@ def remove_colorbars(ax):
             if cb_ax.ax == ax:
                 cb_ax.remove()
                 print('Colorbar removed.')
-        
+
 
     # Clear the axis
     ax.cla()

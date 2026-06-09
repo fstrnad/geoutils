@@ -25,3 +25,7 @@ __pycache__
 
 
 *.egg
+.DS_Store
+
+# Virtual environments
+.venv/

@@ -1,0 +1,1 @@
+"""Energy / capacity-factor utilities."""

@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geoutils"
+dynamic = ["version"]
+description = "Library for processing, analysis, and plotting of geospatial climate data stored in NetCDF files."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Felix Strnad", email = "felix.strnad@uni-tuebingen.de" },
+]
+keywords = ["climate", "geospatial", "xarray", "netcdf", "visualization", "cartopy"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Operating System :: OS Independent",
+]
+
+# Core runtime dependencies: the common processing + plotting stack that the
+# bulk of the package relies on. Specialised/heavy backends are optional extras
+# below and are imported lazily by the modules that need them.
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "xarray",
+    "netcdf4",
+    "cftime",
+    "zarr",
+    "dask",
+    "matplotlib",
+    "cartopy>=0.22",
+    "seaborn",
+    "scikit-learn",
+    "statsmodels",
+    "joblib",
+    "tqdm",
+    "palettable",
+    # Provides pkg_resources, imported by utils/general_utils.py for version
+    # parsing. TODO: migrate that call to packaging.version and drop this dep.
+    "setuptools",
+]
+
+[project.optional-dependencies]
+# Meteorological diagnostics and spherical-harmonic wind analysis.
+met = ["metpy", "windspharm"]
+# Downloading reanalysis / climate data (geoutils.geodata.downloader).
+download = ["cdsapi", "requests"]
+# Country / energy-system modelling (countries, energy, cutouts subpackages).
+energy = ["atlite", "geopandas", "pgeocode"]
+# Extra colormaps and raster helpers.
+viz = ["cmocean", "cmweather"]
+# Animations (geoutils.plotting.videos).
+video = ["imageio", "opencv-python"]
+# Jupyter tutorials.
+notebook = ["jupyter", "ipython", "ipywidgets"]
+# Development tooling.
+dev = ["pytest", "ruff"]
+
+[project.urls]
+Homepage = "https://github.com/fstrnad/geoutils"
+Repository = "https://github.com/fstrnad/geoutils"
+Issues = "https://github.com/fstrnad/geoutils/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "geoutils.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["geoutils*"]
+
+# Ship non-Python data files that the package loads at runtime.
+[tool.setuptools.package-data]
+"geoutils.countries" = ["*.geojson"]
+"geoutils.grid" = ["grids/*.npy"]
+"geoutils.cutouts" = ["*.csv"]
