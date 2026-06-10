@@ -5,7 +5,6 @@ import geoutils.indices.indices_utils as iut
 import numpy as np
 import xarray as xr
 import geoutils.utils.time_utils as tu
-from importlib import reload
 import pandas as pd
 
 
@@ -17,7 +16,6 @@ data = pd.read_csv(mei_file, delim_whitespace=True,
                    )
 # %%
 # Downloaded 24.01.2023
-reload(tu)
 time_range = ['1950-01', '2022-12']
 tps_nao_idx_months = tu.get_dates_of_time_range(
     time_range=time_range,
@@ -49,7 +47,6 @@ nao_index_days.to_netcdf(savepath_nao)
 
 # %%
 # Consistency check of monthly and daily time series
-reload(cplt)
 
 cplt.plot_xy(x_arr=[nao_index.time,
                     nao_index_days.time],

@@ -7,7 +7,6 @@ import geoutils.plotting.plots as gplt
 import geoutils.utils.time_utils as tu
 import geoutils.geodata.downloader.download_era5 as d5
 import geoutils.utils.met_utils as mut
-from importlib import reload
 
 # %%
 # Download the files
@@ -24,7 +23,6 @@ from importlib import reload
                         #    )
 # %%
 # Read files
-reload(bds)
 data_folder = '/home/strnad/data/climate_data/0.25/'
 orograph_file = f'{data_folder}/orography_2019.nc'
 
@@ -37,8 +35,6 @@ ds_era5_orography = bds.BaseDataset(data_nc=orograph_file,
 ds_era5_orography.average_time()
 
 # %%
-reload(gplt)
-reload(mut)
 mean_t = mut.geopotential_to_heigth(ds_era5_orography.get_da())-1024*mut.units('m')
 im_comp = gplt.plot_map(dmap=mean_t,
                         plot_type='contourf',

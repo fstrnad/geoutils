@@ -16,13 +16,10 @@ from matplotlib.ticker import FuncFormatter
 import geoutils.plotting.plotting_utils as put
 import geoutils.plotting.plot_settings as pst
 
-from importlib import reload
 
 """
 # x - y plots
 """
-reload(put)
-reload(pst)
 
 
 def plot_2d(
@@ -43,8 +40,6 @@ def plot_2d(
     plot_type='xy',
     **kwargs,
 ):
-    reload(sut)
-    reload(gut)
     if y is None:
         raise ValueError("y must be provided!")
 
@@ -357,8 +352,6 @@ def plot_hist(data, ax=None, fig=None,
               plot_type='xy',
               log=False,
               **kwargs):
-    reload(sut)
-    reload(gut)
     ax, fig, kwargs = create_axis(
         ax=ax, plot_type=plot_type, **kwargs)
     density = kwargs.pop("density", False)

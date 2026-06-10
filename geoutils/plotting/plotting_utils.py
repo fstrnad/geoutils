@@ -11,8 +11,6 @@ import cartopy as ctp
 import cartopy.mpl as cmpl
 import geoutils.utils.general_utils as gut
 import geoutils.plotting.plot_settings as pst
-from importlib import reload
-reload(pst)
 
 
 def set_legend(ax,
@@ -217,7 +215,6 @@ def prepare_axis(ax, **kwargs):
     Returns:
         ax: ax matplotlib object
     """
-    reload(pst)
     set_grid = kwargs.get('set_grid', False)
     xlim = kwargs.get("xlim", None)
     ylim = kwargs.get("ylim", None)

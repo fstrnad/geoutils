@@ -5,7 +5,6 @@ import geoutils.geodata.base_dataset as bds
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import os
-from importlib import reload
 
 output_folder = 'climate_data'
 time_range = ['1979-01-01', '2019-12-31']
@@ -22,7 +21,6 @@ else:
 
 # %%
 # TRMM
-reload(bds)
 if os.getenv("HOME") == '/home/goswami/fstrnad80':
     dirname_trmm = "/mnt/qb/goswami/data/trmm/trmm_pr_daily_1998_2019.nc4"
 else:

@@ -8,10 +8,6 @@ import geoutils.preprocessing.open_nc_file as onf
 import os
 import numpy as np
 import argparse
-from importlib import reload
-reload(tu)
-reload(fut)
-reload(onf)
 
 
 def pan_europe_request(variable, years, months, days, times, **kwargs):

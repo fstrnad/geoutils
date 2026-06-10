@@ -15,14 +15,10 @@ from scipy.spatial.distance import pdist
 import numpy as np
 import xarray as xr
 import sklearn.metrics as skm
-from importlib import reload
 import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
 import geoutils.plotting.plots as cplt
 from tqdm import tqdm
-reload(gut)
-reload(cplt)
-reload(sput)
 
 
 def plot_statistics(data, sc_th, Z):

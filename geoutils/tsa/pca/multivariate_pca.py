@@ -5,11 +5,6 @@ import numpy as np
 import xarray as xr
 import geoutils.tsa.pca.eof as eof
 import geoutils.tsa.pca.pca_utils as pca_utils
-from importlib import reload
-reload(sut)
-reload(tu)
-reload(gut)
-reload(pca_utils)
 
 
 class MultivariatePCA(eof.SpatioTemporalPCA):

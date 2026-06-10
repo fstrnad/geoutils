@@ -1,7 +1,6 @@
 from scipy.fft import irfft
 import geoutils.utils.time_utils as tu
 from statsmodels.tsa.arima_process import ArmaProcess
-from importlib import reload
 import geoutils.utils.general_utils as gut
 import geoutils.utils.statistic_utils as sut
 from statsmodels.tsa.ar_model import AutoReg
@@ -15,10 +14,6 @@ import nitime.algorithms as spectrum
 from tqdm import tqdm
 from scipy.stats import chi2
 # frequency of measurements per day
-reload(gut)
-reload(sut)
-reload(tu)
-reload(flt)
 
 
 def compute_fft(ts, freq_m=1,
@@ -219,7 +214,7 @@ def ar1(x, lags=25, verbose=False):
 
 
 def ar1_surrogates(data, N=1000, lags=10, verbose=False):
-    """In an AR(1) model
+    r"""In an AR(1) model
         x(t) - <x> = \gamma(x(t-1) - <x>) + \alpha z(t) ,
     where <x> is the process mean, \gamma and \alpha are process
     parameters and z(t) is a Gaussian unit-variance white noise.
@@ -227,7 +222,6 @@ def ar1_surrogates(data, N=1000, lags=10, verbose=False):
     Args:
         x (np.ndarraarray): array of the time series.
     """
-    reload(sut)
 
     # data = sut.standardize(dataset=data)
     T = np.size(data)

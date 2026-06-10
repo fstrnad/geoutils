@@ -4,10 +4,6 @@ import geoutils.utils.general_utils as gut
 import geoutils.utils.statistic_utils as sut
 import geoutils.utils.spatial_utils as sput
 import geoutils.utils.time_utils as tu
-from importlib import reload
-reload(gut)
-reload(sut)
-reload(sput)
 
 
 def map2flatten(x_map: xr.Dataset,

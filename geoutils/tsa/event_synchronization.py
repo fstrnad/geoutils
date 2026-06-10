@@ -7,7 +7,6 @@ Created on Tue Oct 20 11:09:03 2020
 """
 import geoutils.utils.file_utils as fut
 import geoutils.utils.general_utils as gut
-from importlib import reload
 import os
 import numpy as np
 import multiprocessing as mpi
@@ -17,8 +16,6 @@ from tqdm import tqdm
 import scipy.stats as st
 from itertools import product
 import geoutils.tsa.time_series_analysis as tsa
-reload(gut)
-reload(tsa)
 
 
 def event_synchronization(event_data, taumax=10, min_num_sync_events=2):
@@ -455,7 +452,6 @@ def null_model_one_series(i,
                           double_taumax,
                           q_vals=[0.25, 0.5, 0.75, 0.95, 0.98, 0.99, 0.995, 0.999],
                           nnelems=True):
-    reload(gut)
     list_thresholds_i = []
     for j in range(min_num_events, i + 1):
         season1 = np.zeros(le, dtype="bool")

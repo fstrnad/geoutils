@@ -3,13 +3,9 @@ import xarray as xr
 import scipy as sp
 import math
 from tqdm import tqdm
-from importlib import reload
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
 import geoutils.utils.general_utils as gut
-reload(gut)
-reload(tu)
-reload(sput)
 
 
 def get_day_progression_arr(data, tps, start,
@@ -144,7 +140,6 @@ def get_hovmoeller_prop(ds, tps, sps=None, eps=None, num_days=0,
                         lat_range=None, lon_range=None,
                         zonal=True,
                         dateline=False):
-    reload(sput)
     this_ds = sput.cut_map(ds=ds,
                            lon_range=lon_range,
                            lat_range=lat_range,
@@ -251,7 +246,6 @@ def get_box_propagation(ds, loc_dict, tps,
                         lev=None,
                         q_prog=None,
                         norm_grid_fac=2):  # four borders
-    reload(sput)
     coll_data = dict()
     if regions is None:
         regions = list(loc_dict.keys())

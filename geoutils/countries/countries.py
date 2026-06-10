@@ -1,6 +1,5 @@
 import os
 import xarray as xr
-from tabnanny import check
 import geopandas as gpd
 import cartopy.io.shapereader as shpreader
 import cartopy.crs as ccrs

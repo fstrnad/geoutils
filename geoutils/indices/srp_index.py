@@ -11,10 +11,7 @@ import geoutils.plotting.plots as cplt
 import geoutils.geodata.base_dataset as bds
 import copy
 
-from importlib import reload
 
-reload(tu)
-reload(cplt)
 # ======================================================================================
 # Compute the  Silk Road Pattern index (SRP) as the
 # 1st EOF of v200 over the region 20-60°N, 30-130°E

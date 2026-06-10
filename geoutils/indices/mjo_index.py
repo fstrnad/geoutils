@@ -2,7 +2,6 @@ import xarray as xr
 import geoutils.utils.time_utils as tu
 import geoutils.tsa.time_series_analysis as tsa
 
-from importlib import reload
 
 # ############################ MJO #####################################
 
@@ -23,8 +22,6 @@ def get_mjophase_tps(phase_number,
                      start_month='Jan', end_month='Dec',
                      active=None,
                      ):
-    reload(tsa)
-    reload(tu)
     rmm_index = get_mjo_index(time_range=time_range, start_month=start_month,
                               end_month=end_month)
     ampl = rmm_index['amplitude']
@@ -56,7 +53,6 @@ if __name__ == "__main__":
     rmm_phase_index_raw = xr.open_dataset(rmm_file_phase)
 
     # %%
-    reload(tu)
     tps_mjo = tu.get_dates_of_time_range(
         time_range=['1974-06-01', '2022-02-21'])  # Downloaded 23.02.2022
 

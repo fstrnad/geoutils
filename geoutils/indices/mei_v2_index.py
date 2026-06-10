@@ -7,7 +7,6 @@ import geoutils.geodata.base_dataset as bds
 
 import xarray as xr
 import geoutils.utils.time_utils as tu
-from importlib import reload
 import pandas as pd
 
 data_dir = "/home/strnad/data/"
@@ -83,7 +82,6 @@ if __name__ == '__main__':
                        names=tu.months
                        )
 
-    reload(tu)
     tps_mei_months = tu.get_dates_of_time_range(
         time_range=['1979-01', '2023-12'],
         freq='M')  # Downloaded 05.02.2024
@@ -111,7 +109,6 @@ if __name__ == '__main__':
     meiv2_index_days.to_netcdf(savepath_meiv2)
 
     # %%
-    reload(cplt)
     meiv2_index_days = get_meiv2_index()
     enso_types = get_enso_types()
     nino_tps = enso_types['El Nino']
@@ -130,7 +127,6 @@ if __name__ == '__main__':
 
     # %%
     # Plot the different PDO types
-    reload(cplt)
     dataset_file = data_dir + \
         f"/climate_data/2.5/era5_sst_{2.5}_ds.nc"
 

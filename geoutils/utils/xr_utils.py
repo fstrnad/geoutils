@@ -4,11 +4,6 @@ import geoutils.utils.time_utils as tu
 import geoutils.utils.file_utils as fut
 import numpy as np
 import geoutils.utils.statistic_utils as sut
-from importlib import reload
-reload(gut)
-reload(tu)
-reload(fut)
-reload(sut)
 
 
 def unify_datasets(list_da, delete_non_dim_coords=True):

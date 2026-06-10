@@ -2,7 +2,6 @@
 import importlib
 import importlib.util
 import datetime
-from tabnanny import check
 from packaging.version import parse as parse_version
 from collections import Counter
 from pprint import pprint

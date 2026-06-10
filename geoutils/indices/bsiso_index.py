@@ -8,7 +8,6 @@ import geoutils.indices.indices_utils as iut
 import geoutils.tsa.time_series_analysis as tsa
 import geoutils.plotting.plots as cplt
 import geoutils.geodata.base_dataset as bds
-from importlib import reload
 import pandas as pd
 
 
@@ -42,8 +41,6 @@ def get_bsisophase_tps(phase_number,
                        bsiso_name='BSISO',
                        ampl_th=1.5,
                        index_def='Kikuchi'):
-    reload(tsa)
-    reload(tu)
     bsiso_index = get_bsiso_index(time_range=time_range,
                                   start_month=start_month,
                                   end_month=end_month,
@@ -156,7 +153,6 @@ if __name__ == '__main__':
 
     # %%
     # Construct phase BSISO 2
-    reload(iut)
 
     angle_2 = np.rad2deg(np.arctan2(sut.standardize(data['BSISO2-2']),
                                     sut.standardize(data['BSISO2-1'])
@@ -247,8 +243,6 @@ if __name__ == '__main__':
 
     # %%
     # check for consistency
-    reload(bds)
-    reload(cplt)
     data_dir = "/home/strnad/data/"
 
     dataset_file = data_dir + \
@@ -260,7 +254,6 @@ if __name__ == '__main__':
                                 month_range=['Jun', 'Sep']
                                 )
     # %%
-    reload(cplt)
     nrows = 3
     ncols = 3
     an_type = 'month'

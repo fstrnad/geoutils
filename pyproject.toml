@@ -78,3 +78,7 @@ include = ["geoutils*"]
 "geoutils.countries" = ["*.geojson"]
 "geoutils.grid" = ["grids/*.npy"]
 "geoutils.cutouts" = ["*.csv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

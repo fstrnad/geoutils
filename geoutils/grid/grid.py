@@ -25,7 +25,6 @@ import geoutils.plotting.plots as cplt
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.utils.spatial_utils as sput
-from importlib import reload
 RADIUS_EARTH = 6371  # radius of earth in km
 PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -515,15 +514,12 @@ if __name__ == "__main__":
     Fek_fib = FeketeGrid(num_points=num_points,
                          pre_proccess_type='fibonacci')
     # %%
-    reload(cplt)
     im = cplt.create_multi_plot(nrows=1, ncols=2,
                                 subplot_kw=dict(projection='3d'))
 
     fk.plot_spherical_voronoi(Fib.X, ax=im['ax'][0])
     fk.plot_spherical_voronoi(Fek_fib.X, ax=im['ax'][1])
     # %%
-    reload(cplt)
-    reload(fk)
     im = cplt.create_multi_plot(nrows=1, ncols=2,
                                 subplot_kw=dict(projection='3d'))
     X_rand = fk.points_on_sphere(Fek_rand.num_points)
@@ -542,7 +538,6 @@ if __name__ == "__main__":
                                   Fek_rand.grid['lat'])
     X = arange_xyz(x, y, z)
     # %%
-    reload(cplt)
     im = cplt.plot_xy(
         x_arr=[np.arange(len(Fek_fib.dq)), np.arange(len(Fek_rand.dq))],
         y_arr=[Fek_fib.dq, Fek_rand.dq],

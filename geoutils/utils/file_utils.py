@@ -10,9 +10,6 @@ import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
 from pathlib import Path
 
-from importlib import reload
-reload(tu)
-reload(gut)
 
 
 # ##################### Assert functions #####################

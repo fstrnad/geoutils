@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.signal import find_peaks
 from sklearn.preprocessing import minmax_scale
-from importlib import reload
 from scipy.stats import norm, percentileofscore
 from scipy.stats import skew
 import scipy.special as special
@@ -14,7 +13,6 @@ import copy
 from joblib import Parallel, delayed
 import geoutils.utils.general_utils as gut
 
-reload(gut)
 
 
 def holm(pvals, alpha=0.05, corr_type="dunn"):

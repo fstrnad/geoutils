@@ -4,9 +4,6 @@ import pandas as pd
 import numpy as np
 import geoutils.utils.time_utils as tu
 import geoutils.utils.general_utils as gut
-from importlib import reload
-reload(tu)
-reload(gut)
 folder = '/home/strnad/data/air/'
 fname = '/home/strnad/data/air/All-India-Rainfall_1901_2019.csv'
 # fname = f'{folder}/air_index.csv'

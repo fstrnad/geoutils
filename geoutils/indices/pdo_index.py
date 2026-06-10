@@ -5,7 +5,6 @@ import geoutils.utils.general_utils as gut
 import numpy as np
 import xarray as xr
 import geoutils.utils.time_utils as tu
-from importlib import reload
 import pandas as pd
 import geoutils.geodata.base_dataset as bds
 
@@ -68,7 +67,6 @@ if __name__ == '__main__':
                        names=tu.months
                        )
 
-    reload(tu)
     tps_pdo_months = tu.get_dates_of_time_range(
         time_range=['1854-01', '2023-12'],
         freq='M')  # Downloaded 05.02.2024
@@ -96,7 +94,6 @@ if __name__ == '__main__':
     pdo_index_days.to_netcdf(savepath_pdo)
 
     # %%
-    reload(cplt)
     pdo_types = get_pdo_types()
     pos_tps = pdo_types['positive']
     neg_tps = pdo_types['negative']
@@ -108,7 +105,6 @@ if __name__ == '__main__':
 
     # %%
     # Plot the different PDO types
-    reload(cplt)
     dataset_file = data_dir + \
         f"/climate_data/2.5/era5_sst_{2.5}_ds.nc"
 

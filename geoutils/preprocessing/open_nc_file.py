@@ -5,12 +5,7 @@ import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
 from datetime import datetime
-from importlib import reload
 import xarray as xr
-reload(sput)
-reload(gut)
-reload(fut)
-reload(tu)
 
 
 def open_nc_file(
@@ -29,7 +24,6 @@ def open_nc_file(
         to_dataarray=False,
         zarr=False,
         **kwargs,):
-    reload(gut)
     fut.print_file_location_and_size(nc_files, verbose=verbose)
     if zarr:
         ds = xr.open_zarr(nc_files, consolidated=True)
@@ -203,7 +197,6 @@ def check_dimensions(ds, verbose=False, **kwargs):
     """
     Checks whether the dimensions are the correct ones for xarray!
     """
-    reload(sput)
     sort = kwargs.pop('sort', True)
     lon360 = kwargs.pop('lon360', False)
     datetime_ts = kwargs.pop('datetime_ts', True)

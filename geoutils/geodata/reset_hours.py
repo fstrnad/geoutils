@@ -1,7 +1,6 @@
 # %%
 import geoutils.geodata.wind_dataset as wds
 import geoutils.utils.statistic_utils as sut
-from importlib import reload
 import xarray as xr
 import numpy as np
 import geoutils.geodata.base_dataset as bds
@@ -10,7 +9,6 @@ import geoutils.utils.file_utils as fut
 import geoutils.utils.general_utils as gut
 import geoutils.preprocessing.open_nc_file as of
 
-reload(of)
 
 output_dir = "/home/strnad/data/"
 data_dir = "/home/strnad/data/"
@@ -19,12 +17,9 @@ output_folder = "summer_monsoon"
 
 # %%
 # Load wind fields
-reload(wds)
 levs = np.arange(100, 1050, 100)
 grid_step = 1
 # %%
-reload(fut)
-reload(of)
 for lev in levs:
     for var_name in ['u', 'v']:
         dataset_file = data_dir + \

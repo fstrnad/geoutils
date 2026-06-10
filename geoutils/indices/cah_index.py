@@ -5,11 +5,9 @@
 import geoutils.utils.statistic_utils as sut
 import geoutils.utils.general_utils as gut
 import numpy as np
-from importlib import reload
 
 import geoutils.tsa.pca.rot_pca as rot_pca
 import geoutils.utils.time_utils as tut
-reload(tut)
 
 
 # ======================================================================================
@@ -71,7 +69,6 @@ def get_cahi_strength(cahi_val=0):
 
 
 def cah_pattern(z200):
-    reload(sut)
 
     cah_index = get_cah_index(z200=z200, monthly=False)
     regressed_arr = sut.compute_correlation(

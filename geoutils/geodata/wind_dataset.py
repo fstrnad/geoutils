@@ -8,7 +8,6 @@ Class for network of rainfall events
 # %%
 
 import geoutils.geodata.multilevel_pressure as mp
-from importlib import reload
 import numpy as np
 import xarray as xr
 import copy
@@ -16,7 +15,6 @@ import geoutils.utils.time_utils as tu
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 
-reload(mp)
 
 
 class Wind_Dataset(mp.MultiPressureLevelDataset):
@@ -41,7 +39,6 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
                  grad_fac=False,
                  convention_labelling=False,  # label as U, V, OMEGA
                  **kwargs):
-        reload(mp)
         init_mask = kwargs.pop('init_mask', False)
         read_into_memory = kwargs.pop('read_into_memory', True)
         self.u_name = kwargs.pop('u_name', 'u')
@@ -137,7 +134,6 @@ class Wind_Dataset(mp.MultiPressureLevelDataset):
 
     def compute_windspeed(self, u=None, v=None, ws_name='windspeed'):
         import geoutils.utils.met_utils as metu
-        reload(metu)
         if u is None:
             u = self.ds[self.u_name]
         if v is None:

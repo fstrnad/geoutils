@@ -2,7 +2,6 @@
 import geoutils.geodata.wind_dataset as wds
 import geoutils.geodata.multilevel_pressure as mp
 import geoutils.utils.statistic_utils as sut
-from importlib import reload
 import xarray as xr
 import numpy as np
 import geoutils.geodata.base_dataset as bds
@@ -50,7 +49,6 @@ for plevel in levs:
     nc_files_z.append(dataset_file_z)
 
 # %%
-reload(mp)
 ds_q = mp.MultiPressureLevelDataset(data_nc=nc_files_q,
                                     plevels=levs,
                                     grid_step=grid_step,
@@ -88,7 +86,6 @@ for lev in levs:
 
 # %%
 # Load wind fields
-reload(wds)
 nc_files_u = []
 nc_files_v = []
 nc_files_w = []
@@ -105,7 +102,6 @@ for lev in levs:
         f"/climate_data/{grid_step}/era5_w_{grid_step}_{lev}_ds.nc"
     nc_files_w.append(dataset_file_w)
 
-reload(wds)
 ds_wind = wds.Wind_Dataset(data_nc_u=nc_files_u,
                            data_nc_v=nc_files_v,
                            can=False,
@@ -114,7 +110,6 @@ ds_wind = wds.Wind_Dataset(data_nc_u=nc_files_u,
                            convention_labelling=False,
                            )
 # %%
-reload(fut)
 for lev in levs:
     for var_name in ['u', 'v']:
         new_file_name = data_dir + \

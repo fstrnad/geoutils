@@ -7,7 +7,6 @@ Created on Tue Oct 20 11:09:03 2020
 """
 import random
 import geoutils.utils.general_utils as gut
-from importlib import reload
 import numpy as np
 import multiprocessing as mpi
 import time
@@ -17,7 +16,6 @@ import geoutils.tsa.time_series_analysis as tsa
 import geoutils.utils.time_utils as tu
 import dask
 
-reload(tu)
 
 
 def generate_random_events(x, T):

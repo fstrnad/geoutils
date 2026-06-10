@@ -2,7 +2,6 @@ import geoutils.utils.statistic_utils as sut
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
-from importlib import reload
 import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
 import geoutils.utils.file_utils as fut
@@ -10,9 +9,6 @@ import geoutils.plotting.plots as cplt
 import xarray as xr
 import cv2
 
-reload(fut)
-reload(cplt)
-reload(tu)
 
 
 def create_video(input_frames,

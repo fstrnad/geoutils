@@ -8,10 +8,6 @@ import numpy as np
 import xarray as xr
 from sklearn.decomposition import PCA
 
-from importlib import reload
-reload(sut)
-reload(tu)
-reload(pca_utils)
 
 
 class SpatioTemporalPCA:

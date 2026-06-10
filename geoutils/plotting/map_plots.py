@@ -11,13 +11,9 @@ import cartopy as ctp
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
-from importlib import reload
 
 import geoutils.plotting.plotting_utils as put
 import geoutils.plotting.plot_settings as pst
-reload(put)
-reload(pst)
-reload(gut)
 
 
 def estimate_distance(minimum_value, maximum_value, min_dist_val=1,
@@ -464,8 +460,6 @@ def plot_map(dmap: xr.DataArray,
       **kwargs: Additional keyword arguments.
     """
 
-    reload(put)
-    reload(sput)
     plt.rcParams["pcolor.shading"] = "nearest"  # For pcolormesh
     if label is None and isinstance(dmap, xr.DataArray):
         unset_label = kwargs.pop('unset_label', True)
@@ -663,8 +657,6 @@ def plot_array(
     set_axis=True,
     **kwargs,
 ):
-    reload(put)
-    reload(sput)
     if x is None and y is None and z is None:
         raise ValueError(
             'Please provide at least z')
@@ -1268,7 +1260,6 @@ def create_multi_plot(nrows, ncols, projection=None,
                       lon_range=None, lat_range=None,
                       plot_grid=False,
                       verbose=False, **kwargs):
-    reload(put)
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
         figsize = (4*ncols, 3*nrows)

@@ -9,7 +9,6 @@ import geoutils.indices.indices_utils as iut
 import geoutils.tsa.time_series_analysis as tsa
 import geoutils.plotting.plots as cplt
 
-from importlib import reload
 import pandas as pd
 
 
@@ -31,8 +30,6 @@ def get_mjophase_tps(phase_number,
                      start_month='Jan', end_month='Dec',
                      active=None, verbose=False
                      ):
-    reload(tsa)
-    reload(tu)
     rmm_index = get_mjo_index(time_range=time_range, start_month=start_month,
                               end_month=end_month, verbose=verbose)
     ampl = rmm_index['amplitude']
@@ -140,7 +137,6 @@ if __name__ == '__main__':
 
     # %%
     # Construct phase mjo 2
-    reload(iut)
 
     angle_2 = np.rad2deg(np.arctan2(sut.standardize(data['mjo2-2']),
                                     sut.standardize(data['mjo2-1'])
@@ -231,8 +227,6 @@ if __name__ == '__main__':
 
     # %%
     # check for consistency
-    reload(bds)
-    reload(cplt)
     data_dir = "/home/strnad/data/"
     dataset_file = data_dir + \
         f"climate_data/2.5/era5_ttr_{2.5}_ds.nc"

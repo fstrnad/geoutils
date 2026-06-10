@@ -1,12 +1,8 @@
 from cdo import Cdo
 import numpy as np
-from importlib import reload
 import geoutils.utils.file_utils as fut
 import geoutils.utils.general_utils as gut
 import geoutils.preprocessing.open_nc_file as onf
-reload(onf)
-reload(fut)
-reload(gut)
 
 
 def merge_files(input_files, output_file, open_ds=True, cdo=False):

@@ -3,7 +3,6 @@
 @Author  :   Felix Strnad
 '''
 import geoutils.utils.general_utils as gut
-from importlib import reload
 import cftime
 import os
 import numpy as np
@@ -12,7 +11,6 @@ import xarray as xr
 
 import geoutils.utils.time_utils as tut
 PATH = os.path.dirname(os.path.abspath(__file__))
-reload(tut)
 
 
 # ======================================================================================

@@ -8,9 +8,7 @@ import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
 import geoutils.geodata.base_dataset as bds
 import geoutils.plotting.plots as cplt
-from importlib import reload
 import geoutils.utils.time_utils as tut
-reload(tut)
 
 
 # ======================================================================================
@@ -83,7 +81,6 @@ def get_cgti_strength(z200,
 
 
 def cgt_pattern(z200):
-    reload(sut)
 
     cgt_index = get_cgt_index(z200=z200, monthly=False)
     regressed_arr = sut.compute_correlation(
@@ -94,7 +91,6 @@ def cgt_pattern(z200):
 
 # %%
 if __name__ == '__main__':
-    reload(bds)
     data_dir = "/home/strnad/data/"
     plot_dir = "/home/strnad/data/plots/cgti/"
 
@@ -116,7 +112,6 @@ if __name__ == '__main__':
                               an_types=['dayofyear', 'month'],
                               )
     # %%
-    reload(bds)
     grid_step_z = 2.5
     dataset_file = data_dir + \
         f"climate_data/{grid_step_z}/era5_z_{grid_step_z}_{lev}_ds.nc"
@@ -147,7 +142,6 @@ if __name__ == '__main__':
                                   end_month='Sep',
                                   )
     # %%
-    reload(cplt)
     cgt_types = ['pos', 'neg']
     nrows = len(cgt_types)
     ncols = 1

@@ -18,7 +18,6 @@ import geoutils.utils.file_utils as fut
 import geoutils.plotting.plots as gplt
 import geoutils.preprocessing.open_nc_file as of
 import atlite
-from importlib import reload
 import geoutils.countries.countries as cnt
 import geoutils.countries.capacities as cap
 
@@ -32,7 +31,6 @@ country_name = "Germany"
 year = 2013
 dataset_name = f"{country_name}-{year}"
 dataset_file = f"{dataset_name}.nc"
-reload(cnt)
 germany = cnt.get_country('Germany')
 germany_shape = cnt.get_country_shape('Germany')
 x1, y1, x2, y2 = germany_shape.total_bounds
@@ -57,7 +55,6 @@ cells = cutout.grid
 
 # %%
 # Plt raw data time series
-reload(gplt)
 fig = plt.figure(figsize=(12, 7))
 gs = GridSpec(3, 3, figure=fig)
 
@@ -107,7 +104,6 @@ power_generation_pv = cutout.pv(
     orientation={'slope': 35.0, 'azimuth': 180.0}).to_pandas(
 ).rename_axis(index="", columns="shapes")
 # %%
-reload(gplt)
 im = gplt.plot_map(cap_factors, title="Cap. Factor Wind", set_borders=True)
 # cells.plot(ax=im['ax'], **plot_grid_dict)
 savepath = f"{plot_dir}/{country_name}_cap_fact_wind.png"
@@ -129,7 +125,6 @@ ax1.set_ylabel("Generation [MW]")
 savepath = f"{plot_dir}/{country_name}_windpower_ts.png"
 gplt.save_fig(savepath, fig=im['fig'])
 # %%
-reload(gplt)
 im = gplt.create_multi_plot(nrows=1, ncols=2, figsize=(13, 4),
                             projection_arr=['PlateCarree', None],
                             lon_range=[x1, x2], lat_range=[y1, y2],)
@@ -155,7 +150,6 @@ gplt.save_fig(savepath, fig=im['fig'])
 
 # %%
 # Indicator Matrix
-reload(cnt)
 country = "Germany"
 indicator_matrix = cnt.cutout_country_cells(cutout, country)
 im = gplt.plot_map(indicator_matrix,

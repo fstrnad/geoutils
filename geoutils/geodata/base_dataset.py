@@ -11,13 +11,7 @@ import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
-from importlib import reload
 import xarray as xr
-reload(gut)
-reload(fut)
-reload(sput)
-reload(tu)
-reload(of)
 PATH = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -155,8 +149,6 @@ class BaseDataset():
         var_name=None,
         **kwargs,
     ):
-        reload(gut)
-        reload(of)
         self.plevel_name = kwargs.pop('plevel_name', 'lev')
 
         ds = of.open_nc_file(nc_files=nc_files,
@@ -348,7 +340,6 @@ class BaseDataset():
         """
         Checks whether the dimensions are the correct ones for xarray!
         """
-        reload(sput)
         sort = kwargs.pop('sort', True)
         self.lon360 = kwargs.pop('lon360', False)
         ts_days = kwargs.pop('ts_days', True)
@@ -592,13 +583,11 @@ class BaseDataset():
         return data
 
     def lon_2_360(self):
-        reload(sput)
         self.ds = sput.da_lon2_360(da=self.ds)
 
         return self.ds
 
     def lon_2_180(self):
-        reload(sput)
         self.ds = sput.da_lon2_180(da=self.ds)
 
         return self.ds
@@ -694,7 +683,6 @@ class BaseDataset():
         Usefule if get_map_index is called multiple times.
         Also defined spatial lon, lat locations are initialized.
         """
-        reload(gut)
         gut.myprint('Init the point-idx dictionaries', verbose=verbose)
         mask_arr = np.where(self.mask.data.flatten() == 1, True, False)
         if np.count_nonzero(mask_arr) == 0:
@@ -1253,7 +1241,6 @@ class BaseDataset():
             dim (str, optional): [description]. Defaults to 'time'.
             deg (int, optional): [description]. Defaults to 1.
         """
-        reload(tu)
         gut.myprint("Detrending data...")
         da_detrend = tu.detrend_dim(self.ds[self.var_name], dim=dim, deg=deg,
                                     startyear=startyear)
@@ -1277,7 +1264,6 @@ class BaseDataset():
         -------
         anomalies: xr.dataarray
         """
-        reload(tu)
         if dataarray is None:
             dataarray = self.ds[self.var_name]
         anomalies = tu.compute_anomalies(dataarray=dataarray,
@@ -1382,7 +1368,6 @@ class BaseDataset():
             array that contains only data within month-range.
 
         """
-        reload(tu)
         if dataarray is None:
             dataarray = self.ds[self.var_name]
         if set_zero:
@@ -1765,7 +1750,6 @@ class BaseDataset():
     def compute_event_time_series(
         self, var_name=None, **kwargs,
     ):
-        reload(tu)
         if var_name is None:
             var_name = self.var_name
         gut.myprint(f"Apply Event Series on variable {var_name}")
@@ -1803,7 +1787,6 @@ class BaseDataset():
             array that contains only data within month-range.
 
         """
-        reload(tu)
         times = self.ds["time"]
         start_year, end_year = tu.get_sy_ey_time(times, sy=None, ey=None)
         gut.myprint(

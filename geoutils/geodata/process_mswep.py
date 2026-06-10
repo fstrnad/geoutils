@@ -5,7 +5,6 @@ import geoutils.utils.time_utils as tu
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.plotting.plots as cplt
-from importlib import reload
 
 # %%
 plot_dir = "/home/strnad/data/plots/2023/"
@@ -32,7 +31,6 @@ ds_pr_2023.save(dataset_file)
 
 # %%
 # precipitation all
-reload(bds)
 grid_step = 1
 dataset_file = data_dir + \
     f"climate_data/{grid_step}/mswep_pr_{grid_step}_ds.nc"

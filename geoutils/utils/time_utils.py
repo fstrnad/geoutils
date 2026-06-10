@@ -11,12 +11,9 @@ import xarray as xr
 import numpy as np
 import copy
 
-from importlib import reload
 import geoutils.utils.statistic_utils as sut
 import geoutils.utils.general_utils as gut
 
-reload(gut)
-reload(sut)
 
 months = np.array(
     [
@@ -2855,8 +2852,6 @@ def get_lagged_ts_arr(ts1_arr, ts2_arr=None, lag=0):
 
 
 def lead_lag_corr(ts1, ts2, maxlags=20, corr_method="spearman", cutoff=1, cutoff_ts=1):
-    reload(gut)
-    reload(flt)
     ts1, ts2 = equalize_time_points(ts1, ts2)
 
     Nx = len(ts1)

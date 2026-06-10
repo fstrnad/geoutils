@@ -10,10 +10,8 @@ import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
 import geoutils.geodata.base_dataset as bds
 import geoutils.plotting.plots as cplt
-from importlib import reload
 
 import geoutils.utils.time_utils as tut
-reload(tut)
 data_dir = "/home/strnad/data/"
 plot_dir = "/home/strnad/data/plots/tej/"
 
@@ -122,7 +120,6 @@ def get_tej_strength(u200=None,
 
 
 def tej_pattern(u200):
-    reload(sut)
 
     tej_index = get_tej_index(u200=u200, monthly=False)
     regressed_arr = sut.compute_correlation(
@@ -133,7 +130,6 @@ def tej_pattern(u200):
 
 # %%
 if __name__ == '__main__':
-    reload(cplt)
     lev = 200
     grid_step = 1
     dataset_file = data_dir + \
@@ -189,7 +185,6 @@ if __name__ == '__main__':
                              #  lat_range=lat_range_cut,
                              )
     # %%
-    reload(cplt)
     an_type = 'month'
     var_type = f'u_an_{an_type}'
 

@@ -7,13 +7,10 @@ import geoutils.utils.file_utils as fut
 import geoutils.preprocessing.open_nc_file as of
 import xarray as xr
 
-from importlib import reload
 
 output_dir = "/home/strnad/data/"
 data_dir = "/home/strnad/data/"
 # %%
-reload(fut)
-reload(of)
 files = fut.get_files_in_folder(
     data_dir + "era5/single_pressure_level/100m_u_component_of_wind"
 )

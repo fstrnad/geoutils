@@ -1,8 +1,6 @@
-from importlib import reload
 import os
 import matplotlib.pyplot as plt
 import geoutils.utils.general_utils as gut
-reload(gut)
 
 # plotting utils
 import geoutils.plotting.plot_settings
@@ -10,10 +8,6 @@ import geoutils.plotting.map_plots
 import geoutils.plotting.xy_plots
 import geoutils.plotting.plotting_utils
 
-reload(geoutils.plotting.plot_settings)
-reload(geoutils.plotting.plotting_utils)
-reload(geoutils.plotting.map_plots)
-reload(geoutils.plotting.xy_plots)
 
 from geoutils.plotting.plot_settings import *
 from geoutils.plotting.map_plots import *

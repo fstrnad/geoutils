@@ -12,14 +12,10 @@ import pandas as pd
 import geoutils.tsa.event_synchronization as es
 import numpy as np
 import xarray as xr
-from importlib import reload
 import copy
 import geoutils.utils.time_utils as tu
 import geoutils.utils.general_utils as gut
 from tqdm import tqdm
-reload(tu)
-reload(gut)
-reload(sut)
 
 
 def get_yearly_ts(data_t, times,
@@ -200,8 +196,6 @@ def get_ee_ts(evs, rcevs=False, norm=False):
     Returns:
         xr.dataarray: array of 1-d time series.
     """
-    reload(tu)
-    reload(gut)
     evs_ts = tu.get_ts_arr_ds(da=evs)
     ts_idx_arr = get_evs_index_array(event_data=evs_ts, rcevs=rcevs)
     times = evs.time
@@ -357,7 +351,6 @@ def get_sync_times_ES(cnx,
 
 
     """
-    reload(es)
 
     if idx_2 is None:
         idx_2 = idx_1
@@ -424,7 +417,6 @@ def get_sync_times_ES_yearly(ds,
                              use_adj=True,
                              ):
 
-    reload(es)
     if region_2_dict is None:
         region_2_dict = region_1_dict
     times = ds.ds['time']

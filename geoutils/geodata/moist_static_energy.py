@@ -10,13 +10,11 @@ Class for network of rainfall events
 import geoutils.geodata.multilevel_pressure as mp
 import metpy.calc as metcalc
 from metpy.units import units
-from importlib import reload
 import numpy as np
 import xarray as xr
 import copy
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
-reload(mp)
 
 
 class MoistStaticEnergy(mp.MultiPressureLevelDataset):
@@ -39,7 +37,6 @@ class MoistStaticEnergy(mp.MultiPressureLevelDataset):
                  can=True,
                  vi=True,
                  **kwargs):
-        reload(mp)
         q_kwargs = copy.deepcopy(kwargs)
         t_kwargs = copy.deepcopy(kwargs)
         z_kwargs = copy.deepcopy(kwargs)

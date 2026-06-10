@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import geoutils.utils.time_utils as tu
-from importlib import reload
 
 
 def get_nino_indices(fname, time_range=None, time_roll=3, group='month'):
@@ -242,8 +241,6 @@ def tps_enso_years(season_type,
                    print_info=False,
                    start_month='Jan',
                    end_month='Dec'):
-    reload(tu)
-    reload(gut)
     # Select file for nino indices
     PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -370,7 +367,6 @@ def get_enso_years(nino_indices, month_range=[12, 2],
 
 
 def get_nao(fname, time_range=None, timemean=None):
-    reload(tu)
     df = pd.read_csv(
         fname, skiprows=0, names=['YEAR', 'MON', 'DAY', 'NAO'], delim_whitespace=True
     )

@@ -2,7 +2,6 @@
 
 @Author  :   Jakob Schlör, Felix Strnad
 '''
-from importlib import reload
 import cftime
 import os
 import numpy as np
@@ -14,7 +13,6 @@ import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tut
 from sklearn.decomposition import PCA
 PATH = os.path.dirname(os.path.abspath(__file__))
-reload(tut)
 
 # ======================================================================================
 # SST process functions
@@ -708,7 +706,6 @@ def get_enso_flavors_cmip(fname_sst, vname='ts', land_area_mask=None, climatolog
     Returns:
         (pd.Dataframe) Containing the classification including the time-period.
     """
-    reload(tut)
     # Process global SST data
     da_sst = xr.open_dataset(fname_sst)[vname]
     # Mask only oceans

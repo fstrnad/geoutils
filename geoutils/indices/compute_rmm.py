@@ -7,7 +7,6 @@ import numpy as np
 import xarray as xr
 import geoutils.geodata.base_dataset as bds
 import geoutils.geodata.wind_dataset as wds
-from importlib import reload
 
 plot_dir = "/home/strnad/data/rmm/"
 data_dir = "/home/strnad/data/"
@@ -24,7 +23,6 @@ ds_olr = bds.BaseDataset(data_nc=dataset_file,
                          )
 
 # wind data
-reload(wds)
 nc_files_u = []
 nc_files_v = []
 nc_files_w = []
@@ -46,15 +44,12 @@ ds_wind = wds.Wind_Dataset(data_nc_u=nc_files_u,
                            init_mask=False,
                            )
 # %%
-reload(tu)
 da = ds_olr.ds['olr']
 da_slideing = tu.sliding_window_mean(da=da, length=120)
 # %%
 # substract harmonics from time series
 ts = da.mean(dim=['lat', 'lon'])
 # %%
-reload(ffta)
-reload(cplt)
 fft_ts = ffta.compute_fft(ts=ts)
 reco = ffta.revmove_harmonics(ts=ts, num_harmonics=3)
 fft_reco = ffta.compute_fft(ts=reco)
@@ -65,6 +60,5 @@ cplt.plot_xy(x_arr=[fft_ts['period'],
              xlim=[0, 400],
              )
 # %%
-reload(ffta)
 ts_reconstruct = ffta.inverse_fft(ts_fft = fft_ts['fft'])
 # %%

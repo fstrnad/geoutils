@@ -10,10 +10,8 @@ import numpy as np
 import pandas as pd
 import geoutils.utils.time_utils as tu
 import geoutils.utils.statistic_utils as sut
-from importlib import reload
 # %%
 # Fit linear model
-reload(sut)
 
 
 def preproccess_data(data_arr,

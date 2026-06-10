@@ -9,12 +9,9 @@ import geoutils.utils.statistic_utils as sut
 import geoutils.indices.indices_utils as iut
 import geoutils.geodata.base_dataset as bds
 import geoutils.plotting.plots as cplt
-from importlib import reload
 
 
 if __name__ == '__main__':
-    reload(tu)
-    reload(gut)
     folder = '/home/strnad/data/omi/'
     filename = 'omi.1x.txt'
     fname = f'{folder}/{filename}'
@@ -62,8 +59,6 @@ if __name__ == '__main__':
 
     # %%
     # check for consistency
-    reload(bds)
-    reload(cplt)
     data_dir = "/home/strnad/data/"
 
     dataset_file = data_dir + \
@@ -75,7 +70,6 @@ if __name__ == '__main__':
                                 )
     # %%
     import geoutils.indices.bsiso_index as bs
-    reload(bs)
     nrows = 2
     ncols = 4
     im = cplt.create_multi_plot(nrows=nrows,

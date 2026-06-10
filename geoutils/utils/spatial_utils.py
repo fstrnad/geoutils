@@ -7,10 +7,6 @@ import scipy.interpolate as interp
 import geoutils.utils.time_utils as tu
 import geoutils.utils.general_utils as gut
 import geoutils.utils.statistic_utils as sut
-from importlib import reload
-reload(tu)
-reload(sut)
-reload(gut)
 
 RADIUS_EARTH = 6371  # radius of earth in km
 
@@ -151,7 +147,6 @@ def compute_rm(da, rm_val, dim='time', sm='Jan', em='Dec'):
     Returns:
         [type]: [description]
     """
-    reload(tu)
     times = da.time
     if dim != 'time':
         da_rm = da.rolling(time=rm_val, center=True).mean(
@@ -1167,7 +1162,6 @@ def check_dimensions(ds, datetime_ts=True,
     """
     Checks whether the dimensions are the correct ones for xarray!
     """
-    reload(tu)
     gut.myprint('Check dimensions of dataset!', verbose=verbose)
     ds = rename_dims(ds=ds, verbose=verbose)
     ds = remove_single_dim(ds=ds)
