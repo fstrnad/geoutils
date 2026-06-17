@@ -1,7 +1,5 @@
-"""Basic plotting functions for maps"""
-# import matplotlib.cm as cm
+"""Basic plotting functions for x-y (non-map) plots."""
 import copy
-from venv import create
 import xarray as xr
 import pandas as pd
 import geoutils.utils.time_utils as tu
@@ -15,11 +13,30 @@ import matplotlib.dates as mdates
 from matplotlib.ticker import FuncFormatter
 import geoutils.plotting.plotting_utils as put
 import geoutils.plotting.plot_settings as pst
+from geoutils.plotting.plot_result import PlotResult
 
 
 """
 # x - y plots
 """
+
+
+def _as_series_list(data):
+    """Normalize a plot input into a list of series.
+
+    A single series (a 1d ``np.ndarray``, ``pd.Series``/``pd.Index``,
+    ``xr.DataArray`` or a flat list/tuple of scalars) is wrapped into a
+    one-element list. A list/tuple whose elements are themselves array-like is
+    treated as multiple series and returned as-is. This lets callers pass a
+    single array directly while still expecting a list for multiple plots.
+    """
+    if isinstance(data, (list, tuple)):
+        if len(data) > 0 and isinstance(
+            data[0], (list, tuple, np.ndarray, xr.DataArray, pd.Series, pd.Index)
+        ):
+            return list(data)
+        return [data]
+    return [data]
 
 
 def plot_2d(
@@ -43,17 +60,8 @@ def plot_2d(
     if y is None:
         raise ValueError("y must be provided!")
 
-    if isinstance(y, (list)):
-        y_arr = y
-    else:
-        y_arr = [y]
-    if x is not None:
-        if isinstance(x, (list)):
-            x_arr = x
-        else:
-            x_arr = [x]
-    else:
-        x_arr = None
+    y_arr = _as_series_list(y)
+    x_arr = _as_series_list(x) if x is not None else None
 
     y_lb = kwargs.pop('y_lb', [])
     y_ub = kwargs.pop('y_ub', [])
@@ -302,7 +310,7 @@ def plot_2d(
         if plot_type == 'bar':
             ax.legend_.remove()
 
-    return {"ax": ax, "im": im, "fig": fig}
+    return PlotResult(ax=ax, im=im, fig=fig)
 
 
 def create_axis(ax, plot_type, **kwargs):

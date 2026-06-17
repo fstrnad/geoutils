@@ -1,6 +1,7 @@
 """Basic plotting functions for maps"""
 # import matplotlib.cm as cm
 import copy
+from dataclasses import dataclass
 import geoutils.utils.spatial_utils as sput
 import matplotlib.patches as mpatches
 import geoutils.utils.general_utils as gut
@@ -14,6 +15,7 @@ import cartopy.crs as ccrs
 
 import geoutils.plotting.plotting_utils as put
 import geoutils.plotting.plot_settings as pst
+from geoutils.plotting.plot_result import PlotResult
 
 
 def estimate_distance(minimum_value, maximum_value, min_dist_val=1,
@@ -517,7 +519,7 @@ def plot_map(dmap: xr.DataArray,
     ax = map_dict['ax']
     fig = map_dict['fig']
     kwargs = map_dict['kwargs']
-    projection = ccrs.PlateCarree()  # nicht: central_longitude=central_longitude!
+    projection = ccrs.PlateCarree()  # note: do NOT pass central_longitude here!
 
     # interpolate grid of points to regular grid
     grid_step = kwargs.pop('grid_step', 1)  # by default 1 grid
@@ -640,6 +642,145 @@ def plot_map(dmap: xr.DataArray,
 # Plotting of 2D data (not necessary a map)
 
 
+@dataclass
+class _DrawContext:
+    """Mutable state shared between plot_array and its per-type draw helpers."""
+    x: object
+    y: object
+    z: object
+    cmap: object
+    norm: object
+    vmin: object
+    vmax: object
+    levels: object
+    extend: object
+    projection: object
+    color: object
+    alpha: float
+    lw: float
+    size: float
+    marker: str
+    fillstyle: str
+    zorder: int
+    kwargs: dict
+
+
+def _draw_scatter(ax, c):
+    return ax.scatter(
+        x=c.x, y=c.y, c=c.z,
+        vmin=c.vmin, vmax=c.vmax, cmap=c.cmap,
+        transform=c.projection, alpha=c.alpha,
+        marker=mpl.markers.MarkerStyle(marker=c.marker, fillstyle=c.fillstyle),
+        s=c.size,
+    )
+
+
+def _draw_points(ax, c):
+    return ax.plot(
+        c.x, c.y, c=c.color, linewidth=0, linestyle='None',
+        markersize=c.size, marker=c.marker, fillstyle=c.fillstyle,
+        transform=c.projection, alpha=c.alpha, zorder=c.zorder,
+    )
+
+
+def _draw_colormesh(ax, c):
+    return ax.pcolor(
+        c.x, c.y, c.z, cmap=c.cmap, shading="auto", norm=c.norm, zorder=c.zorder,
+    )
+
+
+def _draw_colormesh_map(ax, c):
+    if c.levels is not None:
+        return ax.pcolor(
+            c.x, c.y, c.z, cmap=c.cmap, transform=c.projection,
+            shading="auto", norm=c.norm, zorder=c.zorder,
+        )
+    return ax.pcolor(
+        c.x, c.y, c.z, cmap=c.cmap, vmin=c.vmin, vmax=c.vmax,
+        transform=c.projection, shading="auto", zorder=c.zorder,
+    )
+
+
+def _draw_contourf(ax, c):
+    # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contourf.html
+    if c.cmap is None and c.color is None:
+        raise ValueError('Please provide a cmap or color for contourf/discrete!')
+    if c.cmap is not None and c.color is not None:
+        raise ValueError(
+            'Please provide either a cmap or color for contourf/discrete!')
+    im = ax.contourf(
+        c.x, c.y, c.z, levels=c.levels, norm=c.norm, vmin=c.vmin, vmax=c.vmax,
+        cmap=c.cmap, colors=c.color, transform=c.projection, alpha=c.alpha,
+        extend=c.extend, zorder=c.zorder,
+    )
+    if c.vmin is None:
+        c.vmin = im.get_clim()[0]
+    if c.vmax is None:
+        c.vmax = im.get_clim()[1]
+    return im
+
+
+def _draw_discrete(ax, c):
+    c.vmin = np.nanmin(c.z)
+    c.vmax = np.nanmax(c.z)
+    normticks = put.discrete_norm_ticks(
+        c.vmin, c.vmax, num_ticks=c.levels, shift_ticks=True)
+    c.levels = np.array(normticks[:], dtype=float)
+    return _draw_contourf(ax, c)
+
+
+def _draw_contour(ax, c):
+    cmap = c.cmap if c.color is None else None
+    ls = c.kwargs.pop('ls', 'solid')
+    clabel = c.kwargs.pop('clabel', False)
+    if c.color == 'solid_dashed':
+        colors = c.kwargs.pop('color_contour', ['black', 'black'])
+        styles = ['solid', 'dashed']
+        level_arr = [c.levels[c.levels > 0], c.levels[c.levels < 0]]
+    else:
+        colors = [c.color]
+        styles = [ls]
+        level_arr = [c.levels]
+    im = None
+    for color, ls, this_levels in zip(colors, styles, level_arr):
+        im = ax.contour(
+            c.x, c.y, c.z, levels=this_levels, cmap=cmap,
+            transform=c.projection, colors=color, linewidths=c.lw,
+            alpha=c.alpha, linestyles=ls, zorder=c.zorder,
+        )
+        if clabel:
+            clabel_dict = dict(
+                fontsize=c.kwargs.pop('clabel_fsize', pst.MINI_SIZE),
+                fmt=c.kwargs.pop('clabel_fmt', None),
+                colors=color, inline=True, inline_spacing=8,
+                use_clabeltext=True, rightside_up=True,
+            )
+            if clabel_dict['fmt'] is None:
+                del clabel_dict['fmt']
+            ax.clabel(im, **clabel_dict)
+    return im
+
+
+# scatter/points are resolved separately because `z is None` also routes to
+# points; the rest dispatch straight off plot_type.
+_FIELD_DRAWERS = {
+    "colormesh": _draw_colormesh,
+    "colormesh_map": _draw_colormesh_map,
+    "contourf": _draw_contourf,
+    "discrete": _draw_discrete,
+    "contour": _draw_contour,
+}
+
+
+def _resolve_drawer(plot_type, z):
+    """Pick the draw helper, preserving plot_array's original precedence."""
+    if plot_type == "scatter":
+        return _draw_scatter
+    if plot_type == "points" or z is None:
+        return _draw_points
+    return _FIELD_DRAWERS.get(plot_type)
+
+
 def plot_array(
     z=None,  # Not required for points
     x=None,
@@ -655,8 +796,19 @@ def plot_array(
     title=None,
     significance_mask=None,
     set_axis=True,
+    color_bounds='quantile',
     **kwargs,
 ):
+    """Draw a 2D array (or scattered points) onto an axis.
+
+    Parameters
+    ----------
+    color_bounds : {'quantile', 'minmax', 'absmax', 'absquantile'}
+        How vmin/vmax are derived when not passed explicitly. NOTE: the default
+        ``'quantile'`` clips the colour scale to the 10th-90th percentile of the
+        data, so extreme values saturate unless you pass vmin/vmax or
+        ``color_bounds='minmax'``.
+    """
     if x is None and y is None and z is None:
         raise ValueError(
             'Please provide at least z')
@@ -697,6 +849,7 @@ def plot_array(
 
     set_norm = kwargs.pop('norm', None)
     levels = kwargs.pop("levels", None)
+    norm = None  # reassigned below when applicable; defined for all types
     if plot_type == 'contourf' and levels is None:
         levels = 8  # Default for contourf
 
@@ -711,7 +864,6 @@ def plot_array(
                 f'Vmax has to be of type float or int but is of type {type(vmax)}!')
 
     if z is not None:
-        color_bounds = kwargs.pop('color_bounds', 'quantile')
         if color_bounds == 'quantile':
             vmin = np.nanquantile(z, q=0.1) if vmin is None else vmin
             vmax = np.nanquantile(z, q=0.9) if vmax is None else vmax
@@ -779,149 +931,18 @@ def plot_array(
 
     extend, kwargs = put.set_cb_boundaries(data=z, im=None,
                                            vmin=vmin, vmax=vmax, **kwargs)
-    if plot_type == "scatter":
-        im = ax.scatter(
-            x=x,
-            y=y,
-            c=z,
-            vmin=vmin,
-            vmax=vmax,
-            cmap=cmap,
-            transform=projection,
-            alpha=alpha,
-            marker=mpl.markers.MarkerStyle(marker=marker, fillstyle=fillstyle),
-            s=size,
+    draw = _resolve_drawer(plot_type, z)
+    if draw is not None:
+        ctx = _DrawContext(
+            x=x, y=y, z=z, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax,
+            levels=levels, extend=extend, projection=projection, color=color,
+            alpha=alpha, lw=lw, size=size, marker=marker, fillstyle=fillstyle,
+            zorder=zorder, kwargs=kwargs,
         )
-    elif plot_type == 'points' or z is None:
-        im = ax.plot(
-            x,
-            y,
-            c=color,
-            linewidth=0,
-            linestyle='None',
-            markersize=size,
-            marker=marker,
-            fillstyle=fillstyle,
-            transform=projection,
-            alpha=alpha,
-            zorder=zorder,
-        )
-    elif plot_type == "colormesh":
-        im = ax.pcolor(
-            x,
-            y,
-            z,
-            cmap=cmap,
-            # vmin=vmin,  # Is directly passed by the norm! Otherwise warning will arise!
-            # vmax=vmax,
-            shading="auto",
-            norm=norm,
-            zorder=zorder,
-        )
-    elif plot_type == "colormesh_map":
-        if levels is not None:
-            im = ax.pcolor(
-                x,
-                y,
-                z,
-                cmap=cmap,
-                # vmin=vmin,   # Is directly passed by the norm! Otherwise warning will arise!
-                # vmax=vmax,
-                transform=projection,
-                shading="auto",
-                norm=norm,
-                zorder=zorder,
-            )
-        else:
-            im = ax.pcolor(
-                x,
-                y,
-                z,
-                cmap=cmap,
-                vmin=vmin,
-                vmax=vmax,
-                transform=projection,
-                shading="auto",
-                zorder=zorder,
-            )
-    elif plot_type == "contourf" or plot_type == "discrete":
-        """
-        see https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.contourf.html
-        """
-        if plot_type == "discrete":
-            vmin = np.nanmin(z)
-            vmax = np.nanmax(z)
-            normticks = put.discrete_norm_ticks(
-                vmin, vmax, num_ticks=levels, shift_ticks=True)
-            ticks = normticks[:-1] + 0.5
-            levels = np.array(normticks[:], dtype=float)
-        if cmap is None and color is None:
-            raise ValueError(
-                f'Please provide a cmap or color for plot_type {plot_type}!')
-        if cmap is not None and color is not None:
-            raise ValueError(
-                f'Please provide either a cmap or color for plot_type {plot_type}!')
-        im = ax.contourf(
-            x,
-            y,
-            z,
-            levels=levels,
-            norm=norm,
-            vmin=vmin,
-            vmax=vmax,
-            cmap=cmap,
-            colors=color,  # color all levels with the same color, see documentation
-            transform=projection,
-            alpha=alpha,
-            extend=extend,
-            zorder=zorder,
-        )
-        if vmin is None:
-            vmin = im.get_clim()[0]
-        if vmax is None:
-            vmax = im.get_clim()[1]
-        # im = ScalarMappable(cmap=im.get_cmap())
-    elif plot_type == "contour":
-        cmap = cmap if color is None else None
-        ls = kwargs.pop('ls', 'solid')
-        clabel = kwargs.pop('clabel', False)
-
-        if color == 'solid_dashed':
-            colors = kwargs.pop('color_contour', ['black', 'black'])
-            styles = ['solid', 'dashed']
-            level_arr = [levels[levels > 0], levels[levels < 0]]
-        else:
-            colors = [color]
-            styles = [ls]
-            level_arr = [levels]
-
-        for color, ls, this_levels in zip(colors, styles, level_arr):
-            im = ax.contour(
-                x,
-                y,
-                z,
-                levels=this_levels,
-                cmap=cmap,
-                transform=projection,
-                colors=color,  # color all levels with the same color, see documentation
-                linewidths=lw,  # maybe linewidth=
-                alpha=alpha,
-                linestyles=ls,
-                zorder=zorder,
-            )
-            if clabel:
-                clabel_dict = dict(
-                    fontsize=kwargs.pop('clabel_fsize', pst.MINI_SIZE),
-                    fmt=kwargs.pop('clabel_fmt', None),
-                    colors=color,
-                    inline=True,
-                    inline_spacing=8,
-                    use_clabeltext=True,
-                    rightside_up=True,
-                )
-                if clabel_dict['fmt'] is None:
-                    del clabel_dict['fmt']
-                ax.clabel(im, **clabel_dict)
+        im = draw(ax, ctx)
+        levels, vmin, vmax = ctx.levels, ctx.vmin, ctx.vmax
+    else:
+        im = None
 
     if plot_type == 'hatch' or significance_mask is not None:
         if significance_mask is not None:
@@ -983,10 +1004,10 @@ def plot_array(
                                  shift_ticks=shift_ticks,
                                  **kwargs)
     if plot_type != "points":
-        return {"ax": ax, "fig": fig, "projection": projection, "im": im,
-                'ticks': levels, 'extend': extend}
+        return PlotResult(ax=ax, fig=fig, projection=projection, im=im,
+                          ticks=levels, extend=extend)
     else:
-        return {"ax": ax, "fig": fig, "projection": projection, "im": im}
+        return PlotResult(ax=ax, fig=fig, projection=projection, im=im)
 
 
 def plot_edges(
@@ -1399,7 +1420,7 @@ def create_multi_plot(nrows, ncols, projection=None,
 
 
 
-    return {"ax": axs, "fig": fig, "projection": projection}
+    return PlotResult(ax=axs, fig=fig, projection=projection)
 
 
 def plt_text_map(ax, lon_pos, lat_pos, text, color="k"):

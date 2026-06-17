@@ -7,6 +7,7 @@ import geoutils.plotting.plot_settings
 import geoutils.plotting.map_plots
 import geoutils.plotting.xy_plots
 import geoutils.plotting.plotting_utils
+from geoutils.plotting.plot_result import PlotResult
 
 
 from geoutils.plotting.plot_settings import *
@@ -77,7 +78,4 @@ def create_plot(nrows=1, ncols=1, **kwargs):
         )
         axs = fig.axes
 
-    return {
-        "ax": axs,
-        "fig": fig,
-    }
+    return PlotResult(ax=axs, fig=fig)
