@@ -9,6 +9,13 @@ import xarray as xr
 matplotlib.use("Agg")
 
 
+@pytest.fixture(autouse=True)
+def _close_figures():
+    yield
+    import matplotlib.pyplot as plt
+    plt.close("all")
+
+
 @pytest.fixture
 def latlon_da():
     """2D lat-lon DataArray with ascending coords in [-180, 180]."""

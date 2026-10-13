@@ -4,7 +4,7 @@ import xarray as xr
 import geoutils.utils.time_utils as tu
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 
 # %%
 plot_dir = "/home/strnad/data/plots/2023/"

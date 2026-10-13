@@ -7,7 +7,7 @@ import geoutils.utils.spatial_utils as sput
 import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
 import geoutils.tsa.pca.rot_pca as rot_pca
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 import geoutils.geodata.base_dataset as bds
 import copy
 

@@ -9,13 +9,13 @@ import numpy as np
 import xarray as xr
 import geoutils.geodata.wind_dataset as wds
 import geoutils.preprocessing.open_nc_file as of
-import geoutils.plotting.plots as gplt
+import geoutils.plotting as gplt
 import geoutils.utils.time_utils as tu
 import geoutils.geodata.base_dataset as bds
 import geoutils.utils.spatial_utils as sput
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
-import geoutils.plotting.plots as gplt
+import geoutils.plotting as gplt
 import geoutils.preprocessing.open_nc_file as of
 import atlite
 import geoutils.countries.countries as cnt

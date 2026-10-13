@@ -9,7 +9,7 @@ import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.utils.time_utils as tu
 import geoutils.geodata.base_dataset as bds
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 
 import geoutils.utils.time_utils as tut
 data_dir = "/home/strnad/data/"

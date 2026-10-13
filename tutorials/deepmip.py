@@ -3,7 +3,7 @@
 import xarray as xr
 import numpy as np
 import geoutils.geodata.base_dataset as bds
-import geoutils.plotting.plots as gplt
+import geoutils.plotting as gplt
 import geoutils.utils.time_utils as tu
 from importlib import reload
 

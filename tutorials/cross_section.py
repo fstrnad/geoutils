@@ -11,7 +11,7 @@ gridded data.
 
 import geoutils.utils.general_utils as gut
 from importlib import reload
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import matplotlib.pyplot as plt

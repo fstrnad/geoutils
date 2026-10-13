@@ -8,7 +8,7 @@ import geoutils.utils.file_utils as fut
 import geoutils.utils.statistic_utils as sut
 import geoutils.indices.indices_utils as iut
 import geoutils.geodata.base_dataset as bds
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 
 
 if __name__ == '__main__':

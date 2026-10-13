@@ -2,7 +2,7 @@
 import geoutils.utils.file_utils as fut
 import geoutils.geodata.base_dataset as bds
 import geoutils.utils.general_utils as gut
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 from importlib import reload
 
 
