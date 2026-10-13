@@ -1,4 +1,4 @@
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 import os
 import geoutils.utils.general_utils as gut
 import geoutils.geodata.base_dataset as bds

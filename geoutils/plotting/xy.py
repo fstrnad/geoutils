@@ -11,9 +11,10 @@ import matplotlib.pyplot as plt
 
 import matplotlib.dates as mdates
 from matplotlib.ticker import FuncFormatter
-import geoutils.plotting.plotting_utils as put
-import geoutils.plotting.plot_settings as pst
-from geoutils.plotting.plot_result import PlotResult
+import geoutils.plotting.axes as pax
+import geoutils.plotting.colors as pcol
+import geoutils.plotting.style as pst
+from geoutils.plotting.result import PlotResult
 
 
 """
@@ -275,7 +276,7 @@ def plot_2d(
             ax.set_ylabel(kwargs_init.pop("ylabel", "") or "")
         # set again axis, because sns changes it
 
-        ax, kwargs = put.prepare_axis(ax, reset_axis=True, **kwargs_init)
+        ax, kwargs = pax.prepare_axis(ax, reset_axis=True, **kwargs_init)
     # ############# Plotting  density ################
     elif plot_type == 'density':
         import seaborn as sns
@@ -310,7 +311,7 @@ def plot_2d(
     make_legend = kwargs.pop('set_legend', True)
     if make_legend and label is not None:
         # labels and legend items are already within ax-object
-        ax = put.set_legend(ax=ax, **kwargs)
+        ax = pax.set_legend(ax=ax, **kwargs)
     else:
         if plot_type == 'bar':
             ax.legend_.remove()
@@ -329,7 +330,7 @@ def create_axis(ax, plot_type, **kwargs):
 
     prepare_axis = kwargs.pop('prepare_axis', True)
     if prepare_axis:
-        ax, kwargs = put.prepare_axis(
+        ax, kwargs = pax.prepare_axis(
             ax=ax, **kwargs)
 
     return ax, fig, kwargs
@@ -422,7 +423,7 @@ def plot_hist(data, ax=None, fig=None,
 def prepare_ts_x_axis(ax, dates, **kwargs):
 
     sy, ey = tu.get_start_end_date(data=dates)
-    ax, kwargs = put.prepare_axis(ax, **kwargs)
+    ax, kwargs = pax.prepare_axis(ax, **kwargs)
     ax.tick_params(axis="x", labelrotation=90)
     # Text in the x axis will be displayed in 'YYYY' format.
     fmt_form = mdates.DateFormatter("%m-%Y")
@@ -444,11 +445,11 @@ def plot_null_model(
     arr, title="Null Model for Event Synchronization",
 ):
     fig, ax = plt.subplots(figsize=(8, 8))
-    ax, kwargs = put.prepare_axis(ax)
+    ax, kwargs = pax.prepare_axis(ax)
     ax.set_title(title)
     im = ax.imshow(arr, interpolation="None", cmap="coolwarm", origin="lower")
     # ax.set_aspect('equal')
     ax.set_xlabel("number of events j")
     ax.set_ylabel("number of events i")
-    put.make_colorbar(ax, im, label="# Sync Events")
+    pcol.make_colorbar(ax, im, label="# Sync Events")
     return ax

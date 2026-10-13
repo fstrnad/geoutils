@@ -5,16 +5,17 @@ This is the curated public API. Import the names you need directly, e.g.::
     from geoutils.plotting import plot_map, plot_2d, create_plot, PlotResult
 
 The legacy aggregator ``geoutils.plotting.plots`` (commonly imported ``as cplt``)
-still works and re-exports the same functions. ``geoutils.plotting.videos`` is
+still works as a deprecated shim that re-exports the same functions. ``geoutils.plotting.videos`` is
 intentionally not imported here because it needs the optional ``video`` extra
 (imageio, opencv); import it explicitly if you need it.
 """
-from geoutils.plotting.plot_result import PlotResult
+from geoutils.plotting.result import PlotResult
 
 # Figure creation and saving
-from geoutils.plotting.plots import (
+from geoutils.plotting.figure import (
     create_plot,
     create_twinaxis,
+    enumerate_subplots,
     mk_plot_dir,
     save_fig,
 )
@@ -38,7 +39,7 @@ from geoutils.plotting.map_plots import (
 )
 
 # x-y / time-series plots
-from geoutils.plotting.xy_plots import (
+from geoutils.plotting.xy import (
     fill_between,
     plot_2d,
     plot_hist,
@@ -46,13 +47,14 @@ from geoutils.plotting.xy_plots import (
 )
 
 # Colorbars, colormaps, axis helpers, annotations
-from geoutils.plotting.plotting_utils import (
+from geoutils.plotting.colors import (
     add_colorbar,
     create_cmap,
-    enumerate_subplots,
     get_cmap,
     make_colorbar,
     make_colorbar_discrete,
+)
+from geoutils.plotting.axes import (
     plot_arrow,
     plot_hline,
     plot_line,
@@ -65,7 +67,7 @@ from geoutils.plotting.plotting_utils import (
 )
 
 # Global font / size settings
-from geoutils.plotting.plot_settings import (
+from geoutils.plotting.style import (
     change_fsize,
     list_available_fonts,
     list_available_styles,

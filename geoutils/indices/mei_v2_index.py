@@ -1,5 +1,5 @@
 # %%
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 import geoutils.utils.statistic_utils as sut
 import geoutils.indices.indices_utils as iut
 import numpy as np

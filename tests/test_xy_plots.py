@@ -1,7 +1,7 @@
 """Smoke test for the x-y plotting entry point, plot_2d."""
 import numpy as np
 
-import geoutils.plotting.xy_plots as xyp
+import geoutils.plotting.xy as xyp
 
 
 def test_plot_2d_returns_plotresult():

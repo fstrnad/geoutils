@@ -3,8 +3,8 @@ import matplotlib as mpl
 import numpy as np
 import pytest
 
-import geoutils.plotting.plot_settings as pst
-import geoutils.plotting.xy_plots as xyp
+import geoutils.plotting.style as pst
+import geoutils.plotting.xy as xyp
 
 
 @pytest.fixture
@@ -76,7 +76,7 @@ def test_plot_map_constant_array_draws(latlon_da):
 # --- figure helpers -----------------------------------------------------
 
 def test_save_fig_bare_filename(tmp_path, monkeypatch):
-    import geoutils.plotting.plots as cplt
+    import geoutils.plotting as cplt
     monkeypatch.chdir(tmp_path)
     cplt.create_plot()
     cplt.save_fig("plain_name")
@@ -88,7 +88,7 @@ def test_save_fig_bare_filename(tmp_path, monkeypatch):
     ("figs/out.pdf", "figs/out.pdf"),
 ])
 def test_save_fig_adds_extension_only_when_missing(tmp_path, name, expected):
-    import geoutils.plotting.plots as cplt
+    import geoutils.plotting as cplt
     res = cplt.create_plot()
     path = cplt.save_fig(tmp_path / name, fig=res["fig"])
     assert path == tmp_path / expected
@@ -96,13 +96,13 @@ def test_save_fig_adds_extension_only_when_missing(tmp_path, name, expected):
 
 
 def test_create_plot_single_returns_axes():
-    import geoutils.plotting.plots as cplt
+    import geoutils.plotting as cplt
     res = cplt.create_plot()
     assert isinstance(res["ax"], mpl.axes.Axes)
 
 
 def test_create_plot_multi_returns_flat_array():
-    import geoutils.plotting.plots as cplt
+    import geoutils.plotting as cplt
     res = cplt.create_plot(2, 2)
     assert np.shape(res["ax"]) == (4,)
 
@@ -125,12 +125,12 @@ def test_ylog_and_ysymlog_conflict_raises(xs):
 
 
 def test_create_cmap_accepts_colormap_object():
-    import geoutils.plotting.plotting_utils as put
+    import geoutils.plotting.colors as put
     cmap, norm = put.create_cmap(mpl.colormaps["viridis"], levels=[0, 1, 2])
     assert isinstance(norm, mpl.colors.BoundaryNorm)
 
 
 def test_create_cmap_rejects_other_types():
-    import geoutils.plotting.plotting_utils as put
+    import geoutils.plotting.colors as put
     with pytest.raises(ValueError, match="cmap has to be"):
         put.create_cmap(42, levels=[0, 1, 2])

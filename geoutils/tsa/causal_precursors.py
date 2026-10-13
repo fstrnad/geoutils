@@ -1,6 +1,6 @@
 import xarray as xr
 import numpy as np
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 import geoutils.utils.time_utils as tu
 import geoutils.utils.spatial_utils as sput
 import geoutils.utils.general_utils as gut

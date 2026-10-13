@@ -1,6 +1,5 @@
 """Basic plotting functions for maps"""
 # import matplotlib.cm as cm
-import copy
 import numbers
 from dataclasses import dataclass
 import geoutils.utils.spatial_utils as sput
@@ -8,15 +7,16 @@ import matplotlib.patches as mpatches
 import geoutils.utils.general_utils as gut
 import numpy as np
 import xarray as xr
-import cartopy
 import cartopy as ctp
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
-import geoutils.plotting.plotting_utils as put
-import geoutils.plotting.plot_settings as pst
-from geoutils.plotting.plot_result import PlotResult
+import geoutils.plotting.axes as pax
+import geoutils.plotting.colors as pcol
+import geoutils.plotting.figure as pfig
+import geoutils.plotting.style as pst
+from geoutils.plotting.result import PlotResult
 
 
 def estimate_distance(minimum_value, maximum_value, min_dist_val=1,
@@ -498,8 +498,8 @@ def plot_map(dmap: xr.DataArray,
             dmap = xr.where(mask, dmap, np.nan)
             significance_mask = xr.where(mask, np.nan, 1)  # flip the mask
 
-    put.check_plot_type(plot_type)
-    projection = put.check_projection(ax=ax, projection=projection)
+    pax.check_plot_type(plot_type)
+    projection = pax.check_projection(ax=ax, projection=projection)
 
     if not isinstance(dmap, xr.DataArray) and plot_type != 'points':
         raise ValueError(
@@ -724,7 +724,7 @@ def _draw_contourf(ax, c):
 def _draw_discrete(ax, c):
     c.vmin = np.nanmin(c.z)
     c.vmax = np.nanmax(c.z)
-    normticks = put.discrete_norm_ticks(
+    normticks = pcol.discrete_norm_ticks(
         c.vmin, c.vmax, num_ticks=c.levels, shift_ticks=True)
     c.levels = np.array(normticks[:], dtype=float)
     return _draw_contourf(ax, c)
@@ -844,7 +844,7 @@ def plot_array(
         set_axis = True
     if projection is None and set_axis:
         # This is the Sci for the x axis
-        ax, kwargs = put.prepare_axis(ax, sci=sci_x,
+        ax, kwargs = pax.prepare_axis(ax, sci=sci_x,
                                       **kwargs)
     if projection is not None:
         if isinstance(projection, str):
@@ -918,13 +918,13 @@ def plot_array(
                 levels = this_levels
             if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
                 # norm = mpl.colors.LogNorm(levels=levels)
-                cmap, norm = put.create_cmap(cmap, levels,
+                cmap, norm = pcol.create_cmap(cmap, levels,
                                              centercolor=centercolor,
                                              leftcolor=leftcolor,
                                              **kwargs)
             else:
                 if isinstance(cmap, str):
-                    cmap, norm = put.create_cmap(cmap)
+                    cmap, norm = pcol.create_cmap(cmap)
                 # elif not isinstance(cmap, mpl.colors.Colormap) or not isinstance(cmap, mpl.colors.LinearSegmentedColormap) or not isinstance(color, str):
                 #     raise ValueError(
                 #         f'cmap has to be of type str or mpl.colors.Colormap but is of type {type(cmap)}!')
@@ -932,7 +932,7 @@ def plot_array(
     else:
         sci = round_dec = norm = levels = None
 
-    extend, kwargs = put.set_cb_boundaries(data=z, im=None,
+    extend, kwargs = pcol.set_cb_boundaries(data=z, im=None,
                                            vmin=vmin, vmax=vmax, **kwargs)
     draw = _resolve_drawer(plot_type, z)
     if draw is not None:
@@ -982,12 +982,12 @@ def plot_array(
             im = im_tmp
     # else:
     #     raise ValueError(f"Plot type {plot_type} does not exist!")
-    if put.check_geoaxis(ax):
+    if pax.check_geoaxis(ax):
         # set distance of plot to the title
         y_title = kwargs.pop('y_title', 1.15)
     else:
         y_title = kwargs.pop('y_title', 1.05)
-    kwargs = put.set_title(title=title, ax=ax,
+    kwargs = pax.set_title(title=title, ax=ax,
                            y_title=y_title, **kwargs)
 
     if label is not None:
@@ -996,7 +996,7 @@ def plot_array(
         shift_ticks = kwargs.pop('shift_ticks', None)
         sci = sci if not unset_sci else None
         orientation = kwargs.pop('orientation', 'horizontal')
-        cbar = put.make_colorbar(ax=ax, im=im,
+        cbar = pcol.make_colorbar(ax=ax, im=im,
                                  norm=set_norm,
                                  ticks=levels,
                                  label=label,
@@ -1221,7 +1221,7 @@ def plot_trajectory(lon_lat_pairs,
         ax = map_dict['ax']
         title = kwargs.pop('title', None)
         y_title = kwargs.pop('y_title', 1.18)
-        kwargs = put.set_title(title=title, ax=ax,
+        kwargs = pax.set_title(title=title, ax=ax,
                                y_title=y_title,
                                **kwargs)
 
@@ -1255,7 +1255,7 @@ def plot_trajectory(lon_lat_pairs,
                 c=c, linewidth=lw, alpha=alpha)
 
         label = 'Trajectory' if label is None else label
-        cbar = put.make_colorbar(ax,
+        cbar = pcol.make_colorbar(ax,
                                  im=cmap,
                                  norm=True,
                                  label=label,
@@ -1409,7 +1409,7 @@ def create_multi_plot(nrows, ncols, projection=None,
                 pos_x = gut.replicate_object(pos_x, end_idx)
                 indices_proj = gut.get_not_None_indices(proj_arr)
                 pos_x[indices_proj] = pos_x_proj
-            put.enumerate_subplots(axs=enum_axis, pos_x=pos_x, pos_y=pos_y,
+            pfig.enumerate_subplots(axs=enum_axis, pos_x=pos_x, pos_y=pos_y,
                                    )
     else:
         axs = [axs[0]]
@@ -1418,7 +1418,7 @@ def create_multi_plot(nrows, ncols, projection=None,
     title = kwargs.pop('title', None)
     y_title = kwargs.pop('y_title', y_title_pos)
     if title is not None:
-        put.set_title(title=title, ax=None, fig=fig,
+        pax.set_title(title=title, ax=None, fig=fig,
                       y_title=y_title)
 
 
@@ -1484,7 +1484,7 @@ def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
     )
 
     if text is not None:
-        put.plt_text(ax=ax,
+        pax.plt_text(ax=ax,
                      text=text,
                      color=color,
                      xpos=np.mean(lon_range),

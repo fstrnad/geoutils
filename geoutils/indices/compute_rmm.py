@@ -1,6 +1,6 @@
 # %%
 # packages required
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 import geoutils.tsa.fft_analysis as ffta
 import geoutils.utils.time_utils as tu
 import numpy as np

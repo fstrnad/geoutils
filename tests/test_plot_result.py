@@ -1,5 +1,5 @@
 """Locks the dict-compatibility bridge that keeps legacy callers working."""
-from geoutils.plotting.plot_result import PlotResult
+from geoutils.plotting.result import PlotResult
 
 
 def test_attribute_and_item_access_agree():

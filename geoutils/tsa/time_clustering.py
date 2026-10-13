@@ -17,7 +17,7 @@ import xarray as xr
 import sklearn.metrics as skm
 import geoutils.utils.general_utils as gut
 import geoutils.utils.time_utils as tu
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 from tqdm import tqdm
 
 

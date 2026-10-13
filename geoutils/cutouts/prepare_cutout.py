@@ -9,7 +9,7 @@ import geoutils.utils.general_utils as gut
 import geoutils.utils.spatial_utils as sput
 import geoutils.utils.time_utils as tu
 import geoutils.preprocessing.open_nc_file as of
-import geoutils.plotting.plots as gplt
+import geoutils.plotting as gplt
 
 # %%
 

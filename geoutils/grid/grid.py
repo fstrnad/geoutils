@@ -21,7 +21,7 @@ import warnings
 import os
 from scipy.spatial.transform import Rotation as Rot
 import climnet.grid.fekete as fk
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 import geoutils.utils.general_utils as gut
 import geoutils.utils.file_utils as fut
 import geoutils.utils.spatial_utils as sput

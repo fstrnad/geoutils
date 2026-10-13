@@ -5,7 +5,7 @@ import geoutils.geodata.wind_dataset as wds
 import geoutils.geodata.base_dataset as bds
 import geoutils.utils.spatial_utils as sput
 import geoutils.utils.statistic_utils as sut
-import geoutils.plotting.plots as cplt
+import geoutils.plotting as cplt
 
 from importlib import reload
 
