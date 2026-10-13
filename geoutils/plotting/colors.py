@@ -1,7 +1,7 @@
 """Colormaps, norms, colour scales and colorbars."""
 import numbers
+import warnings
 from dataclasses import dataclass, field, fields
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib as mpl
 from matplotlib.cm import ScalarMappable
 import matplotlib.pyplot as plt
@@ -358,40 +358,27 @@ def add_colorbar(im, fig, label,
                  set_cax=False,
                  multi_plots=False,
                  **kwargs):
-    if multi_plots:
-        # find out number of rows and columns
-        grid_spec = fig.axes[0].get_subplotspec().get_gridspec()
-        num_rows, num_cols = grid_spec.get_geometry()
-        num_cols = len(fig.axes) // num_rows
-        bbox0 = fig.axes[0].get_position(fig)
-        bbox1 = fig.axes[num_cols-1].get_position(fig)  # last column
-        bboxlast = fig.axes[-1].get_position(fig)
-        if width is None:
-            width = (bbox1.x1 - bbox0.x0)/1.1
-            delta_width = (bbox1.x1 - bbox0.x0) - width
-            height = bboxlast.height / 10  # 10% of height
-        x_pos = bbox0.x0 + delta_width/2
-        y_pos = bboxlast.y0 - height*1.5
+    """Add a colorbar for the result ``im`` of a plot to ``fig``.
 
-        positions = [x_pos, y_pos, width, height]
-    else:
-        width = 0.8 if width is None else width
-        height = 0.05 if height is None else height
-        positions = [x_pos, y_pos, width, height]
-    ax_cbar = fig.add_axes(positions)
+    With ``multi_plots`` one colorbar is shared by all panels and placed by the
+    layout engine; otherwise it goes into an axes at the given figure
+    coordinates (``x_pos``, ``y_pos``, ``width``, ``height``).
+    """
     orientation = kwargs.pop('orientation', 'horizontal')
     fsize = kwargs.pop('fontsize', pst.BIGGER_SIZE)
-    cbar = make_colorbar(ax=ax_cbar,
-                         im=im['im'],
-                         fig=fig,
-                         orientation=orientation,
-                         label=label,
-                         set_cax=set_cax,
-                         ticks=im['ticks'],
-                         fontsize=fsize,
-                         **kwargs,
-                         )
-    return cbar
+    if multi_plots:
+        panels = [a for a in fig.axes if a.get_label() != '<colorbar>']
+        return make_colorbar(ax=panels, im=im['im'], fig=fig,
+                             orientation=orientation, label=label,
+                             set_cax=True, ticks=im['ticks'],
+                             fontsize=fsize, **kwargs)
+    width = 0.8 if width is None else width
+    height = 0.05 if height is None else height
+    ax_cbar = fig.add_axes([x_pos, y_pos, width, height])
+    return make_colorbar(ax=ax_cbar, im=im['im'], fig=fig,
+                         orientation=orientation, label=label,
+                         set_cax=set_cax, ticks=im['ticks'],
+                         fontsize=fsize, **kwargs)
 
 
 @dataclass(frozen=True)
@@ -409,6 +396,7 @@ class ColorbarSpec:
     set_rot: bool = False
     set_cax: bool = False
     pad: float | None = None
+    shrink: float | None = None  # default: 0.9 horizontal, 0.75 vertical
     fontsize: float | None = None
     norm: str | None = None
     kwargs_bar: dict = field(default_factory=dict)
@@ -430,25 +418,28 @@ def make_colorbar(ax, im, fig=None, spec=None, **kwargs):
     if spec.set_int:
         ticks = np.round(ticks).astype(int)
     if fig is None:
-        fig = ax.get_figure()
+        fig = (ax[0] if isinstance(ax, (list, tuple)) else ax).get_figure()
 
     orientation = spec.orientation
+    if orientation not in ('horizontal', 'vertical'):
+        raise ValueError(
+            f"orientation has to be 'horizontal' or 'vertical', not {orientation!r}!")
     if spec.set_cax:
-        if orientation == "vertical":
-            # distance from right border
-            pad = -2.5 if spec.pad is None else spec.pad
-            cax = inset_axes(ax, width="5%", height="100%", loc="right",
-                             borderpad=pad)
-        elif orientation == "horizontal":
-            # distance to lower y-range (differs for maps and xy-plots)
-            pad = -4.5 if spec.pad is None else spec.pad
-            cax = inset_axes(ax, width="100%", height="5%", loc="lower center",
-                             borderpad=pad)
-        else:
-            raise ValueError(
-                f"orientation has to be 'horizontal' or 'vertical', not {orientation!r}!")
+        # the layout engine makes room next to ``ax``; pad/shrink are fractions
+        pad = spec.pad
+        if pad is not None and pad < 0:
+            warnings.warn(
+                "A negative colorbar pad (an offset in older versions) is "
+                "ignored; pad is now a fraction of the axes size.",
+                DeprecationWarning, stacklevel=4)
+            pad = None
+        placement = dict(
+            ax=ax, pad=0.05 if pad is None else pad,
+            shrink=(0.9 if orientation == 'horizontal' else 0.75)
+            if spec.shrink is None else spec.shrink,
+            location='bottom' if orientation == 'horizontal' else 'right')
     else:
-        cax = ax
+        placement = dict(cax=ax, orientation=orientation)
 
     kwargs_bar = {**spec.kwargs_bar, 'ticks': ticks}
     kwargs, kwargs_bar = set_kwargs_bar(kwargs, kwargs_bar)
@@ -459,9 +450,8 @@ def make_colorbar(ax, im, fig=None, spec=None, **kwargs):
         fmt = mpl.ticker.FuncFormatter(cbarfmt)
     else:
         fmt = None
-    cbar = fig.colorbar(im, cax=cax, orientation=orientation,
-                        label=spec.label, format=fmt, extend=spec.extend,
-                        **kwargs_bar)
+    cbar = fig.colorbar(im, label=spec.label, format=fmt, extend=spec.extend,
+                        **placement, **kwargs_bar)
     if spec.sci is not None:
         place_colorbar_offset_text(cbar)
 

@@ -24,7 +24,7 @@ def set_legend(ax,
                **kwargs):
     if fig is None:
         fig = ax
-    loc = kwargs.pop("loc", "upper right")
+    loc = kwargs.pop("loc", "best")
     box_loc_default = (0.96, 1)
     box_loc = kwargs.pop('box_loc', None)
     if box_loc is None:
@@ -72,7 +72,7 @@ def set_legend(ax,
 
 
 def set_title(title, ax=None, fig=None, **kwargs):
-    y_title = kwargs.pop('y_title', 1.05)
+    y_title = kwargs.pop('y_title', None)  # None: let the layout place it
     vertical_title = kwargs.pop('vertical_title', None)
     x_title_offset = kwargs.pop('x_title_offset', -0.33)
     title_color = kwargs.pop('title_color', 'black')

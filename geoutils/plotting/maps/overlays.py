@@ -107,7 +107,7 @@ def plot_wind_field(
 ):
     if ax is None:
         figsize = kwargs.pop("figsize", (7, 5))
-        fig, ax = plt.subplots(figsize=(figsize))
+        fig, ax = plt.subplots(figsize=figsize, layout="constrained")
 
     if x_vals is None:
         x_vals = u.coords["lon"]

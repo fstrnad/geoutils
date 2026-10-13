@@ -189,7 +189,7 @@ def plot_map(dmap: xr.DataArray,
         plot_type += '_map'
 
     # not to run into conflicts with significance mask
-    pad = kwargs.pop('pad', -2.5)  # for maps
+    pad = kwargs.pop('pad', None)
     im = plot_array(x=x, y=y, z=z,
                     fig=fig, ax=ax, plot_type=plot_type, projection=projection,
                     vmin=vmin, vmax=vmax, cmap=cmap, label=label, title=title,
@@ -517,7 +517,7 @@ def plot_array(
     sci_x = kwargs.pop('sci_x', None)
     if ax is None:
         figsize = kwargs.pop("figsize", (7, 5))
-        fig, ax = plt.subplots(figsize=(figsize))
+        fig, ax = plt.subplots(figsize=figsize, layout='constrained')
         set_axis = True
     if projection is None and set_axis:
         # This is the Sci for the x axis
@@ -567,13 +567,7 @@ def plot_array(
                               kwargs.pop('hatch_type', '///'))
         if plot_type == 'hatch':
             im = hatches
-    if pax.check_geoaxis(ax):
-        # set distance of plot to the title
-        y_title = kwargs.pop('y_title', 1.15)
-    else:
-        y_title = kwargs.pop('y_title', 1.05)
-    kwargs = pax.set_title(title=title, ax=ax,
-                           y_title=y_title, **kwargs)
+    kwargs = pax.set_title(title=title, ax=ax, **kwargs)
 
     cbar = None
     if label is not None:

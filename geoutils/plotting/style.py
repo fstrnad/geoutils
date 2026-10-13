@@ -19,8 +19,9 @@ MAXIMUM_SIZE = 22
 MAX_ZORDER = 100
 
 # Okabe & Ito colour-blind safe categorical palette.
-OKABE_ITO = ["#E69F00", "#56B4E9", "#009E73", "#F0E442",
-             "#0072B2", "#D55E00", "#CC79A7", "#000000"]
+# Ordered so that the first few series are the easiest to tell apart on white.
+OKABE_ITO = ["#0072B2", "#D55E00", "#009E73", "#E69F00",
+             "#56B4E9", "#CC79A7", "#F0E442", "#000000"]
 colors = list(OKABE_ITO)  # kept for code that read ``style.colors``
 
 

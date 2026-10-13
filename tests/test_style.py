@@ -45,7 +45,7 @@ def test_set_style_applies_palette_and_sizes():
     before = mpl.rcParams.copy()
     try:
         style.set_style()
-        assert mpl.rcParams["axes.prop_cycle"].by_key()["color"][0] == "#E69F00"
+        assert mpl.rcParams["axes.prop_cycle"].by_key()["color"][0] == style.OKABE_ITO[0]
         assert mpl.rcParams["savefig.dpi"] == 300
     finally:
         mpl.rcParams.update(before)
@@ -76,3 +76,21 @@ def test_fsize_helpers_are_consistent():
         assert mpl.rcParams["figure.titlesize"] == style.BIGGER_SIZE
     finally:
         mpl.rcParams.update(before)
+
+
+def test_palette_leads_with_high_contrast_colors():
+    assert style.OKABE_ITO[:3] == ["#0072B2", "#D55E00", "#009E73"]
+    assert style.OKABE_ITO[-2:] == ["#F0E442", "#000000"]
+    assert sorted(style.OKABE_ITO) == sorted(
+        ["#E69F00", "#56B4E9", "#009E73", "#F0E442",
+         "#0072B2", "#D55E00", "#CC79A7", "#000000"])
+
+
+def test_plot_2d_default_line_width_is_readable():
+    res = cplt.plot_2d(y=np.arange(4.0))
+    assert res["ax"].lines[0].get_linewidth() == 1.5
+
+
+def test_legend_avoids_data_by_default():
+    res = cplt.plot_2d(y=[np.arange(4.0), np.arange(4.0) + 1], label=["a", "b"])
+    assert res["ax"].get_legend()._loc == 0  # matplotlib's 'best'

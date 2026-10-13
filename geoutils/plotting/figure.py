@@ -50,13 +50,14 @@ def create_plot(nrows=1, ncols=1, **kwargs):
             nrows=nrows,
             ncols=ncols,
             figsize=figsize,
-            constrained_layout=True,
-            ** kwargs,
+            layout="constrained",
+            **kwargs,
         )
         axs = axs.flatten()
         enumerate_subplots(axs)
     else:
-        fig, axs = plt.subplots(figsize=figsize, **kwargs)
+        fig, axs = plt.subplots(figsize=figsize, layout="constrained",
+                                **kwargs)
 
     return PlotResult(ax=axs, fig=fig)
 
@@ -130,15 +131,15 @@ def create_multi_plot(nrows, ncols, projection=None,
     if len(height_ratios) != nrows:
         raise ValueError(
             f'Length of height_ratios {len(height_ratios)} does not match number of rows {nrows}!')
-    fig = plt.figure(figsize=(figsize[0], figsize[1]))
+    fig = plt.figure(figsize=(figsize[0], figsize[1]), layout="constrained")
 
-    hspace = kwargs.pop('hspace', 0.)
-    wspace = kwargs.pop('wspace', 0.2)
+    spacing = {k: kwargs.pop(k) for k in ('hspace', 'wspace') if k in kwargs}
+    if spacing:
+        fig.get_layout_engine().set(**spacing)
 
     gs = fig.add_gridspec(gs_rows, gs_cols,
                           height_ratios=height_ratios,
-                          width_ratios=width_ratios,
-                          hspace=hspace, wspace=wspace)
+                          width_ratios=width_ratios)
     proj_arr = kwargs.pop('proj_arr', None)
     if proj_arr is None:
         proj_arr = kwargs.pop('projection_arr', None)

@@ -143,12 +143,15 @@ def set_grid(ax, alpha=0.5,
     gl.left_labels = True
     gl.right_labels = False
     # gl.right_labels=True
-    gl.bottom_labels = False
+    gl.bottom_labels = True
+    # smaller labels on narrow panels, where neighbouring labels would collide
+    width_in = ax.get_position().width * ax.figure.get_figwidth()
+    label_size = pst.MEDIUM_SIZE if width_in >= 4.5 else pst.MINI_SIZE
     gl.ylabel_style = {'rotation': -0,
-                       'color': 'black', 'size': pst.MEDIUM_SIZE}
+                       'color': 'black', 'size': label_size}
     gl.xlabel_style = {'rotation': -0,
-                       'color': 'black', 'size': pst.MEDIUM_SIZE}
-    gl.top_labels = True
+                       'color': 'black', 'size': label_size}
+    gl.top_labels = False
 
     return ax, kwargs
 
@@ -333,8 +336,8 @@ def create_map(
     # create figure
     if ax is None:
         # better working in cartopy and matplotlib=3.8.2
-        fig = plt.figure(figsize=figsize)
-        ax = plt.axes(projection=proj)
+        fig = plt.figure(figsize=figsize, layout="constrained")
+        ax = fig.add_subplot(projection=proj)
         unset_grid = kwargs.pop('unset_grid', False)
         plot_grid = True if not unset_grid else False
     else:
