@@ -1,6 +1,7 @@
 """Basic plotting functions for maps"""
 # import matplotlib.cm as cm
 import copy
+import numbers
 from dataclasses import dataclass
 import geoutils.utils.spatial_utils as sput
 import matplotlib.patches as mpatches
@@ -380,7 +381,7 @@ def create_map(
             rem_frame = kwargs.pop("rem_frame", False)
             if rem_frame:
                 # Remove the frame around the map
-                ax.outline_patch.set_visible(False)
+                ax.spines['geo'].set_visible(False)
 
     if plot_grid:
         ax, kwargs = set_grid(ax, alpha=alpha,
@@ -812,6 +813,8 @@ def plot_array(
     if x is None and y is None and z is None:
         raise ValueError(
             'Please provide at least z')
+    if z is not None and np.isnan(z).all():
+        raise ValueError('z is all-NaN, nothing to plot!')
     if x is None and y is None:
         if isinstance(z, xr.DataArray):
             dims = gut.get_dims(z)
@@ -855,11 +858,11 @@ def plot_array(
 
     # Set 0.95 Quantile as definition for vmin, vmax to exclude outliers
     if vmin is not None:
-        if not isinstance(vmin, float) and not isinstance(vmin, int):
+        if not isinstance(vmin, numbers.Real):
             raise ValueError(
                 f'vmin has to be of type float or int but is of type {type(vmin)}!')
     if vmax is not None:
-        if not isinstance(vmax, float) and not isinstance(vmax, int):
+        if not isinstance(vmax, numbers.Real):
             raise ValueError(
                 f'Vmax has to be of type float or int but is of type {type(vmax)}!')
 
