@@ -12,7 +12,7 @@ Set `ERA5_DATA` to use another copy. Run from anywhere, e.g.
 | `01_map_basics.py` | mesh, filled contours, contour lines; `color_bounds` |
 | `02_anomalies.py` | daily anomalies on a diverging colormap, symmetric limits |
 | `03_multipanel_shared_colorbar.py` | four seasons, `create_multi_plot`, one shared colorbar |
-| `04_time_series_and_profiles.py` | `plot_2d`: daily time series with gaps, diurnal cycle, zonal profile |
+| `04_time_series_and_profiles.py` | `plot_2d`: year of daily means, diurnal cycle, zonal profile |
 | `05_annotated_map.py` | city markers and labels, `plot_rectangle` |
 | `06_precipitation.py` | monthly totals and wet-day counts, fixed colour limits |
 | `07_resolution_comparison.py` | 0.25° against 0.5° over the Alps, and what interpolation loses |
