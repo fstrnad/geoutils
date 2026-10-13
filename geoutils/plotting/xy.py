@@ -1,5 +1,6 @@
 """Basic plotting functions for x-y (non-map) plots."""
 import copy
+from dataclasses import dataclass
 import xarray as xr
 import pandas as pd
 import geoutils.utils.time_utils as tu
@@ -40,6 +41,181 @@ def _as_series_list(data):
     return [data]
 
 
+def _pick(values, idx):
+    """Return ``values[idx]``, or the last element when ``idx`` is past the end."""
+    return values[idx] if idx < len(values) else values[-1]
+
+
+def _override(kwargs, key, values, idx):
+    """``kwargs[key]`` if given (shared by all series), else the per-series pick."""
+    value = kwargs.get(key)
+    return _pick(values, idx) if value is None else value
+
+
+@dataclass(frozen=True)
+class _XYSpec:
+    """Per-series styling and error-band inputs for ``_draw_xy``."""
+    z_arr: list
+    lw_arr: list
+    mk_arr: list
+    ls_arr: list
+    alpha_arr: list
+    color_arr: list | None
+    color: object
+    series_colors: object
+    y_lb_arr: list
+    y_ub_arr: list
+    y_err_arr: list
+    x_err_arr: list
+    label_arr: list
+    zorder: float
+    norm: bool
+    standardize: bool
+    inv_z_order: bool
+    linearize_xaxis: bool
+
+
+def _series_color(spec, idx):
+    if spec.series_colors is not None:
+        return spec.series_colors[idx]
+    if spec.color is not None:
+        return spec.color
+    if spec.color_arr is not None:
+        return _pick(spec.color_arr, idx)
+    return pst.colors[idx % len(pst.colors)]
+
+
+def _series_label(label_arr, idx, num_items):
+    if len(label_arr) >= num_items:
+        return label_arr[idx]
+    return label_arr[0] if idx == num_items - 1 else None
+
+
+def _draw_xy(ax, y_arr, x_arr, spec, kwargs):
+    """Draw line/scatter series; returns the last artist and the last label."""
+    num_items = len(y_arr)
+    y_err_arr, y_lb_arr, y_ub_arr = spec.y_err_arr, spec.y_lb_arr, spec.y_ub_arr
+    zorder = spec.zorder
+    label = None
+    im = None
+    for idx in range(num_items):
+        if x_arr is None:
+            x = np.arange(len(y_arr[idx]))
+        else:
+            x = x_arr[0] if len(x_arr) == 1 else x_arr[idx]
+        if spec.linearize_xaxis:
+            x = np.arange(0, len(x))
+
+        y = y_arr[idx] if num_items > 1 else y_arr[0]
+        if len(y) != len(x):
+            raise ValueError(f"{x} and {y} must have the same length")
+        if isinstance(y, xr.DataArray):
+            y = y.values
+        if isinstance(x, xr.DataArray):
+            x = x.values
+
+        zorder += num_items - idx if spec.inv_z_order else idx
+        z = spec.z_arr[idx] if len(spec.z_arr) == 1 else None
+        if spec.norm is True:
+            y = sut.normalize(y)
+        if spec.standardize is True:
+            y = sut.standardize(y)
+            if len(y_err_arr) > 0:
+                y_err_arr[idx] = sut.standardize(y_err_arr[idx])
+            if len(y_lb_arr) > 0:
+                y_lb_arr[idx] = sut.standardize(
+                    y_lb_arr[idx]) if y_lb_arr[idx] is not None else None
+                y_ub_arr[idx] = sut.standardize(
+                    y_ub_arr[idx]) if y_lb_arr[idx] is not None else None
+
+        lw = _override(kwargs, 'lw', spec.lw_arr, idx)
+        alpha = _override(kwargs, 'alpha', spec.alpha_arr, idx)
+        mk = _override(kwargs, 'mk', spec.mk_arr, idx)
+        ls = _override(kwargs, 'ls', spec.ls_arr, idx)
+        mk_size = kwargs.get('mk_size', kwargs.get('marker_size', None))
+        if kwargs.get('mk_size_arr') is not None:
+            mk_size = _pick(kwargs['mk_size_arr'], idx)
+        if len(spec.label_arr) > 0:
+            label = _series_label(spec.label_arr, idx, num_items)
+        c = _series_color(spec, idx)
+
+        if z is not None:
+            cmap = kwargs.pop("cmap", "viridis")
+            cm = mpl.colormaps[cmap] if isinstance(cmap, str) else cmap
+            im = ax.scatter(x, y, c=z, label=label, lw=lw, marker=mk,
+                            s=mk_size, cmap=cm,
+                            vmin=kwargs.pop('vmin', None),
+                            vmax=kwargs.pop('vmax', None), alpha=alpha)
+            plt.colorbar(im, orientation='horizontal', label=label)
+            continue
+
+        im = ax.plot(x, y, lw=lw, marker=mk, markersize=mk_size, ls=ls,
+                     color=c, zorder=zorder, alpha=alpha, label=label)
+
+        y_err = y_err_arr[idx] if len(y_err_arr) > 0 else None
+        x_err = spec.x_err_arr[idx] if len(spec.x_err_arr) > 0 else None
+        if len(y_lb_arr) > idx:
+            y_lb, y_ub = y_lb_arr[idx], y_ub_arr[idx]
+        elif y_err is not None:
+            y_lb = np.array(y + y_err / 2, dtype=float)
+            y_ub = np.array(y - y_err / 2, dtype=float)
+        else:
+            y_lb = y_ub = None
+
+        if y_lb is not None:
+            color_arr_ci = kwargs.pop('color_arr_ci', None)
+            c = color_arr_ci if color_arr_ci is not None else c
+            im = ax.fill_between(x, y_lb, y_ub, color=c,
+                                 alpha=kwargs.get('alpha_err', 0.3))
+
+        if kwargs.pop('plot_errorbars', False):
+            ax.errorbar(x, y, xerr=x_err, yerr=y_err, label=label, lw=lw,
+                        marker=mk, ls=ls, color=c, capsize=2)
+    return im, label
+
+
+def _draw_bar(ax, y_arr, x_arr, label_arr, color_arr, kwargs, kwargs_init):
+    import seaborn as sns
+
+    stacked = kwargs.pop('stacked', False)
+    edgecolor = kwargs.pop('edge_color', None)
+    fill_bar = kwargs.pop('fill_bar', True)
+    df = pd.DataFrame(dict(X=x_arr[0]))
+    names = [0] if len(label_arr) == 0 else label_arr
+    for idx, arr in enumerate(y_arr):
+        df[names[idx]] = arr
+    if color_arr is None:
+        color_arr = sns.color_palette('hls', len(y_arr))
+
+    if stacked:
+        im = df.set_index('X').plot(kind='bar', stacked=True,
+                                    color=color_arr, ax=ax)
+    else:
+        tidy = df.melt(id_vars='X').rename(columns=str.title)
+        im = sns.barplot(x='X', y='Value', hue='Variable', data=tidy,
+                         palette=color_arr, fill=fill_bar, ax=ax,
+                         edgecolor=edgecolor)
+        ax.set_xlabel(kwargs_init.pop("xlabel", "") or "")
+        ax.set_ylabel(kwargs_init.pop("ylabel", "") or "")
+    # seaborn resets the axis, so prepare it again
+    ax, kwargs = pax.prepare_axis(ax, reset_axis=True, **kwargs_init)
+    return im, ax, kwargs
+
+
+def _draw_density(ax, y_arr, x_arr, label_arr, color_arr, alpha_arr, kwargs):
+    import seaborn as sns
+
+    levels = kwargs.pop("levels", 10)
+    im = label = None
+    for idx in range(len(y_arr)):
+        label = label_arr[idx] if idx < len(label_arr) else None
+        im = sns.kdeplot(
+            x=x_arr[idx], y=y_arr[idx], label=label, ax=ax,
+            cmap=color_arr[idx] if color_arr is not None else 'viridis',
+            alpha=_pick(alpha_arr, idx), levels=levels, fill=True)
+    return im, label
+
+
 def plot_2d(
     y=None,
     x=None,
@@ -58,13 +234,42 @@ def plot_2d(
     plot_type='xy',
     **kwargs,
 ):
+    """Plot one or several x-y series, bars or densities.
+
+    Parameters
+    ----------
+    y, x : array-like or list of array-likes
+        One series, or a list of series. ``x`` defaults to ``arange(len(y))``;
+        a single ``x`` is shared by all series.
+    z_arr : list, optional
+        Values to colour a scatter plot by (``plot_type='xy'`` with one entry).
+    lw_arr, mk_arr, ls_arr, alpha_arr, color_arr : list, optional
+        Per-series line width, marker, line style, alpha and colour; the last
+        entry is reused for series beyond the end of the list.
+    color : colour, optional
+        One colour for all series (wins over ``color_arr``).
+    lcmap : str or Colormap, optional
+        Colour the series along this colormap and add a colorbar.
+    ax : matplotlib Axes, optional
+        Draw into this axis instead of creating a figure.
+    norm, standardize : bool
+        Rescale each series to [0, 1] or to zero mean and unit variance.
+    plot_type : {'xy', 'scatter', 'bar', 'density'}
+
+    Other keyword arguments
+    -----------------------
+    label / label_arr, y_lb / y_ub / y_err / x_err, alpha_err, color_arr_ci,
+    plot_errorbars, zorder, inv_z_order, linearize_xaxis, all_x, lw, alpha, ls,
+    mk, mk_size, mk_size_arr (override the per-series lists), stacked,
+    edge_color, fill_bar (bars), levels (density), sci, sci_x, set_legend, and
+    everything accepted by ``axes.prepare_axis`` and ``axes.set_legend``.
+
+    Returns
+    -------
+    PlotResult with ``ax``, ``fig`` and the last drawn artist ``im``.
+    """
     if y is None:
         raise ValueError("y must be provided!")
-    z_arr = [] if z_arr is None else z_arr
-    lw_arr = [1] if lw_arr is None else lw_arr
-    mk_arr = [""] if mk_arr is None else mk_arr
-    ls_arr = ['-'] if ls_arr is None else ls_arr
-    alpha_arr = [1] if alpha_arr is None else alpha_arr
 
     y_arr = _as_series_list(y)
     x_arr = _as_series_list(x) if x is not None else None
@@ -85,225 +290,55 @@ def plot_2d(
     zorder = kwargs.pop('zorder', 0)
     kwargs_init = copy.deepcopy(kwargs)
 
-    # Create the axis and figure
-    ax, fig, kwargs = create_axis(
-        ax, plot_type, **kwargs)
+    ax, fig, kwargs = create_axis(ax, plot_type, **kwargs)
 
     num_items = len(y_arr)
-    inverted_z_order = kwargs.pop('inv_z_order', False)
+    inv_z_order = kwargs.pop('inv_z_order', False)
     linearize_xaxis = kwargs.pop('linearize_xaxis', False)
     label = kwargs.pop('label', None)
-    # to account that both label or label_arr can be used
+    # both label and label_arr can be used
     label_arr = kwargs.get("label_arr", [])
     if label is not None:
-        if not isinstance(label, (list, np.ndarray)):
-            label_arr = [label]
-        else:
-            label_arr = label
+        label_arr = label if isinstance(label, (list, np.ndarray)) else [label]
+    alpha_arr = [1] if alpha_arr is None else alpha_arr
 
-    if plot_type == 'xy' or plot_type == 'scatter':
-        if lcmap is not None:
-            evenly_spaced_interval = np.arange(num_items)
-            ccolors = mpl.colormaps[lcmap](
-                np.linspace(0, 1, num_items)) if isinstance(lcmap, str) \
-                else lcmap(np.linspace(0, 1, num_items))
+    series_colors = None
+    if lcmap is not None:
+        series_colors = (mpl.colormaps[lcmap] if isinstance(lcmap, str)
+                         else lcmap)(np.linspace(0, 1, num_items))
 
-        for idx in range(num_items):
-            if x_arr is None:
-                x = np.arange(len(y_arr[idx]))
-            else:
-                x = x_arr[0] if len(x_arr) == 1 else x_arr[idx]
-            if linearize_xaxis:
-                x = np.arange(0, len(x))
-
-            y = y_arr[idx] if len(y_arr) > 1 else y_arr[0]
-
-            if len(y) != len(x):
-                raise ValueError(
-                    f"{x} and {y} must have the same length")
-            if isinstance(y, xr.DataArray):
-                y = y.values
-            if isinstance(x, xr.DataArray):
-                x = x.values
-
-            zorder += len(y_arr) - idx if inverted_z_order else idx
-            z = z_arr[idx] if len(z_arr) == 1 else None
-            if norm is True:
-                y = sut.normalize(y)
-            if standardize is True:
-                y = sut.standardize(y)
-                if len(y_err_arr) > 0:
-                    y_err_arr[idx] = sut.standardize(y_err_arr[idx])
-                if len(y_lb_arr) > 0:
-                    y_lb_arr[idx] = sut.standardize(
-                        y_lb_arr[idx]) if y_lb_arr[idx] is not None else None
-                    y_ub_arr[idx] = sut.standardize(
-                        y_ub_arr[idx]) if y_lb_arr[idx] is not None else None
-
-            lw = kwargs.get('lw', None)
-            alpha = kwargs.get('alpha', None)
-
-            if lw is None:
-                lw = lw_arr[idx] if idx < len(lw_arr) else lw_arr[-1]
-            if alpha is None:
-                alpha = alpha_arr[idx] if idx < len(
-                    alpha_arr) else alpha_arr[-1]
-            mk = kwargs.get('mk', None)
-            if mk is None:
-                mk = mk_arr[idx] if idx < len(mk_arr) else mk_arr[-1]
-
-            mk_size = kwargs.get('mk_size', kwargs.get('marker_size', None))
-            mk_size_arr = kwargs.get('mk_size_arr', None)
-            if mk_size_arr is not None:
-                mk_size = mk_size_arr[idx] if idx < len(
-                    mk_size_arr) else mk_size_arr[-1]
-
-            ls = kwargs.get('ls', None)
-            if ls is None:
-                ls = ls_arr[idx] if idx < len(ls_arr) else ls_arr[-1]
-
-            if len(label_arr) > 0:
-                if len(label_arr) >= len(y_arr):
-                    label = label_arr[idx]
-                else:
-                    label = label_arr[0] if idx == len(y_arr)-1 else None
-
-            if lcmap is None:
-                if color is None:
-                    if color_arr is None:
-                        c = pst.colors[idx % len(pst.colors)]
-                    else:
-                        if idx < len(color_arr):
-                            c = color_arr[idx]
-                        else:
-                            c = color_arr[-1]
-                else:
-                    c = color
-            else:
-                c = ccolors[idx]
-
-            if z is not None:
-                cmap = kwargs.pop("cmap", "viridis")
-                vmin = kwargs.pop('vmin', None)
-                vmax = kwargs.pop('vmax', None)
-                cm = mpl.colormaps[cmap] if isinstance(cmap, str) else cmap
-                im = ax.scatter(x, y, c=z,
-                                label=label,
-                                lw=lw,
-                                marker=mk,
-                                s=mk_size,
-                                cmap=cm,
-                                vmin=vmin, vmax=vmax,
-                                alpha=alpha
-                                )
-                plt.colorbar(im, orientation='horizontal', label=label)
-            else:
-                im = ax.plot(x, y,
-                             lw=lw,
-                             marker=mk,
-                             markersize=mk_size,
-                             ls=ls,
-                             color=c,
-                             zorder=zorder,
-                             alpha=alpha,
-                             label=label
-                             )
-
-                if len(y_lb_arr) > idx:
-                    y_lb = y_lb_arr[idx] if y_lb_arr[idx] is not None else None
-                    y_ub = y_ub_arr[idx] if y_ub_arr[idx] is not None else None
-                elif len(y_err_arr) > 0:
-                    y_err = y_err_arr[idx] if len(y_err_arr) > 0 else None
-                    x_err = x_err_arr[idx] if len(x_err_arr) > 0 else None
-                    y_lb = np.array(y + y_err / 2, dtype=float)
-                    y_ub = np.array(y - y_err / 2, dtype=float)
-                else:
-                    y_lb = None
-                    y_ub = None
-
-                if y_lb is not None:
-                    color_arr_ci = kwargs.pop('color_arr_ci', None)
-                    c = color_arr_ci if color_arr_ci is not None else c
-                    alpha_err = kwargs.get('alpha_err', 0.3)
-                    im = ax.fill_between(
-                        x,
-                        y_lb,
-                        y_ub,
-                        color=c,
-                        alpha=alpha_err,
-                    )
-
-                plot_errorbar = kwargs.pop('plot_errorbars', False)
-                if plot_errorbar:
-                    ax.errorbar(x, y, xerr=x_err, yerr=y_err,
-                                label=label, lw=lw, marker=mk, ls=ls, color=c,
-                                capsize=2)
-
-    # ############# Plotting  bar ################
+    if plot_type in ('xy', 'scatter'):
+        spec = _XYSpec(
+            z_arr=[] if z_arr is None else z_arr,
+            lw_arr=[1] if lw_arr is None else lw_arr,
+            mk_arr=[""] if mk_arr is None else mk_arr,
+            ls_arr=['-'] if ls_arr is None else ls_arr,
+            alpha_arr=alpha_arr, color_arr=color_arr, color=color,
+            series_colors=series_colors, y_lb_arr=y_lb_arr, y_ub_arr=y_ub_arr,
+            y_err_arr=y_err_arr, x_err_arr=x_err_arr, label_arr=label_arr,
+            zorder=zorder, norm=norm, standardize=standardize,
+            inv_z_order=inv_z_order, linearize_xaxis=linearize_xaxis)
+        im, label = _draw_xy(ax, y_arr, x_arr, spec, kwargs)
     elif plot_type == 'bar':
-        import seaborn as sns
-
-        # Bar plot
-        stacked = kwargs.pop('stacked', False)
-        df = pd.DataFrame(dict(
-            X=x_arr[0]
-        ))
-        edgecolor = kwargs.pop('edge_color', None)
-        fill_bar = kwargs.pop('fill_bar', True)
-        label_arr_tmp = [0] if len(label_arr) == 0 else label_arr
-
-        for idx, arr in enumerate(y_arr):
-            df[label_arr_tmp[idx]] = arr
-
-        if color_arr is None:
-            color_arr = sns.color_palette('hls', len(y_arr))
-
-        tidy = df.melt(id_vars='X').rename(columns=str.title)
-        if stacked:
-            im = df.set_index('X').plot(kind='bar',
-                                        stacked=True, color=color_arr, ax=ax)
-        else:
-            im = sns.barplot(x='X',
-                             y='Value',
-                             hue='Variable',
-                             data=tidy,
-                             palette=color_arr,
-                             fill=fill_bar,
-                             ax=ax,
-                             edgecolor=edgecolor,
-                             )
-            ax.set_xlabel(kwargs_init.pop("xlabel", "") or "")
-            ax.set_ylabel(kwargs_init.pop("ylabel", "") or "")
-        # set again axis, because sns changes it
-
-        ax, kwargs = pax.prepare_axis(ax, reset_axis=True, **kwargs_init)
-    # ############# Plotting  density ################
+        im, ax, kwargs = _draw_bar(ax, y_arr, x_arr, label_arr, color_arr,
+                                   kwargs, kwargs_init)
     elif plot_type == 'density':
-        import seaborn as sns
-
-        levels = kwargs.pop("levels", 10)
-        for idx in range(num_items):
-            label = label_arr[idx] if idx < len(label_arr) else None
-            color = color_arr[idx] if color_arr is not None else 'viridis'
-            im = sns.kdeplot(x=x_arr[idx], y=y_arr[idx], label=label,
-                             cmap=color, ax=ax,
-                             alpha=alpha_arr[min(idx, len(alpha_arr) - 1)],
-                             levels=levels, fill=True)
+        im, label = _draw_density(ax, y_arr, x_arr, label_arr, color_arr,
+                                  alpha_arr, kwargs)
 
     if lcmap is not None:
-        norm = mpl.colors.Normalize(
-            vmin=evenly_spaced_interval.min(), vmax=evenly_spaced_interval.max()
-        )
-        cmap = mpl.cm.ScalarMappable(norm=norm, cmap=lcmap)
-        cmap.set_array([])
-        fig.colorbar(cmap, ax=ax, ticks=evenly_spaced_interval)
+        ticks = np.arange(num_items)
+        mappable = mpl.cm.ScalarMappable(
+            norm=mpl.colors.Normalize(vmin=ticks.min(), vmax=ticks.max()),
+            cmap=lcmap)
+        mappable.set_array([])
+        fig.colorbar(mappable, ax=ax, ticks=ticks)
 
     if all_x is True:
         ax.set_xticks(x_arr[0])
     sci = kwargs.pop("sci", None)
     if sci is not None:
         ax.ticklabel_format(style="sci", axis="y", scilimits=(sci, sci))
-
     sci_x = kwargs.pop("sci_x", None)
     if sci_x is not None:
         ax.ticklabel_format(style="sci", axis="x", scilimits=(sci_x, sci_x))
@@ -312,9 +347,8 @@ def plot_2d(
     if make_legend and label is not None:
         # labels and legend items are already within ax-object
         ax = pax.set_legend(ax=ax, **kwargs)
-    else:
-        if plot_type == 'bar':
-            ax.legend_.remove()
+    elif plot_type == 'bar':
+        ax.legend_.remove()
 
     return PlotResult(ax=ax, im=im, fig=fig)
 
