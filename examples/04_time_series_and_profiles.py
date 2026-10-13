@@ -1,7 +1,7 @@
 """Line plots from hourly data: a year of daily means, the diurnal cycle, and
 the north-south profile in winter and summer.
 
-Run:  python examples/04_profiles_and_distribution.py
+Run:  python examples/04_time_series_and_profiles.py
 """
 import geoutils.plotting as gp
 from common import FIGURES, at_city, load
@@ -30,4 +30,4 @@ gp.plot_2d(y=profiles, x=profiles[0].lat, ax=ax_lat, label=["January", "July"],
            color_arr=["#0072B2", "#D55E00"], xlabel="Latitude [°N]",
            ylabel="2 m temperature [°C]", title="Zonal mean")
 
-gp.save_fig(FIGURES / "04_profiles_and_distribution", fig=res["fig"])
+gp.save_fig(FIGURES / "04_time_series_and_profiles", fig=res["fig"])
