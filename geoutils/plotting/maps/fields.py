@@ -7,6 +7,7 @@ import numpy as np
 import xarray as xr
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 import cartopy.crs as ccrs
 
 import geoutils.plotting.axes as pax
@@ -188,54 +189,66 @@ def plot_map(dmap: xr.DataArray,
             gut.myprint(
                 f'WARNING! plot_type {plot_type} cannot be used togehter with significance mask so far!')
         else:
-            if isinstance(significance_mask, bool) and ds is None:
-                raise ValueError(
-                    'Significance mask set to true requires a dataset!')
-            if significance_mask is False:
-                raise ValueError(
-                    'Significance mask has to be None, not False!')
-            if ds is not None or inverse_mask is True:
-                if ds is not None:
-                    this_mask = ds.mask
-                else:
-                    this_mask = significance_mask
-                significance_mask = xr.where(
-                    this_mask == 1, False, True)  # Turn around the mask
-                hatch_type = '///'
-            if sig_plot_type == 'hatch':
-                significance_mask = xr.where(significance_mask == 1, 1, np.nan)
-            elif sig_plot_type == 'contour':
-                significance_mask = xr.where(
-                    significance_mask, 1, 0)
-            if 'points' in list(significance_mask.dims):
-                mask_dict = sput.interp2gaus(
-                    dataarray=significance_mask, grid_step=grid_step)
-                mask = mask_dict['intpol']
-            else:
-                mask = significance_mask
-
+            mask, hatch_type = _prepare_significance(
+                significance_mask, ds=ds, inverse_mask=inverse_mask,
+                kind=sig_plot_type, grid_step=grid_step, hatch_type=hatch_type)
             if mask.shape != z.shape:
                 raise ValueError(
                     'Significance mask not of same dimension as data input dimension!')
-
-            if sig_plot_type == 'hatch':
-                plot_array(x=x, y=y, z=mask, ax=im['ax'],
-                           plot_type=sig_plot_type, alpha=0.0,
-                           projection=projection,
-                           hatch_type=hatch_type,
-                           **kwargs)
-            elif sig_plot_type == 'contour':
-                color = kwargs.pop('color', 'black')
-                levels = kwargs.pop('levels', 1)
-                plot_array(x=x, y=y, z=mask, ax=im['ax'],
-                           plot_type='contour',
-                           levels=1,
-                           vmin=0, vmax=1,
-                           color='black',
-                           projection=projection,
-                           lw=2,
-                           **kwargs)
+            draw_significance(im['ax'], x, y, mask, projection,
+                              kind=sig_plot_type, hatch_type=hatch_type,
+                              **kwargs)
     return im
+
+def _draw_hatch(ax, x, y, z, projection, hatch_type):
+    """Draw an invisible layer whose only visible part is the hatching."""
+    invisible = ListedColormap(['none'])
+    if projection is None:
+        return ax.contourf(x, y, z, cmap=invisible, hatches=[hatch_type],
+                           alpha=0.0, zorder=10)
+    # transform=None would suppress the hatches
+    return ax.pcolor(x, y, z, transform=projection, cmap=invisible,
+                     hatch=hatch_type, alpha=0.0, shading='nearest',
+                     zorder=10)
+
+
+def _prepare_significance(significance_mask, *, ds, inverse_mask, kind,
+                          grid_step, hatch_type):
+    """Turn a user significance mask into the array that gets drawn.
+
+    Returns the mask (1 where it is drawn) and the hatch pattern to use.
+    """
+    if significance_mask is False:
+        raise ValueError('Significance mask has to be None, not False!')
+    if isinstance(significance_mask, bool) and ds is None:
+        raise ValueError('Significance mask set to true requires a dataset!')
+    if ds is not None or inverse_mask is True:
+        this_mask = ds.mask if ds is not None else significance_mask
+        significance_mask = xr.where(this_mask == 1, False, True)  # turn around
+        hatch_type = '///'
+    if kind == 'hatch':
+        significance_mask = xr.where(significance_mask == 1, 1, np.nan)
+    elif kind == 'contour':
+        significance_mask = xr.where(significance_mask, 1, 0)
+    if 'points' in list(significance_mask.dims):
+        significance_mask = sput.interp2gaus(
+            dataarray=significance_mask, grid_step=grid_step)['intpol']
+    return significance_mask, hatch_type
+
+
+def draw_significance(ax, x, y, mask, projection, *, kind='hatch',
+                      hatch_type='///', **kwargs):
+    """Overlay a prepared significance mask as hatching or a contour line."""
+    if kind == 'hatch':
+        return plot_array(x=x, y=y, z=mask, ax=ax, plot_type='hatch',
+                          alpha=0.0, projection=projection,
+                          hatch_type=hatch_type, **kwargs)
+    # the main plot's colour and levels must not leak into the outline
+    kwargs = {k: v for k, v in kwargs.items() if k not in ('color', 'levels')}
+    return plot_array(x=x, y=y, z=mask, ax=ax, plot_type='contour', levels=1,
+                      vmin=0, vmax=1, color='black', projection=projection,
+                      lw=2, **kwargs)
+
 
 # Plotting of 2D data (not necessary a map)
 
@@ -488,38 +501,10 @@ def plot_array(
     if plot_type == 'hatch' or significance_mask is not None:
         if significance_mask is not None:
             z = xr.where(significance_mask == 1, 1, np.nan)
-        from matplotlib.colors import ListedColormap
-        hatch_type = kwargs.pop('hatch_type', '///')
-        if projection is None:
-            im_tmp = ax.contourf(
-                x,
-                y,
-                z,
-                # vmin=vmin,
-                # vmax=vmax,
-                cmap=ListedColormap(['none']),
-                # norm=norm,
-                hatches=[hatch_type],
-                alpha=0.0,
-                zorder=10,
-            )
-        else:
-            im_tmp = ax.pcolor(
-                x,
-                y,
-                z,
-                # tranform=None causes no plotting of hatches...
-                transform=projection,
-                cmap=ListedColormap(['none']),
-                hatch=hatch_type,
-                alpha=0.0,
-                shading='nearest',
-                zorder=10,
-            )
+        hatches = _draw_hatch(ax, x, y, z, projection,
+                              kwargs.pop('hatch_type', '///'))
         if plot_type == 'hatch':
-            im = im_tmp
-    # else:
-    #     raise ValueError(f"Plot type {plot_type} does not exist!")
+            im = hatches
     if pax.check_geoaxis(ax):
         # set distance of plot to the title
         y_title = kwargs.pop('y_title', 1.15)

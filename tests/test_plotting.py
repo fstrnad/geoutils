@@ -56,3 +56,32 @@ def test_color_bounds_is_explicit_parameter():
     sig = inspect.signature(mp.plot_array)
     assert "color_bounds" in sig.parameters
     assert sig.parameters["color_bounds"].default == "quantile"
+
+
+# --- significance overlays ---------------------------------------------
+
+def _hatched(ax):
+    return [c for c in ax.collections if c.get_hatch()]
+
+
+def test_significance_mask_hatches_map(latlon_da):
+    mask = latlon_da > latlon_da.median()
+    res = mp.plot_map(latlon_da, significance_mask=mask)
+    assert len(_hatched(res["ax"])) == 1
+
+
+def test_significance_contour_draws_lines(latlon_da):
+    mask = latlon_da > latlon_da.median()
+    plain = mp.plot_map(latlon_da)
+    res = mp.plot_map(latlon_da, significance_mask=mask, sig_plot_type="contour")
+    assert len(res["ax"].collections) > len(plain["ax"].collections)
+
+
+def test_significance_mask_false_rejected(latlon_da):
+    with pytest.raises(ValueError, match="not False"):
+        mp.plot_map(latlon_da, significance_mask=False)
+
+
+def test_significance_mask_shape_mismatch_rejected(latlon_da):
+    with pytest.raises(ValueError, match="same dimension"):
+        mp.plot_map(latlon_da, significance_mask=latlon_da[:2])
