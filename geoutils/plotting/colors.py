@@ -110,14 +110,6 @@ def get_cmap(cmap, levels=None):
     return cmap
 
 
-def truncate_colormap(cmap='terrain_r', minval=0.0, maxval=1.0, n=100):
-    cmap = plt.get_cmap(cmap)
-    new_cmap = mpl.colors.LinearSegmentedColormap.from_list(
-        'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
-        cmap(np.linspace(minval, maxval, n)))
-    return new_cmap
-
-
 def create_cmap(cmap, levels=None, **kwargs):
     # set colormap
     if isinstance(cmap, str):
@@ -529,16 +521,3 @@ def discrete_norm_ticks(vmin, vmax, shift_ticks=False, num_ticks=None):
         normticks = np.linspace(vmin, vmax, num_ticks + 1)
 
     return normticks
-
-
-def get_arr_colorbar(data, cmap='spectral'):
-    vmin = np.nanquantile(data, q=0.05)
-    vmax = np.nanquantile(data, q=0.95)
-    cmap = plt.get_cmap(cmap)
-    # Normalize the values in the array to fall within the range [0, 1]
-    norm = (array - vmin) / (vmax - vmin)
-
-    # Map the normalized values to colors in the colormap
-    colors = cmap(norm)
-
-    return colors

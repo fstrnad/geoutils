@@ -3,7 +3,6 @@ import warnings
 from dataclasses import dataclass, fields
 from matplotlib.offsetbox import AnchoredText
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 import numpy as np
 import cartopy.crs as ccrs
 import geoutils.plotting.style as pst
@@ -475,67 +474,5 @@ def text_box(ax, text, pos="upper right", fsize=pst.MEDIUM_SIZE, **kwargs):
                                  prop=dict(size=fsize,
                                            fontweight=fw))
     ax.add_artist(anchored_text)
-
-    return ax
-
-
-def get_lon_lat_ticklabels(array_lon=None, array_lat=None, deg_label='°E'):
-    lon = np.arange(0, 360, 30) if array_lon is None else array_lon
-    lat = np.arange(-90, 90, 30) if array_lat is None else array_lat
-    lon_labels = [f'{lon}°E' if lon > 0 and lon <
-                  180 else f'{lon}°W' for lon in lon]
-    lat_labels = [f'{lat}°N' if lat >= 0 else f'{lat}°S' for lat in lat]
-    return lon_labels, lat_labels
-
-
-def get_grid_figure(fig=None, ax_ratios=None, **kwargs):
-    import matplotlib.gridspec as gridspec
-    figsize = kwargs.pop('figsize', (10, 6))
-    nrows = kwargs.pop('nrows', 2)
-    ncols = kwargs.pop('ncols', 1)
-    hspace = kwargs.pop('hspace', 0.4)
-    wspace = kwargs.pop('wspace', 0.4)
-
-    # Create a gridspec instance
-    if fig is None:
-        fig = plt.figure(figsize=figsize)
-    gs = gridspec.GridSpec(nrows, ncols, hspace=hspace,
-                           wspace=wspace,
-                           figure=fig)
-    ax_arr = []
-    for ax_ratio in ax_ratios:
-        ax_arr.append(plt.subplot(gs[ax_ratio[0], ax_ratio[1]]))
-
-    return {'fig': fig, 'ax': ax_arr}
-
-
-def remove_colorbars(ax):
-    fig = ax.figure
-
-    # Find and remove a colorbar linked to this axis
-    for cb_ax in fig.axes[:]:      # copy list because we may modify it
-        if isinstance(cb_ax, mpl.colorbar.Colorbar):
-            # If this colorbar belongs to our axis, remove it
-            if cb_ax.ax == ax:
-                cb_ax.remove()
-                print('Colorbar removed.')
-
-
-    # Clear the axis
-    ax.cla()
-    ax.set_axis_off()
-    return ax
-
-
-def full_reset_ax(ax, fig=None):
-    ax.cla()                  # clear all artists (content)
-    ax.set_xticks([])         # remove ticks
-    ax.set_yticks([])
-    ax.set_xticklabels([])    # remove tick labels
-    ax.set_yticklabels([])
-    ax.set_xlabel('')
-    ax.set_ylabel('')
-    ax.set_title('')
-    ax = remove_colorbars(ax=ax)
 
     return ax

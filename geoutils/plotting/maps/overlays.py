@@ -286,19 +286,6 @@ def plot_trajectory(lon_lat_pairs,
     )
 
 
-def plt_text_map(ax, lon_pos, lat_pos, text, color="k"):
-    ax.text(
-        lon_pos,
-        lat_pos,
-        text,
-        horizontalalignment="center",
-        transform=ccrs.Geodetic(),
-        color=color,
-    )
-
-    return ax
-
-
 def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
     """Plots a rectangle on a cartopy map
 

@@ -3,15 +3,12 @@ import copy
 from dataclasses import dataclass
 import xarray as xr
 import pandas as pd
-import geoutils.utils.time_utils as tu
 import geoutils.utils.statistic_utils as sut
 import geoutils.utils.general_utils as gut
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-import matplotlib.dates as mdates
-from matplotlib.ticker import FuncFormatter
 import geoutils.plotting.axes as pax
 import geoutils.plotting.colors as pcol
 import geoutils.plotting.style as pst
@@ -388,19 +385,6 @@ def fill_between(ax, x, y, y2, thresh=0, larger=True,
     return ax
 
 
-def plot_lines(ax, te, color="Turquoise"):
-    ylo, yhi = ax.get_ylim()
-    ax.bar(x=te,
-           width=1 * np.ones(len(te)),
-           height=(yhi - ylo) * np.ones(len(te)),
-           bottom=ylo * np.ones(len(te)),
-           #    edgecolor="none",
-           facecolor=color,
-           zorder=10,
-           )
-    return {'ax': ax}
-
-
 @pst.styled
 def plot_hist(data, ax=None, fig=None,
               plot_type='xy',
@@ -458,24 +442,6 @@ def plot_hist(data, ax=None, fig=None,
         hc=hc_arr[0],
         fig=fig,
     )
-
-
-def prepare_ts_x_axis(ax, dates, **kwargs):
-
-    sy, ey = tu.get_start_end_date(data=dates)
-    ax, kwargs = pax.prepare_axis(ax, **kwargs)
-    ax.tick_params(axis="x", labelrotation=90)
-    # Text in the x axis will be displayed in 'YYYY' format.
-    fmt_form = mdates.DateFormatter("%m-%Y")
-    ax.xaxis.set_major_formatter(FuncFormatter(fmt_form))
-    fmt_loc = mdates.YearLocator()
-    ax.xaxis.set_major_locator(fmt_loc)
-    ax.tick_params(
-        direction="out", length=pst.SMALL_SIZE / 2, width=1, colors="k", grid_alpha=0.5
-    )
-    ax.set_xlim(sy, ey)
-
-    return ax
 
 
 #  ########################  Null Model #########################
