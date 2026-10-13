@@ -413,9 +413,9 @@ def make_colorbar(ax, im, fig=None, spec=None, **kwargs):
     if spec is None:
         spec = ColorbarSpec.from_kwargs(kwargs)
     ticks = None if spec.ticks is None else spec.ticks[::int(spec.tick_step)]
-    if spec.round_dec is not None:
+    if ticks is not None and spec.round_dec is not None:
         ticks = np.around(ticks, spec.round_dec)
-    if spec.set_int:
+    if ticks is not None and spec.set_int:
         ticks = np.round(ticks).astype(int)
     if fig is None:
         fig = (ax[0] if isinstance(ax, (list, tuple)) else ax).get_figure()
@@ -455,7 +455,7 @@ def make_colorbar(ax, im, fig=None, spec=None, **kwargs):
     if spec.sci is not None:
         place_colorbar_offset_text(cbar)
 
-    if spec.shift_ticks is not None:
+    if spec.shift_ticks is not None and ticks is not None:
         cbar.set_ticks(ticks[:-1]+0.5)
         if spec.set_rot:
             cbar.ax.set_xticklabels(ticks[:-1], rotation=45)

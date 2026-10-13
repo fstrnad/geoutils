@@ -195,3 +195,26 @@ def test_plot_array_default_clips_at_robust_percentiles():
     res = plot_array(Z, plot_type="contourf")
     assert res["ticks"][0] == pytest.approx(1.98, abs=0.1)
     assert res["ticks"][-1] == pytest.approx(97.02, abs=0.1)
+
+
+# --- review findings ----------------------------------------------------
+
+def test_plot_array_colormesh_honours_robust_bounds():
+    z = np.random.default_rng(0).normal(0, 3, (20, 20))
+    z[0, 0] = 50.0
+    res = plot_array(z, plot_type="colormesh", label="x")
+    assert res["im"].get_clim()[1] < 20
+    assert res["extend"] in ("max", "both")
+
+
+def test_plot_array_colormesh_honours_explicit_limits():
+    res = plot_array(Z, plot_type="colormesh", vmin=-1, vmax=1)
+    assert res["im"].get_clim() == (-1, 1)
+
+
+@pytest.mark.parametrize("kw", [dict(set_int=True), dict(shift_ticks=True),
+                                dict(round_dec=1)])
+def test_colorbar_options_needing_ticks_do_not_crash_without_levels(latlon_da, kw):
+    import geoutils.plotting as cplt
+    res = cplt.plot_map(latlon_da, label="x", **kw)
+    assert res["colorbar"] is not None

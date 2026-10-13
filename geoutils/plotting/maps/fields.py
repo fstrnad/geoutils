@@ -331,8 +331,11 @@ def _draw_points(ax, c):
 
 
 def _draw_colormesh(ax, c):
+    # a norm and vmin/vmax are mutually exclusive in matplotlib
+    limits = {} if c.norm is not None else dict(vmin=c.vmin, vmax=c.vmax)
     return ax.pcolor(
-        c.x, c.y, c.z, cmap=c.cmap, shading="auto", norm=c.norm, zorder=c.zorder,
+        c.x, c.y, c.z, cmap=c.cmap, shading="auto", norm=c.norm,
+        zorder=c.zorder, **limits,
     )
 
 
