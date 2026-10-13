@@ -1,17 +1,24 @@
 # Plotting examples
 
-Scripts using `geoutils.plotting` on the ERA5 test file
-(`/Users/fstrnad/projects/era5/data/era5_test.nc`, 2 m temperature over Central
-Europe). Pass another file as the first argument; it needs a `t2m` variable.
-Run from anywhere, figures are written to `examples/figures/`.
+Scripts using `geoutils.plotting` on the ERA5 single-level data in
+`/Users/fstrnad/projects/era5/data/era5-single-levels` (hourly 2 m temperature
+and total precipitation for Europe, 2024, 0.25°; a few 6-hourly 0.5° fields).
+Set `ERA5_DATA` to use another copy. Run from anywhere, e.g.
+`python examples/03_multipanel_shared_colorbar.py`; figures go to
+`examples/figures/`.
 
 | Script | Shows |
 |---|---|
 | `01_map_basics.py` | mesh, filled contours, contour lines; `color_bounds` |
-| `02_anomalies.py` | diverging colormap with automatic symmetric limits |
-| `03_multipanel_shared_colorbar.py` | `create_multi_plot`, regional extents, one shared colorbar |
-| `04_profiles_and_distribution.py` | `plot_2d` with a spread band, several series, `plot_hist` |
-| `05_annotated_map.py` | `plot_rectangle`, `plot_text`, markers on a map |
+| `02_anomalies.py` | daily anomalies on a diverging colormap, symmetric limits |
+| `03_multipanel_shared_colorbar.py` | four seasons, `create_multi_plot`, one shared colorbar |
+| `04_profiles_and_distribution.py` | `plot_2d`: daily time series with gaps, diurnal cycle, zonal profile |
+| `05_annotated_map.py` | city markers and labels, `plot_rectangle` |
+| `06_precipitation.py` | monthly totals and wet-day counts, fixed colour limits |
+| `07_resolution_comparison.py` | 0.25° against 0.5° over the Alps, and what interpolation loses |
 
-`common.py` loads the data and renames the coordinates to the `lat`/`lon`
-names geoutils expects.
+`common.py` finds and loads the files lazily (renaming the coordinates to the
+`time`/`lat`/`lon` that geoutils expects, converting to °C and mm). When no month is
+given, only months whose `.sig.json` marker exists are loaded, so a download
+that is still running is safe; incomplete months show up as gaps. Scripts that
+ask for a specific month need that file to be complete.

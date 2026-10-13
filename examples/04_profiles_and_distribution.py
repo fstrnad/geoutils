@@ -1,31 +1,33 @@
-"""Line plots from the same field: profiles with a spread band, and a histogram.
+"""Line plots from hourly data: a year of daily means, the diurnal cycle, and
+the north-south profile in winter and summer.
 
-Run:  python examples/04_profiles_and_distribution.py [path/to/era5.nc]
+Run:  python examples/04_profiles_and_distribution.py
 """
 import geoutils.plotting as gp
-from common import FIGURES, load_t2m
+from common import FIGURES, at_city, load
 
-t2m = load_t2m()
+t2m = load("t2m")  # every month that is downloaded
+cities = ["Oslo", "Berlin", "Madrid"]
 
-res = gp.create_plot(1, 3, figsize=(16, 4.2))
-ax_lat, ax_lon, ax_hist = res["ax"]
+res = gp.create_plot(1, 3, figsize=(18, 4.6))
+ax_year, ax_day, ax_lat = res["ax"]
 
-# north-south profile: mean over longitude with min-max band
-gp.plot_2d(y=t2m.mean("lon"), x=t2m.lat, ax=ax_lat, label="zonal mean",
-           y_lb=t2m.min("lon").values, y_ub=t2m.max("lon").values,
-           xlabel="Latitude [°N]", ylabel="2 m temperature [°C]",
-           title="Zonal mean and range")
+# daily means over the year; months that are not downloaded show as gaps
+daily = [at_city(t2m, c).resample(time="1D").mean().compute() for c in cities]
+gp.plot_2d(y=daily, x=daily[0].time, ax=ax_year, label=cities, lw_arr=[1.2],
+           ylabel="2 m temperature [°C]", title="Daily mean, 2024")
 
-# west-east profiles at three latitudes
-lats = [48, 51, 54]
-gp.plot_2d(y=[t2m.sel(lat=lat, method="nearest") for lat in lats],
-           x=t2m.lon, ax=ax_lon, label=[f"{lat}°N" for lat in lats],
-           xlabel="Longitude [°E]", ylabel="2 m temperature [°C]",
-           title="West-east profiles")
+# mean diurnal cycle in July (UTC)
+july = load("t2m", 7)
+cycles = [at_city(july, c).groupby("time.hour").mean().compute() for c in cities]
+gp.plot_2d(y=cycles, x=cycles[0].hour, ax=ax_day, label=cities,
+           xlabel="Hour of day [UTC]", ylabel="2 m temperature [°C]",
+           title="Diurnal cycle, July")
 
-# distribution of all grid points
-gp.plot_hist(t2m.values.ravel(), ax=ax_hist, fig=res["fig"], nbins=20,
-             xlabel="2 m temperature [°C]", ylabel="Density", density=True,
-             title="Distribution")
+# zonal mean profile, January against July
+profiles = [load("t2m", m).mean(("time", "lon")).compute() for m in (1, 7)]
+gp.plot_2d(y=profiles, x=profiles[0].lat, ax=ax_lat, label=["January", "July"],
+           color_arr=["#0072B2", "#D55E00"], xlabel="Latitude [°N]",
+           ylabel="2 m temperature [°C]", title="Zonal mean")
 
 gp.save_fig(FIGURES / "04_profiles_and_distribution", fig=res["fig"])
