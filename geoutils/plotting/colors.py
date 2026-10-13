@@ -1,6 +1,6 @@
 """Colormaps, norms, colour scales and colorbars."""
 import numbers
-from dataclasses import dataclass
+from dataclasses import dataclass, field, fields
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib as mpl
 from matplotlib.cm import ScalarMappable
@@ -372,103 +372,86 @@ def add_colorbar(im, fig, label,
     return cbar
 
 
-def make_colorbar(ax, im, fig=None, **kwargs):
-    ticks = kwargs.pop('ticks', None)
-    extend = kwargs.pop('extend', 'neither')
-    sci = kwargs.pop("sci", None)
-    shift_ticks = kwargs.pop("shift_ticks", None)
-    fsize = kwargs.pop('fontsize', None)
-    tick_step = int(kwargs.pop("tick_step", 2))
-    if ticks is not None:
-        ticks = ticks[::tick_step]
-    else:
-        ticks = None
-    if sci is not None:
-        if sci < 0:
-            round_dec = abs(sci) + 1
-        else:
-            round_dec = 0
-    round_dec = kwargs.pop("round_dec", None)
-    set_int = kwargs.pop("set_int", False)
-    if round_dec is not None:
-        ticks = np.around(ticks, round_dec)
-    if set_int:
+@dataclass(frozen=True)
+class ColorbarSpec:
+    """Everything that shapes a colorbar, apart from the mappable and its axes."""
+    label: str | None = None
+    orientation: str = "horizontal"
+    ticks: object = None
+    extend: str = "neither"
+    tick_step: int = 2
+    sci: int | None = None
+    round_dec: int | None = None
+    set_int: bool = False
+    shift_ticks: bool | None = None
+    set_rot: bool = False
+    set_cax: bool = False
+    pad: float | None = None
+    fontsize: float | None = None
+    norm: str | None = None
+    kwargs_bar: dict = field(default_factory=dict)
+
+    @classmethod
+    def from_kwargs(cls, kwargs):
+        """Build a spec from flat keywords, popping the ones it knows."""
+        return cls(**{f.name: kwargs.pop(f.name)
+                      for f in fields(cls) if f.name in kwargs})
+
+
+def make_colorbar(ax, im, fig=None, spec=None, **kwargs):
+    """Draw a colorbar for ``im``; options come from ``spec`` or flat keywords."""
+    if spec is None:
+        spec = ColorbarSpec.from_kwargs(kwargs)
+    ticks = None if spec.ticks is None else spec.ticks[::int(spec.tick_step)]
+    if spec.round_dec is not None:
+        ticks = np.around(ticks, spec.round_dec)
+    if spec.set_int:
         ticks = np.round(ticks).astype(int)
     if fig is None:
         fig = ax.get_figure()
 
-    orientation = kwargs.pop("orientation", "horizontal")
-    set_cax = kwargs.pop('set_cax', False)
-    if set_cax:
+    orientation = spec.orientation
+    if spec.set_cax:
         if orientation == "vertical":
-            loc = "right"
-            pad = kwargs.pop('pad', -2.5)  # distance from right border
-            # divider = make_axes_locatable(ax)
-            # cax = divider.append_axes(loc, "5%", pad=pad, axes_class=plt.Axes)
-            cax = inset_axes(ax,
-                             width="5%",
-                             height="100%",
-                             loc=loc,
+            # distance from right border
+            pad = -2.5 if spec.pad is None else spec.pad
+            cax = inset_axes(ax, width="5%", height="100%", loc="right",
                              borderpad=pad)
-
         elif orientation == "horizontal":
-            loc = "lower center"
-            # defines distance to lower y-range (different for maps and xy-plots) is passed to make_colorbar
-            pad = kwargs.pop('pad', -4.5)
-            cax = inset_axes(ax,
-                             width="100%",
-                             height="5%",
-                             loc=loc,
+            # distance to lower y-range (differs for maps and xy-plots)
+            pad = -4.5 if spec.pad is None else spec.pad
+            cax = inset_axes(ax, width="100%", height="5%", loc="lower center",
                              borderpad=pad)
+        else:
+            raise ValueError(
+                f"orientation has to be 'horizontal' or 'vertical', not {orientation!r}!")
     else:
         cax = ax
 
-    label = kwargs.pop('label', None)
-    kwargs_bar = kwargs.pop('kwargs_bar', {})
-    kwargs_bar['ticks'] = ticks
+    kwargs_bar = {**spec.kwargs_bar, 'ticks': ticks}
     kwargs, kwargs_bar = set_kwargs_bar(kwargs, kwargs_bar)
-    if sci is not None:
+    if spec.sci is not None:
         fmt = mpl.ticker.ScalarFormatter(useMathText=True)
-        fmt.set_powerlimits((sci, sci))
-        cbar = fig.colorbar(
-            im,
-            cax=cax,
-            orientation=orientation,
-            label=label,
-            format=fmt,
-            extend=extend,
-            **kwargs_bar,
-        )
-        # Get the offset text
-        offset = place_colorbar_offset_text(cbar)
-
+        fmt.set_powerlimits((spec.sci, spec.sci))
+    elif spec.norm == 'log':
+        fmt = mpl.ticker.FuncFormatter(cbarfmt)
     else:
-        norm = kwargs.pop('norm', None)
-        if norm == 'log':
-            fmt = mpl.ticker.FuncFormatter(cbarfmt)
-        else:
-            fmt = None
+        fmt = None
+    cbar = fig.colorbar(im, cax=cax, orientation=orientation,
+                        label=spec.label, format=fmt, extend=spec.extend,
+                        **kwargs_bar)
+    if spec.sci is not None:
+        place_colorbar_offset_text(cbar)
 
-        cbar = fig.colorbar(
-            im,
-            cax=cax,
-            orientation=orientation,
-            label=label,
-            format=fmt,
-            extend=extend,
-            **kwargs_bar
-        )
-
-    if shift_ticks is not None:
-        set_rot = kwargs.pop('set_rot', False)
+    if spec.shift_ticks is not None:
         cbar.set_ticks(ticks[:-1]+0.5)
-        if set_rot:
+        if spec.set_rot:
             cbar.ax.set_xticklabels(ticks[:-1], rotation=45)
         cbar.set_ticklabels(ticks[:-1])
 
-    if fsize is not None:
-        cbar.ax.tick_params(labelsize=fsize)
-        cbar.set_label(label=label, size=fsize)
+    if spec.fontsize is not None:
+        cbar.ax.tick_params(labelsize=spec.fontsize)
+        cbar.set_label(label=spec.label, size=spec.fontsize)
 
     return cbar
 

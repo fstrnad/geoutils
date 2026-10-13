@@ -91,3 +91,42 @@ def test_no_data_gives_empty_scale():
 def test_non_numeric_limits_rejected(bad):
     with pytest.raises(ValueError, match="vmin"):
         resolve_color_scale(Z, vmin=bad)
+
+
+# --- ColorbarSpec -------------------------------------------------------
+
+def _mappable():
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    im = ax.imshow(np.arange(16.0).reshape(4, 4))
+    return fig, ax, im, mpl
+
+
+def test_colorbar_spec_matches_flat_keywords():
+    from geoutils.plotting.colors import ColorbarSpec, make_colorbar
+    fig, ax, im, _ = _mappable()
+    a = make_colorbar(ax, im, fig=fig, spec=ColorbarSpec(
+        label="K", ticks=np.arange(0.0, 16.0, 2.0), tick_step=2, set_cax=True))
+    fig, ax, im, _ = _mappable()
+    b = make_colorbar(ax, im, fig=fig, label="K", ticks=np.arange(0.0, 16.0, 2.0),
+                      tick_step=2, set_cax=True)
+    assert a.ax.get_xlabel() == b.ax.get_xlabel() == "K"
+    np.testing.assert_allclose(a.get_ticks(), b.get_ticks())
+    np.testing.assert_allclose(a.get_ticks(), [0, 4, 8, 12])
+
+
+def test_colorbar_spec_from_kwargs_only_pops_known_keys():
+    from geoutils.plotting.colors import ColorbarSpec
+    kwargs = dict(label="K", orientation="vertical", color="red")
+    spec = ColorbarSpec.from_kwargs(kwargs)
+    assert (spec.label, spec.orientation) == ("K", "vertical")
+    assert kwargs == {"color": "red"}
+
+
+def test_colorbar_unknown_orientation_raises():
+    from geoutils.plotting.colors import ColorbarSpec, make_colorbar
+    fig, ax, im, _ = _mappable()
+    with pytest.raises(ValueError, match="orientation"):
+        make_colorbar(ax, im, fig=fig,
+                      spec=ColorbarSpec(orientation="diagonal", set_cax=True))
