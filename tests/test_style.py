@@ -72,8 +72,8 @@ def test_fsize_helpers_are_consistent():
         style.change_fsize(10)
         assert mpl.rcParams["font.size"] == 10
         style.reset_fsize()
-        assert mpl.rcParams["axes.titlesize"] == style.MEDIUM_SIZE
-        assert mpl.rcParams["figure.titlesize"] == style.BIGGER_SIZE
+        assert mpl.rcParams["axes.titlesize"] == style.STYLE["axes.titlesize"]
+        assert mpl.rcParams["figure.titlesize"] == style.STYLE["figure.titlesize"]
     finally:
         mpl.rcParams.update(before)
 
@@ -94,3 +94,26 @@ def test_plot_2d_default_line_width_is_readable():
 def test_legend_avoids_data_by_default():
     res = cplt.plot_2d(y=[np.arange(4.0), np.arange(4.0) + 1], label=["a", "b"])
     assert res["ax"].get_legend()._loc == 0  # matplotlib's 'best'
+
+
+def test_font_chain_prefers_designed_fonts_and_ends_in_dejavu():
+    chain = style.STYLE["font.sans-serif"]
+    assert style.STYLE["font.family"] == "sans-serif"
+    assert chain[:3] == ["Lato", "Arial", "Liberation Sans"] and chain[-1] == "DejaVu Sans"
+
+
+def test_type_scale_is_compact():
+    s = style.STYLE
+    assert (s["xtick.labelsize"], s["axes.labelsize"], s["axes.titlesize"]) == (10, 11, 13)
+    assert s["axes.titleweight"] == "bold" and s["legend.fontsize"] == 10
+
+
+def test_plot_text_uses_dark_grey_not_black():
+    res = cplt.plot_2d(y=np.arange(4.0), title="t", xlabel="x")
+    assert mpl.colors.to_hex(res["ax"].xaxis.label.get_color()) == "#222222"
+
+
+def test_map_annotations_use_the_label_size():
+    ax = cplt.create_map()["ax"]
+    cplt.plot_rectangle(ax, lon_range=(0, 10), lat_range=(0, 10), text="roi")
+    assert [t.get_fontsize() for t in ax.texts] == [style.LABEL_SIZE]

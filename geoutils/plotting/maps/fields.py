@@ -43,7 +43,7 @@ def plot_map(dmap: xr.DataArray,
              color_bounds: str = 'robust',
              extend: str = None,
              orientation: str = 'horizontal',
-             tick_step: int = 2,
+             tick_step: int = None,
              **kwargs):
     """
     This function plots a map of a given xr.DataArray.
@@ -68,7 +68,7 @@ def plot_map(dmap: xr.DataArray,
       color_bounds (str): How vmin/vmax are derived, see ``plot_array``.
       extend (str): Colorbar extension; derived from the data when None.
       orientation (str): Colorbar orientation, 'horizontal' or 'vertical'.
-      tick_step (int): Show every n-th colorbar tick.
+      tick_step (int): Show every n-th colorbar tick; default at most six.
       **kwargs: Further options of ``plot_array``, ``create_map`` (set_map,
         land_ocean, plot_borders, coast_color, ...) and the significance
         overlay (sig_plot_type, hatch_type, inverse_mask). A colorbar is only
@@ -453,7 +453,7 @@ def plot_array(
     levels=None,
     extend=None,
     orientation='horizontal',
-    tick_step=2,
+    tick_step=None,
     shift_ticks=None,
     sci=None,
     round_dec=None,
