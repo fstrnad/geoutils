@@ -4,10 +4,14 @@ This is the curated public API. Import the names you need directly, e.g.::
 
     from geoutils.plotting import plot_map, plot_2d, create_plot, PlotResult
 
+The geoutils look (palette, fonts, layout) is applied inside each plotting call
+and never changes your global matplotlib state; call ``set_style()`` to use it
+for your own matplotlib figures too.
+
 The legacy aggregator ``geoutils.plotting.plots`` (commonly imported ``as cplt``)
-still works as a deprecated shim that re-exports the same functions. ``geoutils.plotting.videos`` is
-intentionally not imported here because it needs the optional ``video`` extra
-(imageio, opencv); import it explicitly if you need it.
+still works as a deprecated shim that re-exports the same functions.
+``geoutils.plotting.videos`` is intentionally not imported here because it needs
+the optional ``video`` extra (imageio, opencv); import it explicitly if you need it.
 """
 from geoutils.plotting.result import PlotResult
 
