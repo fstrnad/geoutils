@@ -11,7 +11,8 @@ Z = np.arange(100.0).reshape(10, 10)
 # --- characterization of plot_array (values captured before the refactor) ---
 
 @pytest.mark.parametrize("kwargs, z, ticks, extend", [
-    (dict(), Z, [9.9, 19.8, 29.7, 39.6, 49.5, 59.4, 69.3, 79.2, 89.1], "both"),
+    (dict(color_bounds="quantile"), Z,
+     [9.9, 19.8, 29.7, 39.6, 49.5, 59.4, 69.3, 79.2, 89.1], "both"),
     (dict(color_bounds="minmax"), Z,
      [0.0, 12.4, 24.8, 37.1, 49.5, 61.9, 74.2, 86.6, 99.0], "neither"),
     (dict(color_bounds="absmax"), Z - 50,
@@ -39,7 +40,7 @@ def test_plot_array_color_scale_unchanged(kwargs, z, ticks, extend):
 # --- the resolver itself ------------------------------------------------
 
 def test_quantile_bounds():
-    s = resolve_color_scale(Z)
+    s = resolve_color_scale(Z, color_bounds="quantile")
     assert isinstance(s, ColorScale)
     assert (s.vmin, s.vmax) == pytest.approx((9.9, 89.1))
 
@@ -55,7 +56,7 @@ def test_absmax_symmetric():
 
 
 def test_extend_both_when_outliers():
-    assert resolve_color_scale(Z).extend == "both"
+    assert resolve_color_scale(Z, color_bounds="quantile").extend == "both"
 
 
 def test_extend_neither_when_forced():
@@ -130,3 +131,67 @@ def test_colorbar_unknown_orientation_raises():
     with pytest.raises(ValueError, match="orientation"):
         make_colorbar(ax, im, fig=fig,
                       spec=ColorbarSpec(orientation="diagonal", set_cax=True))
+
+
+# --- robust default and diverging colormaps -----------------------------
+
+def test_default_is_robust_and_extends_over_outliers():
+    z = np.append(np.linspace(0, 1, 999), 1000.0)
+    s = resolve_color_scale(z)
+    assert s.vmax < 10 and s.extend in ("max", "both")
+    assert (s.vmin, s.vmax) == pytest.approx(
+        (np.quantile(z, 0.02), np.quantile(z, 0.98)))
+
+
+def test_quantile_still_available():
+    s = resolve_color_scale(Z, color_bounds="quantile")
+    assert (s.vmin, s.vmax) == pytest.approx((9.9, 89.1))
+
+
+def test_diverging_cmap_symmetric_by_default():
+    z = np.append(np.linspace(-1, 4, 500), np.linspace(-1, 1, 500))
+    s = resolve_color_scale(z, diverging=True)
+    assert s.vmin == -s.vmax and s.vmax > 0
+
+
+def test_sequential_cmap_not_symmetric():
+    z = np.linspace(1, 5, 200)
+    s = resolve_color_scale(z, diverging=False)
+    assert s.vmin >= 1
+
+
+def test_explicit_limits_win_over_symmetry():
+    s = resolve_color_scale(Z, vmin=-1, vmax=3, diverging=True)
+    assert (s.vmin, s.vmax) == (-1, 3)
+
+
+def test_one_explicit_limit_is_kept():
+    s = resolve_color_scale(Z - 50, vmin=-10, diverging=True)
+    assert s.vmin == -10
+
+
+@pytest.mark.parametrize("name, expected", [
+    ("RdBu_r", True), ("coolwarm", True), ("viridis", False), ("RdYlBu", True),
+])
+def test_is_diverging_by_name(name, expected):
+    import matplotlib as mpl
+    from geoutils.plotting.colors import is_diverging
+    assert is_diverging(name) is expected
+    assert is_diverging(mpl.colormaps[name]) is expected
+
+
+def test_is_diverging_handles_missing_cmap():
+    from geoutils.plotting.colors import is_diverging
+    assert is_diverging(None) is False
+
+
+def test_plot_array_diverging_cmap_gets_symmetric_ticks():
+    z = np.outer(np.linspace(-1, 5, 30), np.ones(30))
+    res = plot_array(z, plot_type="contourf", cmap="RdBu_r")
+    assert res["ticks"][0] == pytest.approx(-res["ticks"][-1])
+
+
+def test_plot_array_default_clips_at_robust_percentiles():
+    res = plot_array(Z, plot_type="contourf")
+    assert res["ticks"][0] == pytest.approx(1.98, abs=0.1)
+    assert res["ticks"][-1] == pytest.approx(97.02, abs=0.1)

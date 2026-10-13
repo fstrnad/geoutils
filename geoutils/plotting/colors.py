@@ -221,6 +221,18 @@ def cbarfmt(x, pos):
     return rf'${a} \times 10^{{{b}}}$'
 
 
+DIVERGING = frozenset({
+    "RdBu", "RdYlBu", "RdYlGn", "coolwarm", "bwr", "seismic", "BrBG", "PiYG",
+    "PRGn", "PuOr", "RdGy", "Spectral",
+})
+
+
+def is_diverging(cmap):
+    """True for a (name or Colormap of a) known diverging colormap."""
+    name = cmap if isinstance(cmap, str) else getattr(cmap, "name", "")
+    return name.removesuffix("_r") in DIVERGING
+
+
 @dataclass(frozen=True)
 class ColorScale:
     """Resolved colour limits, contour levels and colorbar extension."""
@@ -232,8 +244,14 @@ class ColorScale:
     round_dec: int | None
 
 
-def _color_bounds(z, vmin, vmax, color_bounds):
-    if color_bounds == 'quantile':
+def _color_bounds(z, vmin, vmax, color_bounds, diverging=False):
+    if color_bounds == 'robust':
+        symmetric = diverging and vmin is None and vmax is None
+        vmin = np.nanquantile(z, q=0.02) if vmin is None else vmin
+        vmax = np.nanquantile(z, q=0.98) if vmax is None else vmax
+        if symmetric:
+            vmin, vmax = -max(abs(vmin), abs(vmax)), max(abs(vmin), abs(vmax))
+    elif color_bounds == 'quantile':
         vmin = np.nanquantile(z, q=0.1) if vmin is None else vmin
         vmax = np.nanquantile(z, q=0.9) if vmax is None else vmax
     elif color_bounds == 'minmax':
@@ -287,17 +305,18 @@ def _auto_extend(z, vmin, vmax, extend):
 
 
 def resolve_color_scale(z, vmin=None, vmax=None, levels=None,
-                        color_bounds='quantile', extend=None,
+                        color_bounds='robust', extend=None,
                         sci=None, round_dec=None, log_base=None,
-                        is_hatch=False) -> ColorScale:
+                        is_hatch=False, diverging=False) -> ColorScale:
     """Derive colour limits, levels and colorbar extension for data ``z``.
 
     Parameters
     ----------
     levels : int, optional
         Number of colour intervals; returned as the array of level edges.
-    color_bounds : {'quantile', 'minmax', 'absmax', 'absquantile'}
-        How vmin/vmax are derived when not given.
+    color_bounds : {'robust', 'quantile', 'minmax', 'absmax', 'absquantile'}
+        How vmin/vmax are derived when not given: 'robust' is the 2nd-98th
+        percentile, 'quantile' the 10th-90th.
     extend : {'neither', 'min', 'max', 'both'}, optional
         Colorbar extension; derived from the data when None.
     sci, round_dec : int, optional
@@ -306,6 +325,9 @@ def resolve_color_scale(z, vmin=None, vmax=None, levels=None,
         If given, levels are log-spaced between ``base**vmin`` and ``base**vmax``.
     is_hatch : bool
         Hatch overlays only need vmin/vmax: no widening or level rounding.
+    diverging : bool
+        The colormap is diverging: 'robust' bounds become symmetric about zero
+        unless a limit was given.
     """
     for name, value in (('vmin', vmin), ('vmax', vmax)):
         if value is not None and not isinstance(value, numbers.Real):
@@ -314,7 +336,7 @@ def resolve_color_scale(z, vmin=None, vmax=None, levels=None,
     if z is None:
         return ColorScale(None, None, None, extend or 'neither', None, None)
 
-    vmin, vmax = _color_bounds(z, vmin, vmax, color_bounds)
+    vmin, vmax = _color_bounds(z, vmin, vmax, color_bounds, diverging)
     if vmin == vmax and not is_hatch:
         gut.myprint(f'Vmin and vmax are equal: {vmin}!')
         vmin, vmax = vmin - 0.1, vmax + 0.1

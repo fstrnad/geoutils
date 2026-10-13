@@ -40,7 +40,7 @@ def plot_map(dmap: xr.DataArray,
              lon_range: tuple[float, float] = None,
              dateline: bool = False,
              levels: int = None,
-             color_bounds: str = 'quantile',
+             color_bounds: str = 'robust',
              extend: str = None,
              orientation: str = 'horizontal',
              tick_step: int = 2,
@@ -446,7 +446,7 @@ def plot_array(
     title=None,
     significance_mask=None,
     set_axis=True,
-    color_bounds='quantile',
+    color_bounds='robust',
     levels=None,
     extend=None,
     orientation='horizontal',
@@ -470,11 +470,11 @@ def plot_array(
     plot_type : {'colormesh', 'contourf', 'contour', 'discrete', 'scatter',
         'points', 'hatch'}
     vmin, vmax : colour limits; derived from ``color_bounds`` when None.
-    color_bounds : {'quantile', 'minmax', 'absmax', 'absquantile'}
-        How vmin/vmax are derived when not passed explicitly. NOTE: the default
-        ``'quantile'`` clips the colour scale to the 10th-90th percentile of the
-        data, so extreme values saturate unless you pass vmin/vmax or
-        ``color_bounds='minmax'``.
+    color_bounds : {'robust', 'quantile', 'minmax', 'absmax', 'absquantile'}
+        How vmin/vmax are derived when not passed explicitly. The default
+        ``'robust'`` uses the 2nd-98th percentile of the data (extreme values
+        saturate and the colorbar shows extend arrows) and is symmetric about
+        zero for diverging colormaps; ``'quantile'`` is the 10th-90th percentile.
     levels : number of colour intervals (contourf defaults to 8).
     extend : colorbar extension; derived from the data when None.
     label : colorbar label; a colorbar is only drawn when it is given.
@@ -536,7 +536,7 @@ def plot_array(
         z, vmin=vmin, vmax=vmax, levels=levels, color_bounds=color_bounds,
         extend=extend, sci=sci, round_dec=round_dec,
         log_base=kwargs.pop('base', 2) if set_norm == 'log' else None,
-        is_hatch=plot_type == 'hatch')
+        is_hatch=plot_type == 'hatch', diverging=pcol.is_diverging(cmap))
     vmin, vmax, levels, extend, sci = (
         scale.vmin, scale.vmax, scale.levels, scale.extend, scale.sci)
     if z is not None and plot_type != 'hatch':

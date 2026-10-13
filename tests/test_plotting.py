@@ -55,7 +55,8 @@ def test_plot_array_hatch(latlon_da):
 def test_color_bounds_is_explicit_parameter():
     sig = inspect.signature(mp.plot_array)
     assert "color_bounds" in sig.parameters
-    assert sig.parameters["color_bounds"].default == "quantile"
+    assert sig.parameters["color_bounds"].default == "robust"
+    assert inspect.signature(mp.plot_map).parameters["color_bounds"].default == "robust"
 
 
 # --- significance overlays ---------------------------------------------
