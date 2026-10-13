@@ -16,6 +16,7 @@ Set `ERA5_DATA` to use another copy. Run from anywhere, e.g.
 | `05_annotated_map.py` | city markers and labels, `plot_rectangle` |
 | `06_precipitation.py` | monthly totals and wet-day counts, fixed colour limits |
 | `07_resolution_comparison.py` | 0.25° against 0.5° over the Alps, and what interpolation loses |
+| `08_distribution_and_range.py` | `plot_hist` of hourly values, `plot_2d` with a shaded min-max band |
 
 `common.py` finds and loads the files lazily (renaming the coordinates to the
 `time`/`lat`/`lon` that geoutils expects, converting to °C and mm). When no month is
