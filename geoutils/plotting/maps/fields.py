@@ -520,7 +520,7 @@ def plot_array(
         set_axis = True
     if projection is None and set_axis:
         # This is the Sci for the x axis
-        ax, kwargs = pax.prepare_axis(ax, sci=sci_x,
+        ax, kwargs = pax.prepare_axis(ax, sci_x=sci_x,
                                       **kwargs)
     if projection is not None:
         if isinstance(projection, str):

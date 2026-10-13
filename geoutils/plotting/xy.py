@@ -364,8 +364,10 @@ def create_axis(ax, plot_type, **kwargs):
 
     prepare_axis = kwargs.pop('prepare_axis', True)
     if prepare_axis:
-        ax, kwargs = pax.prepare_axis(
-            ax=ax, **kwargs)
+        # sci / sci_x are the callers' y / x formatting, applied after drawing
+        held = {k: kwargs.pop(k) for k in ('sci', 'sci_x') if k in kwargs}
+        ax, kwargs = pax.prepare_axis(ax=ax, **kwargs)
+        kwargs.update(held)
 
     return ax, fig, kwargs
 

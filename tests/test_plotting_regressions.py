@@ -141,3 +141,54 @@ def test_plot_rectangle_with_text():
     ax = cplt.create_map()["ax"]
     cplt.plot_rectangle(ax, lon_range=(0, 10), lat_range=(0, 10), text="box")
     assert "box" in [t.get_text() for t in ax.texts]
+
+
+# --- AxisSpec -----------------------------------------------------------
+
+def test_prepare_axis_spec_sets_limits_and_labels():
+    import matplotlib.pyplot as plt
+    from geoutils.plotting.axes import AxisSpec, prepare_axis
+    _, ax = plt.subplots()
+    ax, _ = prepare_axis(ax, AxisSpec(xlabel="x", ylabel="y", xlim=(0, 3),
+                                      ylim=(1, 2), set_grid=True))
+    assert (ax.get_xlabel(), ax.get_ylabel()) == ("x", "y")
+    assert ax.get_xlim() == (0, 3) and ax.get_ylim() == (1, 2)
+
+
+def test_prepare_axis_legacy_kwargs_equal_spec():
+    import matplotlib.pyplot as plt
+    from geoutils.plotting.axes import AxisSpec, prepare_axis
+    _, a = plt.subplots()
+    _, b = plt.subplots()
+    prepare_axis(a, AxisSpec(xlabel="x", xlim=(0, 3), set_spines=True))
+    prepare_axis(b, xlabel="x", xlim=(0, 3), set_spines=True)
+    assert a.get_xlabel() == b.get_xlabel() and a.get_xlim() == b.get_xlim()
+    assert a.spines["top"].get_visible() == b.spines["top"].get_visible() is True
+
+
+@pytest.mark.parametrize("old, new, attr", [
+    ("flip_x", "invert_x", "xaxis_inverted"),
+    ("flip_y", "invert_y", "yaxis_inverted"),
+])
+def test_flip_keywords_are_deprecated_aliases(old, new, attr):
+    import matplotlib.pyplot as plt
+    from geoutils.plotting.axes import prepare_axis
+    _, ax = plt.subplots()
+    with pytest.warns(DeprecationWarning, match=new):
+        prepare_axis(ax, **{old: True})
+    assert getattr(ax, attr)()
+
+
+def test_prepare_axis_leftover_kwargs_returned():
+    import matplotlib.pyplot as plt
+    from geoutils.plotting.axes import prepare_axis
+    _, ax = plt.subplots()
+    _, rest = prepare_axis(ax, xlabel="x", title_fsize=9)
+    assert "xlabel" not in rest and rest["title_fsize"] == 9
+
+
+def test_plot_2d_sci_formats_y_and_sci_x_formats_x(xs):
+    res = xyp.plot_2d(y=xs * 1e6, x=xs * 1e-6, sci=6, sci_x=-6)
+    res["fig"].canvas.draw()
+    assert res["ax"].yaxis.get_offset_text().get_text() == "1e6"
+    assert res["ax"].xaxis.get_offset_text().get_text().endswith("6")

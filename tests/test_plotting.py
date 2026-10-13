@@ -119,7 +119,7 @@ def test_axis_options_documented_for_plain_arrays(recwarn):
 
 
 @pytest.mark.parametrize("module, names", [
-    ("axes", ("AXIS_OPTIONS", "TITLE_OPTIONS")),
+    ("axes", ("TITLE_OPTIONS",)),
     ("maps.basemap", ("BASEMAP_OPTIONS",)),
 ])
 def test_option_registries_match_source(module, names):

@@ -1,4 +1,6 @@
 """Axis preparation, titles, legends and line/text annotations."""
+import warnings
+from dataclasses import dataclass, fields
 from matplotlib.offsetbox import AnchoredText
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -6,17 +8,7 @@ import numpy as np
 import cartopy.crs as ccrs
 import geoutils.plotting.style as pst
 
-# keyword options understood by prepare_axis / set_title (used to flag typos)
-AXIS_OPTIONS = frozenset({
-    'flip_x', 'flip_y', 'invert_x', 'invert_y', 'left_ticks', 'log',
-    'reset_axis', 'right_ticks', 'rot', 'rot_y', 'sci', 'set_grid',
-    'set_spines', 'set_ticks', 'set_twinx', 'set_twiny', 'set_xaxis',
-    'set_xint', 'set_xticks', 'set_yaxis', 'set_yint', 'set_yticks',
-    'spines_color', 'title', 'top_ticks', 'unset_yticks', 'x_label_color',
-    'xlabel', 'xlabel_pos', 'xlim', 'xlog', 'xticklabels', 'xticks',
-    'ylabel', 'ylabel_color', 'ylabel_pos', 'ylim', 'ylog', 'yscale',
-    'ysymlog', 'yticklabels', 'yticks',
-})
+# keyword options understood by set_title (used to flag typos)
 TITLE_OPTIONS = frozenset({
     'title_color', 'title_fontweight', 'title_fsize', 'vertical_title',
     'vertical_title_fsize', 'x_title_offset', 'y_title',
@@ -121,190 +113,193 @@ def has_labels(ax):
     return bool(ax.get_xlabel()) or bool(ax.get_ylabel())
 
 
-def prepare_axis(ax, **kwargs):
-    """Prepares an axis for any type x to y plot
+@dataclass(frozen=True)
+class AxisSpec:
+    """Appearance of an x-y axis as set by ``prepare_axis``."""
+    title: str | None = None
+    xlabel: str | None = None
+    ylabel: str | None = None
+    x_label_color: str = "k"
+    ylabel_color: str = "k"
+    xlabel_pos: object = None
+    ylabel_pos: object = None
+    xlim: tuple | None = None
+    ylim: tuple | None = None
+    xticks: object = None
+    yticks: object = None
+    xticklabels: object = None
+    yticklabels: object = None
+    rot: float = 0
+    rot_y: float = 0
+    set_grid: bool = False
+    set_spines: bool = False
+    spines_color: str = "black"
+    set_xaxis: bool = True
+    set_yaxis: bool = True
+    set_ticks: bool = True
+    set_xticks: bool = True
+    set_yticks: bool = True
+    top_ticks: bool = False
+    right_ticks: bool = False
+    left_ticks: bool = True
+    unset_yticks: bool = False
+    set_xint: bool = False
+    set_yint: bool = False
+    set_twinx: bool = False
+    set_twiny: bool = False
+    xlog: bool = False
+    ylog: bool = False
+    ysymlog: bool = False
+    yscale: str | None = None
+    log: bool = False
+    sci_x: int | None = None
+    invert_x: bool = False
+    invert_y: bool = False
 
-    Args:
-        ax (ax-object): axis object from matplotlib
+    @classmethod
+    def from_kwargs(cls, kwargs):
+        """Build a spec from flat keywords, popping the ones it knows.
 
-    Returns:
-        ax: ax matplotlib object
+        ``flip_x`` / ``flip_y`` / ``sci`` are deprecated aliases of
+        ``invert_x`` / ``invert_y`` / ``sci_x``.
+        """
+        for old, new in (('flip_x', 'invert_x'), ('flip_y', 'invert_y'),
+                         ('sci', 'sci_x')):
+            if old in kwargs:
+                warnings.warn(f"'{old}' is deprecated, use '{new}'",
+                              DeprecationWarning, stacklevel=3)
+                kwargs.setdefault(new, kwargs.pop(old))
+        return cls(**{f.name: kwargs.pop(f.name)
+                      for f in fields(cls) if f.name in kwargs})
+
+
+# AxisSpec fields plus the deprecated aliases and the no-op reset_axis
+AXIS_OPTIONS = frozenset(f.name for f in fields(AxisSpec)) | {
+    'flip_x', 'flip_y', 'sci', 'reset_axis'}
+
+
+def prepare_axis(ax, spec=None, **kwargs):
+    """Prepare an axis for any x-y plot.
+
+    Options come from ``spec`` (an ``AxisSpec``) or, for convenience, from the
+    same names as flat keywords. Returns the axis (a new one for ``set_twinx``
+    / ``set_twiny``) and the keywords that were not axis options.
     """
-    set_grid = kwargs.get('set_grid', False)
-    xlim = kwargs.get("xlim", None)
-    ylim = kwargs.get("ylim", None)
-    xticks = kwargs.get('xticks', None)
-    yticks = kwargs.get('yticks', None)
-    xticklabels = kwargs.get('xticklabels', None)
-    yticklabels = kwargs.get('yticklabels', None)
-    ylabel = kwargs.get("ylabel", None)
-    ylabel_color = kwargs.get("ylabel_color", "k")
-    xlabel = kwargs.get("xlabel", None)
-    x_label_color = kwargs.get("x_label_color", "k")
-    xlabel_pos = kwargs.get("xlabel_pos", None)
-    ylabel_pos = kwargs.get("ylabel_pos", None)
-    set_xint = kwargs.get("set_xint", False)
-    set_yint = kwargs.get("set_yint", False)
-    set_yaxis = kwargs.get("set_yaxis", True)
-    set_xaxis = kwargs.get("set_xaxis", True)
-    set_twinx = kwargs.get("set_twinx", False)
-    set_twiny = kwargs.get("set_twiny", False)
-    set_spines = kwargs.get("set_spines", False)
-    spines_color = kwargs.get("spines_color", "black")
-    reset_axis = kwargs.get("reset_axis", False)
-    set_ticks = kwargs.get("set_ticks", True)
-    set_xticks = kwargs.get("set_xticks", True)
-    set_yticks = kwargs.get("set_yticks", True)
-    top_ticks = kwargs.get("top_ticks", False)
-    right_ticks = kwargs.get("right_ticks", False)
-    left_ticks = kwargs.get("left_ticks", True)
-    # face_color = kwargs.pop("face_color", 'none')
-    # ax.set_facecolor(face_color)
+    if spec is None:
+        spec = AxisSpec.from_kwargs(kwargs)
+    set_xticks, set_yticks = spec.set_xticks, spec.set_yticks
+    xlabel, ylabel = spec.xlabel, spec.ylabel
 
-    if set_twinx:
+    if spec.set_twinx:
         ax.set_zorder(1)
         ax = ax.twinx()
         ax.set_zorder(1)
-    if set_twiny:
+    if spec.set_twiny:
         ax = ax.twiny()
 
-    ax.spines['bottom'].set_visible(set_xaxis)
-    ax.spines['left'].set_visible(set_yaxis)
-    if not set_yaxis:
+    ax.spines['bottom'].set_visible(spec.set_xaxis)
+    ax.spines['left'].set_visible(spec.set_yaxis)
+    if not spec.set_yaxis:
         ylabel = None
         set_yticks = False
-    if not set_xaxis:
+    if not spec.set_xaxis:
         xlabel = None
         set_xticks = False
 
-    if not set_twinx:
-        ax.spines["right"].set_visible(False)
-    else:
+    ax.spines["right"].set_visible(False)
+    if spec.set_twinx:
         ax.spines["left"].set_visible(False)
-    ax.spines["top"].set_visible(set_spines)
-    if set_spines:
-        ax.spines['bottom'].set_color(spines_color)
-        ax.spines['top'].set_color(spines_color)
-        ax.spines['left'].set_color(spines_color)
-        ax.spines['right'].set_color(spines_color)
+    ax.spines["top"].set_visible(spec.set_spines)
+    if spec.set_spines:
+        for side in ('bottom', 'top', 'left', 'right'):
+            ax.spines[side].set_color(spec.spines_color)
 
-    ax.grid(set_grid)
+    ax.grid(spec.set_grid)
     ax.tick_params(
         direction="out",
         length=pst.SMALL_SIZE / 2, width=1,
-        colors=ylabel_color, grid_alpha=0.5
+        colors=spec.ylabel_color, grid_alpha=0.5
     )
 
     if not has_labels(ax):
-        ax.set_xlabel(xlabel, color=x_label_color)
-        ax.set_ylabel(ylabel, color=ylabel_color)
+        ax.set_xlabel(xlabel, color=spec.x_label_color)
+        ax.set_ylabel(ylabel, color=spec.ylabel_color)
 
-        if xlabel_pos is not None:
-            if xlabel_pos == "right":
+        if spec.xlabel_pos is not None:
+            if spec.xlabel_pos == "right":
                 ax.xaxis.set_label_coords(1.0, -0.2)
             else:
-                ax.xaxis.set_label_coords(xlabel_pos)
-        if ylabel_pos is not None:
-            ax.yaxis.set_label_coords(x=ylabel_pos[0],
-                                      y=ylabel_pos[1])
+                ax.xaxis.set_label_coords(spec.xlabel_pos)
+        if spec.ylabel_pos is not None:
+            ax.yaxis.set_label_coords(x=spec.ylabel_pos[0],
+                                      y=spec.ylabel_pos[1])
 
-        if xlim is not None:
-            ax.set_xlim(xlim)
-        if ylim is not None:
-            ax.set_ylim(ylim)
+        if spec.xlim is not None:
+            ax.set_xlim(spec.xlim)
+        if spec.ylim is not None:
+            ax.set_ylim(spec.ylim)
 
-        rot = kwargs.pop("rot", 0)
-        rot_y = kwargs.pop("rot_y", 0)
-
-        if set_ticks is False:
-            left_ticks = False
-            right_ticks = False
-        if set_twinx:
-            left_ticks = False
-            right_ticks = True
-        ax.tick_params(axis="x", labelrotation=rot,
-                       bottom=set_xticks,
-                       top=top_ticks,
-                       )
-        ax.tick_params(axis="y", labelrotation=rot_y,
+        left_ticks, right_ticks = spec.left_ticks, spec.right_ticks
+        if spec.set_ticks is False:
+            left_ticks = right_ticks = False
+        if spec.set_twinx:
+            left_ticks, right_ticks = False, True
+        ax.tick_params(axis="x", labelrotation=spec.rot,
+                       bottom=set_xticks, top=spec.top_ticks)
+        ax.tick_params(axis="y", labelrotation=spec.rot_y,
                        left=left_ticks if set_yticks else False,
-                       right=right_ticks,
-                       )
-        if xticks is not None and set_xticks:
-            ax.set_xticks(xticks)
-
-        if xticklabels is not None and set_xticks:
-            ax.set_xticklabels(xticklabels)
-        if set_xint:
+                       right=right_ticks)
+        if spec.xticks is not None and set_xticks:
+            ax.set_xticks(spec.xticks)
+        if spec.xticklabels is not None and set_xticks:
+            ax.set_xticklabels(spec.xticklabels)
+        if spec.set_xint:
             ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
-        if set_yint:
+        if spec.set_yint:
             ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
 
-    title = kwargs.pop("title", None)
-    set_title(title=title, ax=ax, **kwargs)
+    set_title(title=spec.title, ax=ax, **kwargs)
 
-    ylog = kwargs.pop("ylog", False)
-    ysymlog = kwargs.pop("ysymlog", False)
-    yscale = kwargs.pop("yscale", None)
-    if yscale == 'log':
-        ylog = True
-    elif yscale == 'symlog':
-        ysymlog = True
-
+    ylog = spec.ylog or spec.yscale == 'log'
+    ysymlog = spec.ysymlog or spec.yscale == 'symlog'
     if ylog and ysymlog:
         raise ValueError('ylog and ysymlog cannot be True at the same time!')
-    if ylog is True:
+    if ylog:
         ax.set_yscale("log")
-    if ysymlog is True:
+    if ysymlog:
         ax.set_yscale("symlog")
-
-    xlog = kwargs.pop("xlog", False)
-    if xlog is True:
+    if spec.xlog:
         ax.set_xscale("log")
 
-    log = kwargs.pop("log", False)
-    if log:
+    if spec.log:
         ax.set_xscale("log")
         ax.set_yscale("log")
 
-        x_major = mpl.ticker.LogLocator(base=10.0, numticks=10)
-        ax.xaxis.set_major_locator(x_major)
-        x_minor = mpl.ticker.LogLocator(
-            base=10.0, subs=np.arange(1.0, 10.0) * 0.1, numticks=10
-        )
-        ax.xaxis.set_minor_locator(x_minor)
+        ax.xaxis.set_major_locator(
+            mpl.ticker.LogLocator(base=10.0, numticks=10))
+        ax.xaxis.set_minor_locator(mpl.ticker.LogLocator(
+            base=10.0, subs=np.arange(1.0, 10.0) * 0.1, numticks=10))
         ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
 
-    if not set_ticks or not set_xticks or not set_yticks:
+    if not spec.set_ticks or not set_xticks or not set_yticks:
         if not set_xticks:
             ax.xaxis.set_ticklabels([])
         if not set_yticks:
             ax.yaxis.set_ticklabels([])
 
-    yticks = kwargs.pop('yticks', None)
-    if yticks is not None:
-        ax.set_yticks(yticks)
-        yticklabels = kwargs.pop('yticklabels', None)
-        yticklabels = yticks if yticklabels is None else yticklabels
-        ax.set_yticklabels(yticklabels)
-
-    unset_yticks = kwargs.pop('unset_yticks', False)
-    if unset_yticks:
+    if spec.yticks is not None:
+        ax.set_yticks(spec.yticks)
+        ax.set_yticklabels(spec.yticks if spec.yticklabels is None
+                           else spec.yticklabels)
+    if spec.unset_yticks:
         ax.yaxis.set_ticklabels([])
 
-    sci = kwargs.pop("sci", None)
-    if sci is not None:
-        ax.ticklabel_format(style="sci", axis="x", scilimits=(sci, sci))
-
-    flip_x = kwargs.pop('flip_x', False)
-    invert_x = kwargs.pop('invert_x', False)
-
-    if flip_x or invert_x:
+    if spec.sci_x is not None:
+        ax.ticklabel_format(style="sci", axis="x",
+                            scilimits=(spec.sci_x, spec.sci_x))
+    if spec.invert_x:
         ax.invert_xaxis()
-
-    flip_y = kwargs.pop('flip_y', False)
-    invert_y = kwargs.pop('invert_y', False)
-    if flip_y or invert_y:
+    if spec.invert_y:
         ax.invert_yaxis()
 
     return ax, kwargs
