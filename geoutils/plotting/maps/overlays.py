@@ -341,14 +341,14 @@ def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
     )
 
     if text is not None:
-        pax.plt_text(ax=ax,
-                     text=text,
-                     color=color,
-                     xpos=np.mean(lon_range),
-                     # always plot above(!) the rectangle
-                     ypos=np.max(lat_range)+2,
-                     zorder=zorder+1,
-                     )
+        pax.plot_text(ax=ax,
+                      text=text,
+                      color=color,
+                      xpos=np.mean(lon_range),
+                      # always plot above(!) the rectangle
+                      ypos=np.max(lat_range)+2,
+                      zorder=zorder+1,
+                      )
 
     return ax
 

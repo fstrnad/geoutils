@@ -134,3 +134,10 @@ def test_create_cmap_rejects_other_types():
     import geoutils.plotting.colors as put
     with pytest.raises(ValueError, match="cmap has to be"):
         put.create_cmap(42, levels=[0, 1, 2])
+
+
+def test_plot_rectangle_with_text():
+    import geoutils.plotting as cplt
+    ax = cplt.create_map()["ax"]
+    cplt.plot_rectangle(ax, lon_range=(0, 10), lat_range=(0, 10), text="box")
+    assert "box" in [t.get_text() for t in ax.texts]
