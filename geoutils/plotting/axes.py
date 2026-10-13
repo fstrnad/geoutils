@@ -468,24 +468,6 @@ def text_box(ax, text, pos="upper right", fsize=pst.MEDIUM_SIZE, **kwargs):
     return ax
 
 
-def check_plot_type(plot_type):
-    avail_types = ['contour', 'contourf', 'scatter',
-                   'points', 'colormesh', 'discrete']
-    if plot_type not in avail_types:
-        raise ValueError(f'ERROR plot_type {plot_type} not available!')
-    return True
-
-
-def check_projection(ax, projection):
-    if ax is not None and projection is not None:
-        raise ValueError(
-            f'Axis already given, projection {projection} will have no effect.')
-    else:
-        # Set default to PlateCarree
-        projection = 'PlateCarree' if projection is None else projection
-    return projection
-
-
 def get_lon_lat_ticklabels(array_lon=None, array_lat=None, deg_label='°E'):
     lon = np.arange(0, 360, 30) if array_lon is None else array_lon
     lat = np.arange(-90, 90, 30) if array_lat is None else array_lat

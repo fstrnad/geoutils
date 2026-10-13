@@ -50,25 +50,25 @@ def test_plot_2d_marker_size_kwarg_used(xs):
 # --- maps ---------------------------------------------------------------
 
 def test_create_map_rem_frame():
-    import geoutils.plotting.map_plots as mp
+    import geoutils.plotting.maps.fields as mp
     ax = mp.create_map(rem_frame=True)["ax"]
     assert ax.spines["geo"].get_visible() is False
 
 
 def test_plot_map_accepts_numpy_scalar_limits(latlon_da):
-    import geoutils.plotting.map_plots as mp
+    import geoutils.plotting.maps.fields as mp
     res = mp.plot_map(latlon_da, vmin=np.float32(0), vmax=np.float64(5))
     assert res["im"] is not None
 
 
 def test_plot_map_all_nan_raises_valueerror(latlon_da):
-    import geoutils.plotting.map_plots as mp
+    import geoutils.plotting.maps.fields as mp
     with pytest.raises(ValueError, match="all-NaN"):
         mp.plot_map(latlon_da * np.nan)
 
 
 def test_plot_map_constant_array_draws(latlon_da):
-    import geoutils.plotting.map_plots as mp
+    import geoutils.plotting.maps.fields as mp
     res = mp.plot_map(latlon_da * 0 + 3)
     assert res["im"] is not None
 

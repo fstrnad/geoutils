@@ -12,7 +12,7 @@ def test_core_subpackages_importable():
     for mod in (
         "geoutils.utils.spatial_utils",
         "geoutils.utils.time_utils",
-        "geoutils.plotting.map_plots",
+        "geoutils.plotting.maps.fields",
         "geoutils.plotting.axes",
         "geoutils.plotting.colors",
         "geoutils.plotting.figure",

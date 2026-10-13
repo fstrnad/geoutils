@@ -8,7 +8,7 @@ import inspect
 import numpy as np
 import pytest
 
-import geoutils.plotting.map_plots as mp
+import geoutils.plotting.maps.fields as mp
 
 
 def test_plot_map_returns_expected_artifacts(latlon_da):

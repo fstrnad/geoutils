@@ -17,3 +17,16 @@ def test_plots_shim_exposes_public_api():
         importlib.reload(cplt)
     missing = [n for n in plotting.__all__ if not hasattr(cplt, n)]
     assert missing == []
+
+
+@pytest.mark.parametrize("module", [
+    "projections", "basemap", "fields", "overlays",
+])
+def test_maps_modules_importable(module):
+    assert importlib.import_module(f"geoutils.plotting.maps.{module}") is not None
+
+
+def test_old_module_names_are_gone():
+    for old in ("map_plots", "plotting_utils", "plot_settings", "xy_plots", "plot_result"):
+        with pytest.raises(ModuleNotFoundError):
+            importlib.import_module(f"geoutils.plotting.{old}")

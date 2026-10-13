@@ -21,21 +21,22 @@ from geoutils.plotting.figure import (
 )
 
 # Maps
-from geoutils.plotting.map_plots import (
+from geoutils.plotting.figure import create_multi_plot
+from geoutils.plotting.maps.projections import get_projection
+from geoutils.plotting.maps.basemap import (
     create_map,
-    create_multi_plot,
-    get_projection,
-    plot_array,
+    scale_bar,
+    set_extent,
+    set_grid,
+)
+from geoutils.plotting.maps.fields import plot_array, plot_map
+from geoutils.plotting.maps.overlays import (
     plot_edges,
     plot_horizontal_line_at_latitude,
-    plot_map,
     plot_rectangle,
     plot_ring,
     plot_trajectory,
     plot_wind_field,
-    scale_bar,
-    set_extent,
-    set_grid,
 )
 
 # x-y / time-series plots
