@@ -21,6 +21,7 @@ from geoutils.plotting.maps.basemap import BASEMAP_OPTIONS, create_map
 
 
 
+@pst.styled
 def plot_map(dmap: xr.DataArray,
              ds: object = None,
              fig: plt.Figure = None,
@@ -74,7 +75,6 @@ def plot_map(dmap: xr.DataArray,
         drawn when ``label`` is given.
     """
 
-    plt.rcParams["pcolor.shading"] = "nearest"  # For pcolormesh
     if label is None and isinstance(dmap, xr.DataArray):
         unset_label = kwargs.pop('unset_label', True)
         label = dmap.name if not unset_label else None
@@ -430,6 +430,7 @@ def _resolve_drawer(plot_type, z):
     return _FIELD_DRAWERS.get(plot_type)
 
 
+@pst.styled
 def plot_array(
     z=None,  # Not required for points
     x=None,

@@ -38,6 +38,7 @@ def save_fig(savepath, fig=None,
     return savepath
 
 
+@pst.styled
 def create_plot(nrows=1, ncols=1, **kwargs):
 
     figsize = kwargs.pop("figsize", None)
@@ -100,6 +101,7 @@ def enumerate_subplots(axs, pos_x=-0.12,
     return axs
 
 
+@pst.styled
 def create_multi_plot(nrows, ncols, projection=None,
                       lon_range=None, lat_range=None,
                       plot_grid=False,

@@ -82,7 +82,7 @@ def _series_color(spec, idx):
         return spec.color
     if spec.color_arr is not None:
         return _pick(spec.color_arr, idx)
-    return pst.colors[idx % len(pst.colors)]
+    return None  # let matplotlib take the next colour of the axes' cycle
 
 
 def _series_label(label_arr, idx, num_items):
@@ -151,6 +151,7 @@ def _draw_xy(ax, y_arr, x_arr, spec, kwargs):
 
         im = ax.plot(x, y, lw=lw, marker=mk, markersize=mk_size, ls=ls,
                      color=c, zorder=zorder, alpha=alpha, label=label)
+        c = im[0].get_color() if c is None else c
 
         y_err = y_err_arr[idx] if len(y_err_arr) > 0 else None
         x_err = spec.x_err_arr[idx] if len(spec.x_err_arr) > 0 else None
@@ -216,6 +217,7 @@ def _draw_density(ax, y_arr, x_arr, label_arr, color_arr, alpha_arr, kwargs):
     return im, label
 
 
+@pst.styled
 def plot_2d(
     y=None,
     x=None,
@@ -398,6 +400,7 @@ def plot_lines(ax, te, color="Turquoise"):
     return {'ax': ax}
 
 
+@pst.styled
 def plot_hist(data, ax=None, fig=None,
               plot_type='xy',
               log=False,
@@ -477,6 +480,7 @@ def prepare_ts_x_axis(ax, dates, **kwargs):
 #  ########################  Null Model #########################
 
 
+@pst.styled
 def plot_null_model(
     arr, title="Null Model for Event Synchronization",
 ):

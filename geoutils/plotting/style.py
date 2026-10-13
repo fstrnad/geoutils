@@ -1,7 +1,15 @@
-from matplotlib import rcParams, font_manager
+"""The geoutils look: font sizes, palette and one explicit rc configuration.
+
+Importing this module changes nothing. Plotting functions draw inside
+``style_context()``, so the look is applied without touching the user's global
+matplotlib state; call ``set_style()`` to adopt it for your own plots as well.
+"""
+import functools
+
 import matplotlib.pyplot as plt
-import warnings
-warnings.filterwarnings("ignore", message="facecolor will have no effect")
+from cycler import cycler
+from matplotlib import font_manager
+
 TINY_SIZE = 8
 MINI_SIZE = 10
 SMALL_SIZE = 12
@@ -10,63 +18,65 @@ BIGGER_SIZE = 16
 MAXIMUM_SIZE = 22
 MAX_ZORDER = 100
 
-set_new_font = True
-enable_all_cmaps = True
-
-plt.rcdefaults()
-
-default_font = 'Liberation Sans'
-preferred_font = 'Lato'
-preferred_font = 'Liberation Sans'
+# Okabe & Ito colour-blind safe categorical palette.
+OKABE_ITO = ["#E69F00", "#56B4E9", "#009E73", "#F0E442",
+             "#0072B2", "#D55E00", "#CC79A7", "#000000"]
+colors = list(OKABE_ITO)  # kept for code that read ``style.colors``
 
 
-def set_font_or_fallback(preferred: str = preferred_font,
-                         fallback: str = default_font):
-    """Set Matplotlib font to `preferred` if available, else to `fallback`."""
-    available_fonts = {f.name for f in font_manager.fontManager.ttflist}
-
-    if preferred in available_fonts:
-        rcParams["font.family"] = preferred
-    elif fallback in available_fonts:
-        rcParams["font.family"] = fallback
-    else:
-        # fallback to default (DejaVu Sans) if neither is found
-        rcParams["font.family"] = "DejaVu Sans"
+def _font_family(preferred="Liberation Sans", fallback="DejaVu Sans"):
+    available = {f.name for f in font_manager.fontManager.ttflist}
+    return preferred if preferred in available else fallback
 
 
-# Choose 'serif', 'sans-serif', or 'monospace'
-plt.style.use('bmh')
-# plt.style.use(['science'])
-if set_new_font:
-    set_font_or_fallback()
-    plt.rcParams['font.serif'] = 'Ubuntu'
-plt.rcParams['axes.facecolor'] = 'white'
-plt.rc("font", size=SMALL_SIZE)  # controls default text sizes
-plt.rc("axes", titlesize=MEDIUM_SIZE)  # fontsize of the axes title
-# fontsize of the x and y labels
-plt.rc("axes", labelsize=MEDIUM_SIZE)
-plt.rc("xtick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
-plt.rc("ytick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
-plt.rc("legend", fontsize=MEDIUM_SIZE)  # legend fontsize
-plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
+def _sizes(font, title, label, figure_title):
+    return {
+        "font.size": font,
+        "axes.titlesize": title,
+        "axes.labelsize": label,
+        "xtick.labelsize": label,
+        "ytick.labelsize": label,
+        "legend.fontsize": label,
+        "figure.titlesize": figure_title,
+    }
 
 
-# plt.rcParams['pcolor.shading'] ='nearest' # For pcolormesh
-colors = [
-    'dimgray',
-    'firebrick',
-    "steelblue",
-    "tab:green",
-    "tomato",
-    "c",
-    "darkviolet",
-    "tab:orange",
-    "y",
-    "tab:blue",
-    "tab:purple",
-    "m",
-    "slategray",
-]
+STYLE = {
+    "font.family": _font_family(),
+    **_sizes(SMALL_SIZE, MEDIUM_SIZE, MEDIUM_SIZE, BIGGER_SIZE),
+    "figure.facecolor": "white",
+    "axes.facecolor": "white",
+    "axes.axisbelow": True,
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+    "axes.prop_cycle": cycler(color=OKABE_ITO),
+    "grid.alpha": 0.3,
+    "grid.color": "0.5",
+    "xtick.direction": "out",
+    "ytick.direction": "out",
+    "pcolor.shading": "nearest",
+    "savefig.dpi": 300,
+    "savefig.bbox": "tight",
+}
+
+
+def set_style():
+    """Apply the geoutils look to all subsequent matplotlib figures."""
+    plt.rcParams.update(STYLE)
+
+
+def style_context():
+    """Context manager applying the geoutils look only inside its block."""
+    return plt.rc_context(STYLE)
+
+
+def styled(func):
+    """Run a plotting function inside ``style_context()``."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        with style_context():
+            return func(*args, **kwargs)
+    return wrapper
 
 
 def list_available_fonts():
@@ -82,22 +92,9 @@ def list_available_styles():
 
 
 def change_fsize(fsize):
-    plt.rc("font", size=fsize)  # controls default text sizes
-    plt.rc("axes", titlesize=fsize+4)  # fontsize of the axes title
-    # fontsize of the x and y labels
-    plt.rc("axes", labelsize=fsize)
-    plt.rc("xtick", labelsize=fsize)  # fontsize of the tick labels
-    plt.rc("ytick", labelsize=fsize)  # fontsize of the tick labels
-    plt.rc("legend", fontsize=fsize)  # legend fontsize
-    plt.rc("figure", titlesize=fsize)  # fontsize of the figure title
+    plt.rcParams.update(_sizes(fsize, fsize + 4, fsize, fsize))
 
 
 def reset_fsize():
-    plt.rc("font", size=SMALL_SIZE)  # controls default text sizes
-    plt.rc("axes", titlesize=BIGGER_SIZE)  # fontsize of the axes title
-    # fontsize of the x and y labels
-    plt.rc("axes", labelsize=MEDIUM_SIZE)
-    plt.rc("xtick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
-    plt.rc("ytick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
-    plt.rc("legend", fontsize=MEDIUM_SIZE)  # legend fontsize
-    plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
+    plt.rcParams.update(
+        _sizes(SMALL_SIZE, MEDIUM_SIZE, MEDIUM_SIZE, BIGGER_SIZE))

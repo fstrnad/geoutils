@@ -67,12 +67,14 @@ from geoutils.plotting.axes import (
     text_box,
 )
 
-# Global font / size settings
+# Look: explicit style, palette and global font sizes
 from geoutils.plotting.style import (
     change_fsize,
     list_available_fonts,
     list_available_styles,
     reset_fsize,
+    set_style,
+    style_context,
 )
 
 __all__ = [
@@ -93,5 +95,5 @@ __all__ = [
     "set_title", "text_box",
     # settings
     "change_fsize", "list_available_fonts", "list_available_styles",
-    "reset_fsize",
+    "reset_fsize", "set_style", "style_context",
 ]

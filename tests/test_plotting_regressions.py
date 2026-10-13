@@ -23,8 +23,8 @@ def test_plot_2d_scatter_with_z_arr_runs(xs):
 
 
 def test_plot_2d_default_lists_not_shared():
-    defaults = xyp.plot_2d.__kwdefaults__ or {}
-    defaults = list(xyp.plot_2d.__defaults__ or ()) + list(defaults.values())
+    import inspect
+    defaults = [p.default for p in inspect.signature(xyp.plot_2d).parameters.values()]
     assert not any(isinstance(d, list) for d in defaults)
 
 

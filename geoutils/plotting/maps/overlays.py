@@ -16,6 +16,7 @@ from geoutils.plotting.maps.basemap import create_map
 
 
 
+@pst.styled
 def plot_edges(
     ds,
     edges,
@@ -92,6 +93,7 @@ def plot_edges(
     return {"ax": ax, "fig": fig, "projection": projection}
 
 
+@pst.styled
 def plot_wind_field(
     u,
     v,
@@ -190,6 +192,7 @@ def plot_wind_field(
     return {'ax': ax}
 
 
+@pst.styled
 def plot_trajectory(lon_lat_pairs,
                     vals=None,
                     ax=None,

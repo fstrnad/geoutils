@@ -307,6 +307,7 @@ def scale_bar(ax, proj='PlateCarree',
             linewidth=linewidth, zorder=3)
 
 
+@pst.styled
 def create_map(
     da=None,
     ax=None,
