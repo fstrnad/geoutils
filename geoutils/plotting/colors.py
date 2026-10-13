@@ -1,4 +1,6 @@
-"""Colormaps, norms and colorbars."""
+"""Colormaps, norms, colour scales and colorbars."""
+import numbers
+from dataclasses import dataclass
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib as mpl
 from matplotlib.cm import ScalarMappable
@@ -219,37 +221,113 @@ def cbarfmt(x, pos):
     return rf'${a} \times 10^{{{b}}}$'
 
 
-def set_cb_boundaries(data, im=None, vmin=None, vmax=None, **kwargs):
-    noextend = "extend" in kwargs.keys() and kwargs["extend"] == "neither"
-    extend = kwargs.pop('extend', 'neither')
-    if extend == 'neither':
-        if data is not None:
-            if vmin is None:
-                vmin = im.norm.vmin
-            if vmax is None:
-                vmax = im.norm.vmax
-            data_min = np.nanmin(data)
-            cliplower = data_min < vmin if not noextend else False
-            data_max = np.nanmax(data)
-            clipupper = data_max > vmax if not noextend else False
+@dataclass(frozen=True)
+class ColorScale:
+    """Resolved colour limits, contour levels and colorbar extension."""
+    vmin: float | None
+    vmax: float | None
+    levels: np.ndarray | None
+    extend: str
+    sci: int | None
+    round_dec: int | None
 
-            if not ("extend" in kwargs.keys()) or kwargs["extend"] in ["min", "max"]:
-                extend_min = cliplower or (
-                    "extend" in kwargs.keys() and kwargs["extend"] == "min"
-                )
-                extend_max = clipupper or (
-                    "extend" in kwargs.keys() and kwargs["extend"] == "max"
-                )
-                if extend_min and extend_max:
-                    extend = "both"
-                elif extend_min:
-                    extend = "min"
-                elif extend_max:
-                    extend = "max"
 
-    kwargs["extend"] = extend
+def _color_bounds(z, vmin, vmax, color_bounds):
+    if color_bounds == 'quantile':
+        vmin = np.nanquantile(z, q=0.1) if vmin is None else vmin
+        vmax = np.nanquantile(z, q=0.9) if vmax is None else vmax
+    elif color_bounds == 'minmax':
+        vmin = np.nanmin(z) if vmin is None else vmin
+        vmax = np.nanmax(z) if vmax is None else vmax
+    elif color_bounds == 'absmax':
+        vmin = -1 * np.nanmax(abs(z)) if vmin is None else vmin
+        vmax = np.nanmax(abs(z)) if vmax is None else vmax
+    elif color_bounds == 'absquantile':
+        vmax = np.nanquantile(abs(z), q=0.9) if vmax is None else vmax
+        vmin = -1 * vmax
+    else:
+        raise ValueError(f'Unknown color_bounds {color_bounds!r}!')
+    return vmin, vmax
 
-    return extend, kwargs
+
+def _sci_and_rounding(vmin, vmax, sci, round_dec):
+    expo = gut.get_exponent10(np.abs(vmax - vmin))
+    if sci is None:
+        sci = expo if np.abs(expo) > 1 else None
+    if sci is not None:
+        if sci < 0:
+            round_dec = abs(sci) + 1
+        elif sci > 0:
+            round_dec = -1 * (sci - 2)
+    elif round_dec is None:
+        round_dec = 1 if vmax > 1 else 2
+    return sci, round_dec
+
+
+def _round_levels(levels, round_dec):
+    """Round levels, adding decimals until no two levels coincide."""
+    if levels is None or round_dec is None:
+        return levels
+    rounded = np.around(levels, round_dec)
+    extra = 1
+    while gut.has_duplicate(rounded):
+        rounded = np.around(levels, round_dec + extra)
+        extra += 1
+    return rounded
+
+
+def _auto_extend(z, vmin, vmax, extend):
+    if extend is not None:
+        return extend
+    below = np.nanmin(z) < vmin
+    above = np.nanmax(z) > vmax
+    if below and above:
+        return 'both'
+    return 'min' if below else 'max' if above else 'neither'
+
+
+def resolve_color_scale(z, vmin=None, vmax=None, levels=None,
+                        color_bounds='quantile', extend=None,
+                        sci=None, round_dec=None, log_base=None,
+                        is_hatch=False) -> ColorScale:
+    """Derive colour limits, levels and colorbar extension for data ``z``.
+
+    Parameters
+    ----------
+    levels : int, optional
+        Number of colour intervals; returned as the array of level edges.
+    color_bounds : {'quantile', 'minmax', 'absmax', 'absquantile'}
+        How vmin/vmax are derived when not given.
+    extend : {'neither', 'min', 'max', 'both'}, optional
+        Colorbar extension; derived from the data when None.
+    sci, round_dec : int, optional
+        Scientific-notation exponent and tick rounding; derived when None.
+    log_base : float, optional
+        If given, levels are log-spaced between ``base**vmin`` and ``base**vmax``.
+    is_hatch : bool
+        Hatch overlays only need vmin/vmax: no widening or level rounding.
+    """
+    for name, value in (('vmin', vmin), ('vmax', vmax)):
+        if value is not None and not isinstance(value, numbers.Real):
+            raise ValueError(
+                f'{name} has to be of type float or int but is of type {type(value)}!')
+    if z is None:
+        return ColorScale(None, None, None, extend or 'neither', None, None)
+
+    vmin, vmax = _color_bounds(z, vmin, vmax, color_bounds)
+    if vmin == vmax and not is_hatch:
+        gut.myprint(f'Vmin and vmax are equal: {vmin}!')
+        vmin, vmax = vmin - 0.1, vmax + 0.1
+
+    if log_base is not None:
+        levels = np.logspace(vmin, vmax, levels + 1, base=log_base)
+    elif levels is not None:
+        levels = np.linspace(vmin, vmax, levels + 1, endpoint=True)
+    if not is_hatch:
+        sci, round_dec = _sci_and_rounding(vmin, vmax, sci, round_dec)
+        levels = _round_levels(levels, round_dec)
+    return ColorScale(vmin, vmax, levels,
+                      _auto_extend(z, vmin, vmax, extend), sci, round_dec)
 
 
 def add_colorbar(im, fig, label,

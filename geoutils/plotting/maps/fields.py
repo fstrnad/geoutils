@@ -1,6 +1,5 @@
 """Plotting of gridded fields and scattered points on maps and axes."""
 # import matplotlib.cm as cm
-import numbers
 from dataclasses import dataclass
 import geoutils.utils.spatial_utils as sput
 import geoutils.utils.general_utils as gut
@@ -456,84 +455,23 @@ def plot_array(
     if plot_type == 'contourf' and levels is None:
         levels = 8  # Default for contourf
 
-    # Set 0.95 Quantile as definition for vmin, vmax to exclude outliers
-    if vmin is not None:
-        if not isinstance(vmin, numbers.Real):
-            raise ValueError(
-                f'vmin has to be of type float or int but is of type {type(vmin)}!')
-    if vmax is not None:
-        if not isinstance(vmax, numbers.Real):
-            raise ValueError(
-                f'Vmax has to be of type float or int but is of type {type(vmax)}!')
-
-    if z is not None:
-        if color_bounds == 'quantile':
-            vmin = np.nanquantile(z, q=0.1) if vmin is None else vmin
-            vmax = np.nanquantile(z, q=0.9) if vmax is None else vmax
-        elif color_bounds == 'minmax':
-            vmin = np.nanmin(z) if vmin is None else vmin
-            vmax = np.nanmax(z) if vmax is None else vmax
-        elif color_bounds == 'absmax':
-            vmin = -1*np.nanmax(abs(z)) if vmin is None else vmin
-            vmax = np.nanmax(abs(z)) if vmax is None else vmax
-        elif color_bounds == 'absquantile':
-            vmax = np.nanquantile(abs(z), q=0.9) if vmax is None else vmax
-            vmin = -1*vmax
-        if vmin == vmax and plot_type != 'hatch':
-            gut.myprint(f'Vmin and vmax are equal: {vmin}!')
-            vmin = vmin - 0.1
-            vmax = vmax + 0.1
-    else:
-        vmin = vmax = None
-
-    if set_norm == 'log':
-        base = kwargs.pop('base', 2)
-        # vmin and vmax are now the exponentials
-        levels = np.logspace(vmin, vmax, levels + 1, base=base)
-    elif levels is not None:
-        levels = np.linspace(vmin, vmax, levels + 1, endpoint=True)
-    round_dec = kwargs.pop("round_dec", None)
-    if z is not None:
-        if plot_type != 'hatch':
-            expo = gut.get_exponent10(np.abs(vmax-vmin)) if float(
-                vmin) != 0. else gut.get_exponent10(np.abs(vmax-vmin))
-            if sci is None:
-                sci = expo if np.abs(expo) > 1 else None
-            if sci is not None:
-                if sci < 0:
-                    round_dec = abs(sci) + 1
-                elif sci > 0:
-                    round_dec = -1*(sci-2)
-            else:
-                if round_dec is None:
-                    round_dec = 1 if vmax > 1 else 2  # because the range is between 0 and 10
-            if levels is not None:
-                this_levels = np.around(
-                    levels, round_dec) if round_dec is not None else levels
-                i = 1
-                while gut.has_duplicate(this_levels):
-                    this_levels = np.around(
-                        levels, round_dec+i)
-                    i += 1
-                levels = this_levels
-            if levels is not None and plot_type != 'points' and plot_type != 'contour' and cmap is not None:
-                # norm = mpl.colors.LogNorm(levels=levels)
-                cmap, norm = pcol.create_cmap(cmap, levels,
-                                             centercolor=centercolor,
-                                             leftcolor=leftcolor,
-                                             **kwargs)
-            else:
-                if isinstance(cmap, str):
-                    cmap, norm = pcol.create_cmap(cmap)
-                # elif not isinstance(cmap, mpl.colors.Colormap) or not isinstance(cmap, mpl.colors.LinearSegmentedColormap) or not isinstance(color, str):
-                #     raise ValueError(
-                #         f'cmap has to be of type str or mpl.colors.Colormap but is of type {type(cmap)}!')
-                norm = None
-    else:
-        sci = round_dec = norm = levels = None
-
-    extend, kwargs = pcol.set_cb_boundaries(data=z, im=None,
-                                           vmin=vmin, vmax=vmax, **kwargs)
+    scale = pcol.resolve_color_scale(
+        z, vmin=vmin, vmax=vmax, levels=levels, color_bounds=color_bounds,
+        extend=kwargs.pop('extend', None),
+        sci=sci, round_dec=kwargs.pop("round_dec", None),
+        log_base=kwargs.pop('base', 2) if set_norm == 'log' else None,
+        is_hatch=plot_type == 'hatch')
+    vmin, vmax, levels, extend, sci = (
+        scale.vmin, scale.vmax, scale.levels, scale.extend, scale.sci)
+    kwargs['extend'] = extend
+    if z is not None and plot_type != 'hatch':
+        if levels is not None and plot_type not in ('points', 'contour') and cmap is not None:
+            cmap, norm = pcol.create_cmap(cmap, levels,
+                                          centercolor=centercolor,
+                                          leftcolor=leftcolor,
+                                          **kwargs)
+        elif isinstance(cmap, str):
+            cmap, _ = pcol.create_cmap(cmap)
     draw = _resolve_drawer(plot_type, z)
     if draw is not None:
         ctx = _DrawContext(
