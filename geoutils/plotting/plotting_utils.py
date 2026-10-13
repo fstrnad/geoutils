@@ -329,13 +329,13 @@ def prepare_axis(ax, **kwargs):
     set_title(title=title, ax=ax, **kwargs)
 
     ylog = kwargs.pop("ylog", False)
+    ysymlog = kwargs.pop("ysymlog", False)
     yscale = kwargs.pop("yscale", None)
     if yscale == 'log':
         ylog = True
     elif yscale == 'symlog':
         ysymlog = True
 
-    ysymlog = kwargs.pop("ysymlog", False)
     if ylog and ysymlog:
         raise ValueError('ylog and ysymlog cannot be True at the same time!')
     if ylog is True:
@@ -407,7 +407,7 @@ def create_cmap(cmap, levels=None, **kwargs):
     # set colormap
     if isinstance(cmap, str):
         cmap = get_cmap(cmap, levels=levels)
-    elif not isinstance(cmap, mpl.colors.Colormap) or not isinstance(cmap, mpl.colors.LinearSegmentedColormap):
+    elif not isinstance(cmap, mpl.colors.Colormap):
         raise ValueError(
             f'cmap has to be of type str or mpl.colors.Colormap but is of type {type(cmap)}!')
     if levels is not None:

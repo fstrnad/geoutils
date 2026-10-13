@@ -105,3 +105,32 @@ def test_create_plot_multi_returns_flat_array():
     import geoutils.plotting.plots as cplt
     res = cplt.create_plot(2, 2)
     assert np.shape(res["ax"]) == (4,)
+
+
+# --- axes and colormaps -------------------------------------------------
+
+def test_yscale_symlog_applied(xs):
+    res = xyp.plot_2d(y=xs - 5, yscale="symlog")
+    assert res["ax"].get_yscale() == "symlog"
+
+
+def test_ysymlog_flag_applied(xs):
+    res = xyp.plot_2d(y=xs - 5, ysymlog=True)
+    assert res["ax"].get_yscale() == "symlog"
+
+
+def test_ylog_and_ysymlog_conflict_raises(xs):
+    with pytest.raises(ValueError, match="ylog and ysymlog"):
+        xyp.plot_2d(y=xs + 1, ylog=True, ysymlog=True)
+
+
+def test_create_cmap_accepts_colormap_object():
+    import geoutils.plotting.plotting_utils as put
+    cmap, norm = put.create_cmap(mpl.colormaps["viridis"], levels=[0, 1, 2])
+    assert isinstance(norm, mpl.colors.BoundaryNorm)
+
+
+def test_create_cmap_rejects_other_types():
+    import geoutils.plotting.plotting_utils as put
+    with pytest.raises(ValueError, match="cmap has to be"):
+        put.create_cmap(42, levels=[0, 1, 2])
