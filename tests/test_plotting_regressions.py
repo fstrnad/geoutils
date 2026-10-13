@@ -71,3 +71,37 @@ def test_plot_map_constant_array_draws(latlon_da):
     import geoutils.plotting.map_plots as mp
     res = mp.plot_map(latlon_da * 0 + 3)
     assert res["im"] is not None
+
+
+# --- figure helpers -----------------------------------------------------
+
+def test_save_fig_bare_filename(tmp_path, monkeypatch):
+    import geoutils.plotting.plots as cplt
+    monkeypatch.chdir(tmp_path)
+    cplt.create_plot()
+    cplt.save_fig("plain_name")
+    assert (tmp_path / "plain_name.png").stat().st_size > 0
+
+
+@pytest.mark.parametrize("name, expected", [
+    ("png_plots/out", "png_plots/out.png"),
+    ("figs/out.pdf", "figs/out.pdf"),
+])
+def test_save_fig_adds_extension_only_when_missing(tmp_path, name, expected):
+    import geoutils.plotting.plots as cplt
+    res = cplt.create_plot()
+    path = cplt.save_fig(tmp_path / name, fig=res["fig"])
+    assert path == tmp_path / expected
+    assert path.stat().st_size > 0
+
+
+def test_create_plot_single_returns_axes():
+    import geoutils.plotting.plots as cplt
+    res = cplt.create_plot()
+    assert isinstance(res["ax"], mpl.axes.Axes)
+
+
+def test_create_plot_multi_returns_flat_array():
+    import geoutils.plotting.plots as cplt
+    res = cplt.create_plot(2, 2)
+    assert np.shape(res["ax"]) == (4,)
