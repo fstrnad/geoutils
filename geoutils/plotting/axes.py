@@ -9,7 +9,7 @@ import geoutils.plotting.style as pst
 
 # keyword options understood by set_title (used to flag typos)
 TITLE_OPTIONS = frozenset({
-    'title_color', 'title_fontweight', 'title_fsize', 'vertical_title',
+    'title_color', 'title_fontweight', 'title_fsize', 'title_loc', 'vertical_title',
     'vertical_title_fsize', 'x_title_offset', 'y_title',
 })
 
@@ -32,7 +32,7 @@ def set_legend(ax,
     ncol_legend = kwargs.pop('ncol_legend', 1)
     ncol_legend = 2 if ncol_legend == 1 and loc == 'under' else ncol_legend
     loc = 'upper left' if loc == 'outside' or loc == 'under' else loc  # loc is set above
-    fsize = kwargs.pop("fontsize", pst.MEDIUM_SIZE)
+    fsize = kwargs.pop("fontsize", pst.TICK_SIZE)
     order = kwargs.pop("order", None)
     if len(label_arr) == 0:
         legend_items, label_arr = ax.get_legend_handles_labels()
@@ -74,23 +74,27 @@ def set_title(title, ax=None, fig=None, **kwargs):
     y_title = kwargs.pop('y_title', None)  # None: let the layout place it
     vertical_title = kwargs.pop('vertical_title', None)
     x_title_offset = kwargs.pop('x_title_offset', -0.33)
-    title_color = kwargs.pop('title_color', 'black')
+    title_color = kwargs.pop('title_color', pst.INK)
     # fw = kwargs.pop('title_fontweight', "normal")
     fw = kwargs.pop('title_fontweight', "bold")
-    fsize = kwargs.pop('title_fsize', pst.BIGGER_SIZE)
+    fsize = kwargs.pop('title_fsize', None)
+    title_loc = kwargs.pop('title_loc', 'left')
     if title is not None:
         if ax is not None:
-            ax.set_title(title, color=title_color,
-                         fontweight=fw, size=fsize,
+            ax.set_title(title, loc=title_loc, color=title_color,
+                         fontweight=fw, size=fsize or pst.TITLE_SIZE,
                          y=y_title)
         elif fig is not None:
+            left = title_loc == 'left'
             fig.suptitle(title,
+                         x=0.01 if left else 0.5,
+                         ha='left' if left else 'center',
                          color=title_color,
                          y=y_title,
                          fontweight=fw,
-                         fontsize=fsize)
+                         fontsize=fsize or pst.FIGURE_TITLE_SIZE)
     if vertical_title is not None:
-        fsize = kwargs.pop('vertical_title_fsize', pst.MEDIUM_SIZE)
+        fsize = kwargs.pop('vertical_title_fsize', pst.LABEL_SIZE)
         ax.text(x=x_title_offset, y=.5, s=vertical_title,
                 transform=ax.transAxes,
                 color=title_color, rotation='vertical',
@@ -118,8 +122,8 @@ class AxisSpec:
     title: str | None = None
     xlabel: str | None = None
     ylabel: str | None = None
-    x_label_color: str = "k"
-    ylabel_color: str = "k"
+    x_label_color: str = pst.INK
+    ylabel_color: str = pst.INK
     xlabel_pos: object = None
     ylabel_pos: object = None
     xlim: tuple | None = None
@@ -424,10 +428,10 @@ def plot_hline(ax, y, transform=None, **kwargs):
 def plot_text(ax, text, xpos=0, ypos=0,
               **kwargs):
 
-    color = kwargs.pop("color", "k")
+    color = kwargs.pop("color", pst.INK)
     zorder = kwargs.pop('zorder', 10)
     rot = kwargs.pop("rot", 0)
-    fsize = kwargs.pop('fsize', pst.BIGGER_SIZE)
+    fsize = kwargs.pop('fsize', pst.LABEL_SIZE)
     weight = kwargs.pop('weight', "normal")
     trafo_axis = kwargs.pop('transform', False)
     check_axis = kwargs.pop('check_axis', True)
@@ -467,9 +471,9 @@ def plot_text(ax, text, xpos=0, ypos=0,
     return ax
 
 
-def text_box(ax, text, pos="upper right", fsize=pst.MEDIUM_SIZE, **kwargs):
+def text_box(ax, text, pos="upper right", fsize=pst.LABEL_SIZE, **kwargs):
     fw = kwargs.pop('fw', "normal")
-    fsize = kwargs.pop('fsize', pst.MEDIUM_SIZE)
+    fsize = kwargs.pop('fsize', pst.LABEL_SIZE)
     anchored_text = AnchoredText(text, loc=pos,
                                  prop=dict(size=fsize,
                                            fontweight=fw))

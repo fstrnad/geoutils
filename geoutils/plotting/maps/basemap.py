@@ -136,6 +136,9 @@ def set_grid(ax, alpha=0.5,
         x_inline=False,
         y_inline=False,
         alpha=alpha,
+        linewidth=0.4,
+        linestyle=":",
+        color="0.35",
     )
     # gl = ax.gridlines(draw_labels=True, dms=True,
     #                   x_inline=False, y_inline=False, )
@@ -144,13 +147,10 @@ def set_grid(ax, alpha=0.5,
     gl.right_labels = False
     # gl.right_labels=True
     gl.bottom_labels = True
-    # smaller labels on narrow panels, where neighbouring labels would collide
-    width_in = ax.get_position().width * ax.figure.get_figwidth()
-    label_size = pst.MEDIUM_SIZE if width_in >= 4.5 else pst.MINI_SIZE
     gl.ylabel_style = {'rotation': -0,
-                       'color': 'black', 'size': label_size}
+                       'color': pst.INK, 'size': pst.TICK_SIZE}
     gl.xlabel_style = {'rotation': -0,
-                       'color': 'black', 'size': label_size}
+                       'color': pst.INK, 'size': pst.TICK_SIZE}
     gl.top_labels = False
 
     return ax, kwargs
@@ -366,18 +366,19 @@ def create_map(
 
     if set_map:
         # axes properties
-        coast_color = kwargs.pop("coast_color", "k")
+        coast_color = kwargs.pop("coast_color", None)
         plot_borders = kwargs.pop("plot_borders", False)
-        lw_borders = kwargs.pop("lw_borders", 1)
+        lw_borders = kwargs.pop("lw_borders", None)
+        # fine dark-grey coastlines; borders one step lighter and thinner
         ax.coastlines(alpha=alpha,
-                      color=coast_color,
-                      lw=lw_borders
+                      color=coast_color or "#333333",
+                      lw=0.6 if lw_borders is None else lw_borders
                       )
         if plot_borders:
             ax.add_feature(ctp.feature.BORDERS,
                            linestyle="-",
-                           color=coast_color,
-                           lw=lw_borders,
+                           color=coast_color or "#666666",
+                           lw=0.4 if lw_borders is None else lw_borders,
                            alpha=alpha)
         land_ocean = kwargs.pop("land_ocean", False)
         if land_ocean:
@@ -390,7 +391,7 @@ def create_map(
                 ax.spines['geo'].set_visible(False)
 
     if plot_grid:
-        ax, kwargs = set_grid(ax, alpha=alpha,
+        ax, kwargs = set_grid(ax,
                               proj=projection,
                               ext_dict=ext_dict,
                               **kwargs)

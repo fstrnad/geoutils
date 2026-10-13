@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import copy
 import numpy as np
 import geoutils.utils.general_utils as gut
-import geoutils.plotting.style as pst
 
 
 
@@ -357,7 +356,7 @@ def add_colorbar(im, fig, label,
     coordinates (``x_pos``, ``y_pos``, ``width``, ``height``).
     """
     orientation = kwargs.pop('orientation', 'horizontal')
-    fsize = kwargs.pop('fontsize', pst.BIGGER_SIZE)
+    fsize = kwargs.pop('fontsize', None)
     if multi_plots:
         panels = [a for a in fig.axes if a.get_label() != '<colorbar>']
         return make_colorbar(ax=panels, im=im['im'], fig=fig,
@@ -380,7 +379,7 @@ class ColorbarSpec:
     orientation: str = "horizontal"
     ticks: object = None
     extend: str = "neither"
-    tick_step: int = 2
+    tick_step: int | None = None  # None: at most six ticks
     sci: int | None = None
     round_dec: int | None = None
     set_int: bool = False
@@ -388,7 +387,8 @@ class ColorbarSpec:
     set_rot: bool = False
     set_cax: bool = False
     pad: float | None = None
-    shrink: float | None = None  # default: 0.9 horizontal, 0.75 vertical
+    shrink: float | None = None  # default: 0.8 horizontal, 0.7 vertical
+    aspect: float = 35  # length / thickness
     fontsize: float | None = None
     norm: str | None = None
     kwargs_bar: dict = field(default_factory=dict)
@@ -400,11 +400,18 @@ class ColorbarSpec:
                       for f in fields(cls) if f.name in kwargs})
 
 
+def _tick_step(spec):
+    """Every n-th level edge is labelled; by default at most six labels."""
+    if spec.tick_step is not None:
+        return int(spec.tick_step)
+    return max(1, -(-len(spec.ticks) // 6))
+
+
 def make_colorbar(ax, im, fig=None, spec=None, **kwargs):
     """Draw a colorbar for ``im``; options come from ``spec`` or flat keywords."""
     if spec is None:
         spec = ColorbarSpec.from_kwargs(kwargs)
-    ticks = None if spec.ticks is None else spec.ticks[::int(spec.tick_step)]
+    ticks = None if spec.ticks is None else spec.ticks[::_tick_step(spec)]
     if ticks is not None and spec.round_dec is not None:
         ticks = np.around(ticks, spec.round_dec)
     if ticks is not None and spec.set_int:
@@ -426,8 +433,8 @@ def make_colorbar(ax, im, fig=None, spec=None, **kwargs):
                 DeprecationWarning, stacklevel=4)
             pad = None
         placement = dict(
-            ax=ax, pad=0.05 if pad is None else pad,
-            shrink=(0.9 if orientation == 'horizontal' else 0.75)
+            ax=ax, pad=0.05 if pad is None else pad, aspect=spec.aspect,
+            shrink=(0.8 if orientation == 'horizontal' else 0.7)
             if spec.shrink is None else spec.shrink,
             location='bottom' if orientation == 'horizontal' else 'right')
     else:
@@ -444,6 +451,7 @@ def make_colorbar(ax, im, fig=None, spec=None, **kwargs):
         fmt = None
     cbar = fig.colorbar(im, label=spec.label, format=fmt, extend=spec.extend,
                         **placement, **kwargs_bar)
+    cbar.outline.set_linewidth(0.5)
     if spec.sci is not None:
         place_colorbar_offset_text(cbar)
 

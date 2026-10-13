@@ -8,7 +8,6 @@ import functools
 
 import matplotlib.pyplot as plt
 from cycler import cycler
-from matplotlib import font_manager
 
 TINY_SIZE = 8
 MINI_SIZE = 10
@@ -18,6 +17,20 @@ BIGGER_SIZE = 16
 MAXIMUM_SIZE = 22
 MAX_ZORDER = 100
 
+# The compact type scale of the geoutils look.
+TICK_SIZE = 10
+LABEL_SIZE = 11
+TITLE_SIZE = 13
+FIGURE_TITLE_SIZE = 14
+INK = "#222222"  # text colour
+EDGE = "#444444"  # axes frame colour
+
+# Uses the first installed font, so it also works where Lato is missing (e.g.
+# on a cluster) without bundling any font files. Liberation Sans is the
+# metric-compatible Linux twin of Arial; Helvetica Neue ranks below them
+# because matplotlib only registers its regular weight (no real bold).
+FONT_CHAIN = ["Lato", "Arial", "Liberation Sans", "Helvetica Neue", "DejaVu Sans"]
+
 # Okabe & Ito colour-blind safe categorical palette.
 # Ordered so that the first few series are the easiest to tell apart on white.
 OKABE_ITO = ["#0072B2", "#D55E00", "#009E73", "#E69F00",
@@ -25,26 +38,33 @@ OKABE_ITO = ["#0072B2", "#D55E00", "#009E73", "#E69F00",
 colors = list(OKABE_ITO)  # kept for code that read ``style.colors``
 
 
-def _font_family(preferred="Liberation Sans", fallback="DejaVu Sans"):
-    available = {f.name for f in font_manager.fontManager.ttflist}
-    return preferred if preferred in available else fallback
-
-
-def _sizes(font, title, label, figure_title):
+def _sizes(font, title, label, tick, figure_title):
     return {
         "font.size": font,
         "axes.titlesize": title,
         "axes.labelsize": label,
-        "xtick.labelsize": label,
-        "ytick.labelsize": label,
-        "legend.fontsize": label,
+        "xtick.labelsize": tick,
+        "ytick.labelsize": tick,
+        "legend.fontsize": tick,
         "figure.titlesize": figure_title,
     }
 
 
+_BASE_SIZES = _sizes(TICK_SIZE, TITLE_SIZE, LABEL_SIZE, TICK_SIZE,
+                     FIGURE_TITLE_SIZE)
+
+
 STYLE = {
-    "font.family": _font_family(),
-    **_sizes(SMALL_SIZE, MEDIUM_SIZE, MEDIUM_SIZE, BIGGER_SIZE),
+    "font.family": "sans-serif",
+    "font.sans-serif": FONT_CHAIN,
+    **_BASE_SIZES,
+    "axes.titleweight": "bold",
+    "text.color": INK,
+    "axes.labelcolor": INK,
+    "axes.edgecolor": EDGE,
+    "axes.linewidth": 0.8,
+    "xtick.color": "#333333",
+    "ytick.color": "#333333",
     "figure.facecolor": "white",
     "axes.facecolor": "white",
     "axes.axisbelow": True,
@@ -93,9 +113,8 @@ def list_available_styles():
 
 
 def change_fsize(fsize):
-    plt.rcParams.update(_sizes(fsize, fsize + 4, fsize, fsize))
+    plt.rcParams.update(_sizes(fsize, fsize + 4, fsize, fsize, fsize))
 
 
 def reset_fsize():
-    plt.rcParams.update(
-        _sizes(SMALL_SIZE, MEDIUM_SIZE, MEDIUM_SIZE, BIGGER_SIZE))
+    plt.rcParams.update(_BASE_SIZES)

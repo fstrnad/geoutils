@@ -244,12 +244,12 @@ def _label_size(ax):
     return gl.xlabel_style["size"]
 
 
-def test_gridline_labels_shrink_on_narrow_panels():
+def test_gridline_labels_have_one_size_on_every_map():
     import geoutils.plotting as cplt
     wide = cplt.create_map(figsize=(9, 5))["ax"]
     narrow = cplt.create_multi_plot(2, 3, projection="PlateCarree", plot_grid=True,
                                     figsize=(9, 5))["ax"][0]
-    assert _label_size(narrow) < _label_size(wide)
+    assert _label_size(narrow) == _label_size(wide) == 10
 
 
 def test_vertical_colorbar_is_shorter_than_horizontal_is_wide(latlon_da):
@@ -262,3 +262,78 @@ def test_vertical_colorbar_is_shorter_than_horizontal_is_wide(latlon_da):
     horizontal = mp.plot_map(latlon_da, label="K")
     vertical = mp.plot_map(latlon_da, label="K", orientation="vertical")
     assert ratio(vertical, "height") < ratio(horizontal, "width")
+
+
+# --- map furniture and colorbar style -----------------------------------
+
+def _gridliner(ax):
+    from cartopy.mpl.gridliner import Gridliner
+    (gl,) = [c for c in ax.get_children() if isinstance(c, Gridliner)]
+    return gl
+
+
+def test_titles_are_left_aligned(latlon_da):
+    res = mp.plot_map(latlon_da, title="A title")
+    assert res["ax"].get_title(loc="left") == "A title"
+    assert res["ax"].get_title(loc="center") == ""
+
+
+def test_title_loc_can_be_overridden(latlon_da):
+    res = mp.plot_map(latlon_da, title="A title", title_loc="center")
+    assert res["ax"].get_title(loc="center") == "A title"
+
+
+def test_gridlines_are_thin_dotted_and_translucent():
+    import geoutils.plotting as cplt
+    gl = _gridliner(cplt.create_map()["ax"])
+    kw = gl.collection_kwargs
+    assert kw["linestyle"] == ":" and kw["linewidth"] <= 0.5 and kw["alpha"] < 1
+
+
+def test_coastlines_are_thin_and_dark_grey():
+    from cartopy.mpl.feature_artist import FeatureArtist
+    import geoutils.plotting as cplt
+    ax = cplt.create_map()["ax"]
+    (coast,) = [a for a in ax.get_children() if isinstance(a, FeatureArtist)]
+    assert coast._kwargs["lw"] == 0.6 and coast._kwargs["edgecolor"] == "#333333"
+
+
+def test_explicit_coast_options_still_win():
+    from cartopy.mpl.feature_artist import FeatureArtist
+    import geoutils.plotting as cplt
+    ax = cplt.create_map(coast_color="red", lw_borders=2)["ax"]
+    (coast,) = [a for a in ax.get_children() if isinstance(a, FeatureArtist)]
+    assert coast._kwargs["lw"] == 2 and coast._kwargs["edgecolor"] == "red"
+
+
+def test_map_frame_is_thin_grey():
+    import geoutils.plotting as cplt
+    spine = cplt.create_map()["ax"].spines["geo"]
+    assert spine.get_linewidth() == 0.8 and spine.get_edgecolor()[0] < 0.5
+
+
+def test_colorbar_is_slim_with_fine_outline(latlon_da):
+    res = mp.plot_map(latlon_da, label="K")
+    box = _extent(_cbar_axes(res["fig"])[0], res["fig"])
+    assert box.height < 0.04 * res["fig"].bbox.height
+    assert res["colorbar"].outline.get_linewidth() == 0.5
+
+
+@pytest.mark.parametrize("levels", [4, 8, 12, 20])
+def test_colorbar_shows_at_most_six_ticks_by_default(latlon_da, levels):
+    res = mp.plot_map(latlon_da, label="K", plot_type="contourf", levels=levels)
+    assert len(res["colorbar"].get_ticks()) <= 6
+
+
+def test_explicit_tick_step_is_kept(latlon_da):
+    res = mp.plot_map(latlon_da, label="K", plot_type="contourf", levels=8,
+                      tick_step=1)
+    assert len(res["colorbar"].get_ticks()) == 9
+
+
+def test_panel_letters_use_the_small_title_size():
+    import geoutils.plotting as cplt
+    res = cplt.create_multi_plot(1, 2)
+    letters = [t for ax in res["ax"] for t in ax.texts]
+    assert {t.get_text() for t in letters} == {"a.", "b."}
+    assert all(t.get_fontsize() == 13 for t in letters)
