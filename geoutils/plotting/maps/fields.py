@@ -1,5 +1,6 @@
 """Plotting of gridded fields and scattered points on maps and axes."""
 # import matplotlib.cm as cm
+import warnings
 from dataclasses import dataclass
 import geoutils.utils.spatial_utils as sput
 import geoutils.utils.general_utils as gut
@@ -15,7 +16,7 @@ import geoutils.plotting.colors as pcol
 import geoutils.plotting.style as pst
 from geoutils.plotting.result import PlotResult
 from geoutils.plotting.maps.projections import get_projection
-from geoutils.plotting.maps.basemap import create_map
+from geoutils.plotting.maps.basemap import BASEMAP_OPTIONS, create_map
 
 
 
@@ -37,6 +38,11 @@ def plot_map(dmap: xr.DataArray,
              lat_range: tuple[float, float] = None,
              lon_range: tuple[float, float] = None,
              dateline: bool = False,
+             levels: int = None,
+             color_bounds: str = 'quantile',
+             extend: str = None,
+             orientation: str = 'horizontal',
+             tick_step: int = 2,
              **kwargs):
     """
     This function plots a map of a given xr.DataArray.
@@ -50,7 +56,6 @@ def plot_map(dmap: xr.DataArray,
       vmin (int): Minimum value for the colorbar.
       vmax (int): Maximum value for the colorbar.
       cmap (str): Colormap used for the plot.
-      bar (bool): Add colorbar or not.
       projection (str): Map projection to be used.
       label (str): Label for the colorbar.
       title (str): Title for the plot.
@@ -58,7 +63,15 @@ def plot_map(dmap: xr.DataArray,
       mask (xr.DataArray): Mask to apply on the plot. 1 for masked data
       lat_range (Tuple[float, float]): Latitude range for the plot.
       lon_range (Tuple[float, float]): Longitude range for the plot.
-      **kwargs: Additional keyword arguments.
+      levels (int): Number of colour intervals.
+      color_bounds (str): How vmin/vmax are derived, see ``plot_array``.
+      extend (str): Colorbar extension; derived from the data when None.
+      orientation (str): Colorbar orientation, 'horizontal' or 'vertical'.
+      tick_step (int): Show every n-th colorbar tick.
+      **kwargs: Further options of ``plot_array``, ``create_map`` (set_map,
+        land_ocean, plot_borders, coast_color, ...) and the significance
+        overlay (sig_plot_type, hatch_type, inverse_mask). A colorbar is only
+        drawn when ``label`` is given.
     """
 
     plt.rcParams["pcolor.shading"] = "nearest"  # For pcolormesh
@@ -180,7 +193,9 @@ def plot_map(dmap: xr.DataArray,
     im = plot_array(x=x, y=y, z=z,
                     fig=fig, ax=ax, plot_type=plot_type, projection=projection,
                     vmin=vmin, vmax=vmax, cmap=cmap, label=label, title=title,
-                    alpha=alpha, pad=pad,
+                    alpha=alpha, pad=pad, levels=levels,
+                    color_bounds=color_bounds, extend=extend,
+                    orientation=orientation, tick_step=tick_step,
                     **kwargs)
 
     # areas which are dotted are mask
@@ -199,6 +214,27 @@ def plot_map(dmap: xr.DataArray,
                               kind=sig_plot_type, hatch_type=hatch_type,
                               **kwargs)
     return im
+
+# keyword options plot_array reads from **kwargs itself (axis, title and
+# basemap options are registered by their own modules)
+_ARRAY_OPTIONS = frozenset({
+    'lw', 'size', 'marker', 'fillstyle', 'zorder', 'sci_x', 'figsize', 'norm',
+    'base', 'hatch_type', 'ls', 'clabel', 'clabel_fsize', 'clabel_fmt',
+    'color_contour', 'set_int', 'set_rot', 'pad', 'fontsize', 'kwargs_bar',
+})
+_COLORBAR_EXTRAS = ('set_int', 'set_rot', 'pad', 'fontsize', 'kwargs_bar')
+_KNOWN_OPTIONS = (_ARRAY_OPTIONS | pax.AXIS_OPTIONS | pax.TITLE_OPTIONS
+                  | BASEMAP_OPTIONS)
+
+
+def _warn_unknown_options(kwargs):
+    unknown = sorted(set(kwargs) - _KNOWN_OPTIONS)
+    if unknown:
+        warnings.warn(
+            f"Ignoring unknown plotting option(s) {unknown}; "
+            "this will raise a TypeError in a future release.",
+            FutureWarning, stacklevel=3)
+
 
 def _draw_hatch(ax, x, y, z, projection, hatch_type):
     """Draw an invisible layer whose only visible part is the hatching."""
@@ -410,18 +446,51 @@ def plot_array(
     significance_mask=None,
     set_axis=True,
     color_bounds='quantile',
+    levels=None,
+    extend=None,
+    orientation='horizontal',
+    tick_step=2,
+    shift_ticks=None,
+    sci=None,
+    round_dec=None,
+    unset_sci=False,
+    centercolor=None,
+    leftcolor=None,
+    color=None,
+    alpha=1.0,
     **kwargs,
 ):
     """Draw a 2D array (or scattered points) onto an axis.
 
     Parameters
     ----------
+    z, x, y : 2D values and their coordinates; x and y default to the array's
+        own coordinates.
+    plot_type : {'colormesh', 'contourf', 'contour', 'discrete', 'scatter',
+        'points', 'hatch'}
+    vmin, vmax : colour limits; derived from ``color_bounds`` when None.
     color_bounds : {'quantile', 'minmax', 'absmax', 'absquantile'}
         How vmin/vmax are derived when not passed explicitly. NOTE: the default
         ``'quantile'`` clips the colour scale to the 10th-90th percentile of the
         data, so extreme values saturate unless you pass vmin/vmax or
         ``color_bounds='minmax'``.
+    levels : number of colour intervals (contourf defaults to 8).
+    extend : colorbar extension; derived from the data when None.
+    label : colorbar label; a colorbar is only drawn when it is given.
+    orientation, tick_step, shift_ticks, sci, unset_sci, round_dec : colorbar
+        layout, tick thinning and number formatting.
+    centercolor, leftcolor : override the middle / first colour of the colormap.
+    color, alpha : one colour instead of a colormap; opacity.
+
+    Other keyword arguments
+    -----------------------
+    lw, size, marker, fillstyle, zorder (artist styling), sci_x, figsize, norm,
+    base, hatch_type, ls / clabel / clabel_fsize / clabel_fmt / color_contour
+    (contour lines), set_int, set_rot, pad, fontsize, kwargs_bar (colorbar), plus
+    the options of ``axes.prepare_axis`` and ``axes.set_title``. Unknown keywords
+    raise a FutureWarning and are ignored.
     """
+    _warn_unknown_options(kwargs)
     if x is None and y is None and z is None:
         raise ValueError(
             'Please provide at least z')
@@ -437,11 +506,7 @@ def plot_array(
             x = np.arange(0, len(z[0]))
             y = np.arange(0, len(z))
     # plotting
-    centercolor = kwargs.pop('centercolor', None)
-    leftcolor = kwargs.pop('leftcolor', None)
-    color = kwargs.pop("color", None)
     cmap = None if color is not None else cmap
-    alpha = kwargs.pop("alpha", 1.0)
     lw = kwargs.pop("lw", 1)
     size = kwargs.pop("size", 1)
     marker = kwargs.pop("marker", "o")
@@ -449,7 +514,6 @@ def plot_array(
     # such that setting to 1 will always be in the background
     zorder = kwargs.pop("zorder", 1)
     sci_x = kwargs.pop('sci_x', None)
-    sci = kwargs.pop("sci", None)
     if ax is None:
         figsize = kwargs.pop("figsize", (7, 5))
         fig, ax = plt.subplots(figsize=(figsize))
@@ -463,20 +527,17 @@ def plot_array(
             projection = get_projection(projection='PlateCarree')
 
     set_norm = kwargs.pop('norm', None)
-    levels = kwargs.pop("levels", None)
     norm = None  # reassigned below when applicable; defined for all types
     if plot_type == 'contourf' and levels is None:
         levels = 8  # Default for contourf
 
     scale = pcol.resolve_color_scale(
         z, vmin=vmin, vmax=vmax, levels=levels, color_bounds=color_bounds,
-        extend=kwargs.pop('extend', None),
-        sci=sci, round_dec=kwargs.pop("round_dec", None),
+        extend=extend, sci=sci, round_dec=round_dec,
         log_base=kwargs.pop('base', 2) if set_norm == 'log' else None,
         is_hatch=plot_type == 'hatch')
     vmin, vmax, levels, extend, sci = (
         scale.vmin, scale.vmax, scale.levels, scale.extend, scale.sci)
-    kwargs['extend'] = extend
     if z is not None and plot_type != 'hatch':
         if levels is not None and plot_type not in ('points', 'contour') and cmap is not None:
             cmap, norm = pcol.create_cmap(cmap, levels,
@@ -513,27 +574,21 @@ def plot_array(
     kwargs = pax.set_title(title=title, ax=ax,
                            y_title=y_title, **kwargs)
 
+    cbar = None
     if label is not None:
-        tick_step = kwargs.pop('tick_step', 2)
-        unset_sci = kwargs.pop('unset_sci', False)
-        shift_ticks = kwargs.pop('shift_ticks', None)
-        sci = sci if not unset_sci else None
-        orientation = kwargs.pop('orientation', 'horizontal')
-        cbar = pcol.make_colorbar(ax=ax, im=im,
-                                 norm=set_norm,
-                                 ticks=levels,
-                                 label=label,
-                                 set_cax=True,
-                                 sci=sci,
-                                 tick_step=tick_step if plot_type != 'discrete' else 1,
-                                 orientation=orientation,
-                                 shift_ticks=shift_ticks,
-                                 **kwargs)
+        spec = pcol.ColorbarSpec(
+            label=label, orientation=orientation, ticks=levels, extend=extend,
+            tick_step=tick_step if plot_type != 'discrete' else 1,
+            sci=None if unset_sci else sci, shift_ticks=shift_ticks,
+            set_cax=True, norm=set_norm,
+            **{k: kwargs[k] for k in _COLORBAR_EXTRAS if k in kwargs})
+        cbar = pcol.make_colorbar(ax=ax, im=im, spec=spec)
     if plot_type != "points":
         return PlotResult(ax=ax, fig=fig, projection=projection, im=im,
-                          ticks=levels, extend=extend)
+                          ticks=levels, extend=extend, colorbar=cbar)
     else:
-        return PlotResult(ax=ax, fig=fig, projection=projection, im=im)
+        return PlotResult(ax=ax, fig=fig, projection=projection, im=im,
+                          colorbar=cbar)
 
 
 def check_plot_type(plot_type):

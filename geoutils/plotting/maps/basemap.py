@@ -11,6 +11,13 @@ import cartopy.crs as ccrs
 import geoutils.plotting.style as pst
 from geoutils.plotting.maps.projections import get_projection
 
+# keyword options understood by create_map / set_extent / set_grid
+BASEMAP_OPTIONS = frozenset({
+    'central_latitude', 'coast_color', 'figsize', 'land_ocean', 'lw_borders',
+    'plot_borders', 'rem_frame', 'set_global', 'set_map', 'unset_grid',
+    'verbose', 'gs_lat', 'gs_lon',
+})
+
 
 
 

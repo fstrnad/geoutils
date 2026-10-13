@@ -6,6 +6,22 @@ import numpy as np
 import cartopy.crs as ccrs
 import geoutils.plotting.style as pst
 
+# keyword options understood by prepare_axis / set_title (used to flag typos)
+AXIS_OPTIONS = frozenset({
+    'flip_x', 'flip_y', 'invert_x', 'invert_y', 'left_ticks', 'log',
+    'reset_axis', 'right_ticks', 'rot', 'rot_y', 'sci', 'set_grid',
+    'set_spines', 'set_ticks', 'set_twinx', 'set_twiny', 'set_xaxis',
+    'set_xint', 'set_xticks', 'set_yaxis', 'set_yint', 'set_yticks',
+    'spines_color', 'title', 'top_ticks', 'unset_yticks', 'x_label_color',
+    'xlabel', 'xlabel_pos', 'xlim', 'xlog', 'xticklabels', 'xticks',
+    'ylabel', 'ylabel_color', 'ylabel_pos', 'ylim', 'ylog', 'yscale',
+    'ysymlog', 'yticklabels', 'yticks',
+})
+TITLE_OPTIONS = frozenset({
+    'title_color', 'title_fontweight', 'title_fsize', 'vertical_title',
+    'vertical_title_fsize', 'x_title_offset', 'y_title',
+})
+
 
 
 
