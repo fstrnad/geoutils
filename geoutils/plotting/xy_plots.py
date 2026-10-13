@@ -42,11 +42,11 @@ def _as_series_list(data):
 def plot_2d(
     y=None,
     x=None,
-    z_arr=[],
-    lw_arr=[1],
-    mk_arr=[""],
-    ls_arr=['-'],
-    alpha_arr=[1],
+    z_arr=None,
+    lw_arr=None,
+    mk_arr=None,
+    ls_arr=None,
+    alpha_arr=None,
     color_arr=None,
     color=None,
     lcmap=None,
@@ -59,6 +59,11 @@ def plot_2d(
 ):
     if y is None:
         raise ValueError("y must be provided!")
+    z_arr = [] if z_arr is None else z_arr
+    lw_arr = [1] if lw_arr is None else lw_arr
+    mk_arr = [""] if mk_arr is None else mk_arr
+    ls_arr = ['-'] if ls_arr is None else ls_arr
+    alpha_arr = [1] if alpha_arr is None else alpha_arr
 
     y_arr = _as_series_list(y)
     x_arr = _as_series_list(x) if x is not None else None
@@ -97,8 +102,10 @@ def plot_2d(
 
     if plot_type == 'xy' or plot_type == 'scatter':
         if lcmap is not None:
-            lcmap, evenly_spaced_interval, ccolors = put.get_arr_colorbar(
-                cmap=lcmap, num_items=num_items,)
+            evenly_spaced_interval = np.arange(num_items)
+            ccolors = mpl.colormaps[lcmap](
+                np.linspace(0, 1, num_items)) if isinstance(lcmap, str) \
+                else lcmap(np.linspace(0, 1, num_items))
 
         for idx in range(num_items):
             if x_arr is None:
@@ -144,8 +151,7 @@ def plot_2d(
             if mk is None:
                 mk = mk_arr[idx] if idx < len(mk_arr) else mk_arr[-1]
 
-            mk_size = kwargs.get('marker_size', None)
-            mk_size = kwargs.get('mk_size', None)
+            mk_size = kwargs.get('mk_size', kwargs.get('marker_size', None))
             mk_size_arr = kwargs.get('mk_size_arr', None)
             if mk_size_arr is not None:
                 mk_size = mk_size_arr[idx] if idx < len(
@@ -164,10 +170,7 @@ def plot_2d(
             if lcmap is None:
                 if color is None:
                     if color_arr is None:
-                        if len(y_arr) <= len(pst.colors):
-                            c = pst.colors[idx]
-                        else:
-                            c = pst.colors[0]
+                        c = pst.colors[idx % len(pst.colors)]
                     else:
                         if idx < len(color_arr):
                             c = color_arr[idx]
@@ -182,12 +185,12 @@ def plot_2d(
                 cmap = kwargs.pop("cmap", "viridis")
                 vmin = kwargs.pop('vmin', None)
                 vmax = kwargs.pop('vmax', None)
-                cm = plt.cm.get_cmap(cmap)
+                cm = mpl.colormaps[cmap] if isinstance(cmap, str) else cmap
                 im = ax.scatter(x, y, c=z,
                                 label=label,
                                 lw=lw,
                                 marker=mk,
-                                markersize=mk_size,
+                                s=mk_size,
                                 cmap=cm,
                                 vmin=vmin, vmax=vmax,
                                 alpha=alpha
@@ -275,22 +278,24 @@ def plot_2d(
         ax, kwargs = put.prepare_axis(ax, reset_axis=True, **kwargs_init)
     # ############# Plotting  density ################
     elif plot_type == 'density':
+        import seaborn as sns
+
         levels = kwargs.pop("levels", 10)
         for idx in range(num_items):
             label = label_arr[idx] if idx < len(label_arr) else None
             color = color_arr[idx] if color_arr is not None else 'viridis'
             im = sns.kdeplot(x=x_arr[idx], y=y_arr[idx], label=label,
                              cmap=color, ax=ax,
-                             alpha=alpha,
+                             alpha=alpha_arr[min(idx, len(alpha_arr) - 1)],
                              levels=levels, fill=True)
 
     if lcmap is not None:
         norm = mpl.colors.Normalize(
             vmin=evenly_spaced_interval.min(), vmax=evenly_spaced_interval.max()
         )
-        cmap = mpl.cm.ScalarMappable(norm=norm, cmap=mpl.cm.jet)
+        cmap = mpl.cm.ScalarMappable(norm=norm, cmap=lcmap)
         cmap.set_array([])
-        fig.colorbar(cmap, ticks=evenly_spaced_interval)
+        fig.colorbar(cmap, ax=ax, ticks=evenly_spaced_interval)
 
     if all_x is True:
         ax.set_xticks(x_arr[0])
