@@ -98,7 +98,7 @@ def test_legend_avoids_data_by_default():
 
 def test_font_chain_prefers_designed_fonts_and_ends_in_dejavu():
     chain = style.STYLE["font.sans-serif"]
-    assert style.STYLE["font.family"] == "sans-serif"
+    assert style.STYLE["font.family"][-1] == "DejaVu Sans"
     assert chain[:4] == ["Inter", "Lato", "Arial", "Liberation Sans"] and chain[-1] == "DejaVu Sans"
 
 

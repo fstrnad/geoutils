@@ -235,3 +235,52 @@ def test_import_does_not_register_fonts():
     out = subprocess.run([sys.executable, "-I", "-W", "ignore", "-c", code],
                          capture_output=True, text=True, check=True).stdout
     assert json.loads(out.strip().splitlines()[-1]) is False
+
+
+def test_font_survives_the_context_exit_when_the_figure_is_drawn_later():
+    ax = cplt.plot_2d(y=np.arange(4.0), title="t", xlabel="x")["ax"]
+    for text in (ax.title, ax.xaxis.label, *ax.get_xticklabels()):
+        found = font_manager.findfont(text.get_fontproperties())
+        assert Path(found).name.startswith("Inter"), (text.get_text(), found)
+
+
+def test_font_family_pins_the_first_available_name():
+    style.register_fonts()
+    family = build_style(PRESETS["paper"])["font.family"]
+    assert family[0] == "Inter" and family[-1] == "DejaVu Sans"
+
+
+def test_shared_colorbar_follows_the_preset_when_called_directly(latlon_da):
+    res = cplt.create_multi_plot(1, 2, projection="PlateCarree")
+    for ax in res["ax"]:
+        im = cplt.plot_map(latlon_da, ax=ax, plot_type="contourf", levels=6)
+    cbar = cplt.add_colorbar(im, res["fig"], "K", multi_plots=True)
+    label = cbar.ax.xaxis.label
+    tick = cbar.ax.xaxis.get_ticklabels()[0]
+    assert (label.get_fontsize(), tick.get_fontsize()) == (8, 7)
+    assert Path(font_manager.findfont(label.get_fontproperties())).name.startswith("Inter")
+
+
+def _inter(text):
+    return Path(font_manager.findfont(text.get_fontproperties())).name.startswith("Inter")
+
+
+def _plain_axes():
+    return plt.subplots()[1]
+
+
+@pytest.mark.parametrize("draw", [
+    lambda ax: (cplt.plot_text(ax, "t", check_axis=False), ax.texts[0])[1],
+    lambda ax: (cplt.text_box(ax, "t"), ax.artists[0].txt._text)[1],
+    lambda ax: (ax.plot([0, 1], label="l"), cplt.set_legend(ax),
+                ax.get_legend().get_texts()[0])[2],
+    lambda ax: (cplt.enumerate_subplots([ax]), ax.texts[0])[1],
+], ids=["plot_text", "text_box", "set_legend", "enumerate_subplots"])
+def test_text_helpers_use_the_bundled_font_when_called_directly(draw):
+    assert _inter(draw(_plain_axes()))
+
+
+def test_plot_rectangle_label_uses_the_bundled_font():
+    ax = cplt.create_map()["ax"]
+    cplt.plot_rectangle(ax, lon_range=(0, 10), lat_range=(0, 10), text="roi")
+    assert _inter(ax.texts[0])

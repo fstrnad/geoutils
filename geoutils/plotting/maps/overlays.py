@@ -286,6 +286,7 @@ def plot_trajectory(lon_lat_pairs,
     )
 
 
+@pst.styled
 def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
     """Plots a rectangle on a cartopy map
 

@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-from matplotlib import font_manager
 from cycler import cycler
+from matplotlib import font_manager
 
 TINY_SIZE = 8
 MINI_SIZE = 10
@@ -114,6 +114,18 @@ def get_preset(name=None):
     return PRESETS[_active if name is None else _resolve(name)]
 
 
+def _font_family():
+    """The first available font of the chain, pinned by name.
+
+    A text artist keeps only the generic ``sans-serif`` and resolves it at
+    draw time, usually after our style context has exited, which would give
+    DejaVu. Naming the font keeps it for figures that are saved later.
+    """
+    available = {f.name for f in font_manager.fontManager.ttflist}
+    first = next((n for n in FONT_CHAIN if n in available), "DejaVu Sans")
+    return list(dict.fromkeys([first, "DejaVu Sans"]))
+
+
 def _preset_sizes(preset):
     return _sizes(preset.tick, preset.title, preset.label, preset.tick,
                   preset.figure_title)
@@ -122,7 +134,7 @@ def _preset_sizes(preset):
 def build_style(preset):
     """The rc dict of the geoutils look at the scale of ``preset``."""
     return {
-        "font.family": "sans-serif",
+        "font.family": _font_family(),
         "font.sans-serif": FONT_CHAIN,
         **_preset_sizes(preset),
         "axes.titleweight": "bold",

@@ -63,6 +63,7 @@ def create_plot(nrows=1, ncols=1, **kwargs):
     return PlotResult(ax=axs, fig=fig)
 
 
+@pst.styled
 def enumerate_subplots(axs, pos_x=-0.12,
                        pos_y=1.1,
                        fontsize=None):

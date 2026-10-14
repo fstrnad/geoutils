@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import copy
 import numpy as np
 import geoutils.utils.general_utils as gut
+from geoutils.plotting.style import styled
 
 
 
@@ -343,6 +344,7 @@ def resolve_color_scale(z, vmin=None, vmax=None, levels=None,
                       _auto_extend(z, vmin, vmax, extend), sci, round_dec)
 
 
+@styled
 def add_colorbar(im, fig, label,
                  x_pos=0, y_pos=0,
                  width=None, height=None,
@@ -407,6 +409,7 @@ def _tick_step(spec):
     return max(1, -(-len(spec.ticks) // 6))
 
 
+@styled
 def make_colorbar(ax, im, fig=None, spec=None, **kwargs):
     """Draw a colorbar for ``im``; options come from ``spec`` or flat keywords."""
     if spec is None:

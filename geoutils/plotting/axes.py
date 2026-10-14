@@ -16,6 +16,7 @@ TITLE_OPTIONS = frozenset({
 
 
 
+@pst.styled
 def set_legend(ax,
                fig=None,
                label_arr=[],
@@ -426,6 +427,7 @@ def plot_hline(ax, y, transform=None, **kwargs):
     return {'im': ax}
 
 
+@pst.styled
 def plot_text(ax, text, xpos=0, ypos=0,
               **kwargs):
 
@@ -472,6 +474,7 @@ def plot_text(ax, text, xpos=0, ypos=0,
     return ax
 
 
+@pst.styled
 def text_box(ax, text, pos="upper right", fsize=None, **kwargs):
     fw = kwargs.pop('fw', "normal")
     fsize = pst.get_preset().label if fsize is None else fsize
