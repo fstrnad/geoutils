@@ -6,7 +6,10 @@ This is the curated public API. Import the names you need directly, e.g.::
 
 The geoutils look (palette, fonts, layout) is applied inside each plotting call
 and never changes your global matplotlib state; call ``set_style()`` to use it
-for your own matplotlib figures too.
+for your own matplotlib figures too. The default ``"paper"`` preset is sized for
+journal columns (about 7 pt text, 3.4 in per panel); ``set_style("talk")``, or
+``with style_context("talk"):`` for one block, gives slide-sized text and lines.
+The Inter font ships with the package.
 
 The legacy aggregator ``geoutils.plotting.plots`` (commonly imported ``as cplt``)
 still works as a deprecated shim that re-exports the same functions.

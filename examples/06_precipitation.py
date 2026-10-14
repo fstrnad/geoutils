@@ -5,7 +5,7 @@ Run:  python examples/06_precipitation.py
 import geoutils.plotting as gp
 from common import FIGURES, load
 
-res = gp.create_multi_plot(1, 3, projection="PlateCarree", figsize=(17, 4.4),
+res = gp.create_multi_plot(1, 3, projection="PlateCarree", figsize=(11.9, 3.1),
                            title="ERA5 total precipitation, 2024")
 jan, jul, wet = res["ax"]
 

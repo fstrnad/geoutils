@@ -9,7 +9,7 @@ from common import FIGURES, at_city, load
 t2m = load("t2m")  # every month that is downloaded
 cities = ["Oslo", "Berlin", "Madrid"]
 
-res = gp.create_plot(1, 3, figsize=(18, 4.6))
+res = gp.create_plot(1, 3, figsize=(12.6, 3.2))
 ax_year, ax_day, ax_lat = res["ax"]
 
 # daily means over the year; months that are not downloaded show as gaps
