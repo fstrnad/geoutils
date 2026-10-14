@@ -221,6 +221,7 @@ _ARRAY_OPTIONS = frozenset({
     'lw', 'size', 'marker', 'fillstyle', 'zorder', 'sci_x', 'figsize', 'norm',
     'base', 'hatch_type', 'ls', 'clabel', 'clabel_fsize', 'clabel_fmt',
     'color_contour', 'set_int', 'set_rot', 'pad', 'fontsize', 'kwargs_bar',
+    'edgecolors', 'linewidths',
 })
 _COLORBAR_EXTRAS = ('set_int', 'set_rot', 'pad', 'fontsize', 'kwargs_bar')
 _KNOWN_OPTIONS = (_ARRAY_OPTIONS | pax.AXIS_OPTIONS | pax.TITLE_OPTIONS
@@ -318,7 +319,8 @@ def _draw_scatter(ax, c):
         x=c.x, y=c.y, c=c.z, norm=c.norm, cmap=c.cmap, **limits,
         transform=c.projection, alpha=c.alpha,
         marker=mpl.markers.MarkerStyle(marker=c.marker, fillstyle=c.fillstyle),
-        s=c.size,
+        s=c.size, edgecolors=c.kwargs.get('edgecolors'),
+        linewidths=c.kwargs.get('linewidths'),
     )
 
 
@@ -488,7 +490,8 @@ def plot_array(
 
     Other keyword arguments
     -----------------------
-    lw, size, marker, fillstyle, zorder (artist styling), sci_x, figsize, norm,
+    lw, size, marker, fillstyle, zorder (artist styling), edgecolors and
+    linewidths (marker outlines of scatter maps), sci_x, figsize, norm,
     base, hatch_type, ls / clabel / clabel_fsize / clabel_fmt / color_contour
     (contour lines), set_int, set_rot, pad, fontsize, kwargs_bar (colorbar), plus
     the options of ``axes.prepare_axis`` and ``axes.set_title``. Unknown keywords

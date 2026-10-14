@@ -123,3 +123,11 @@ def test_scatter_map_accepts_a_normalize_instance():
                       lon_range=(7, 11), lat_range=(49, 53), cmap="coolwarm",
                       norm=norm, label="T")
     assert res["im"].norm is norm
+
+
+def test_scatter_map_edge_options():
+    res = gp.plot_map(np.array([[8.0, 50.0], [9.0, 51.0]]), z=np.array([1.0, 2.0]),
+                      plot_type="points", lon_range=(7, 10), lat_range=(49, 52),
+                      edgecolors="black", linewidths=0.4)
+    assert res["im"].get_linewidths()[0] == pytest.approx(0.4)
+    assert tuple(res["im"].get_edgecolors()[0][:3]) == (0.0, 0.0, 0.0)
