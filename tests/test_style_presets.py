@@ -124,3 +124,51 @@ def test_tick_length_follows_the_preset(name, length):
 def test_map_gridline_labels_follow_the_preset():
     (grid,) = cplt.create_map(plot_grid=True)["ax"].artists
     assert grid.xlabel_style["size"] == 7 and grid.ylabel_style["size"] == 7
+
+
+# --- default figure sizes ----------------------------------------------------
+
+from geoutils.plotting.style import default_figsize
+
+
+def test_default_figsize_single_panel():
+    assert default_figsize() == pytest.approx((3.4, 3.4 * 0.75))
+    with style_context("talk"):
+        assert default_figsize() == pytest.approx((6.0, 4.5))
+
+
+def test_default_figsize_caps_wide_grids():
+    assert default_figsize(1, 6)[0] == pytest.approx(7.1)
+    assert default_figsize(2, 2)[0] == pytest.approx(6.8)
+    assert default_figsize(2, 2)[1] == pytest.approx(2 * 3.4 * 0.75)
+    w, h = default_figsize(1, 6)
+    assert h == pytest.approx(w / 6 * 0.75)
+    assert default_figsize(aspect=1.0) == pytest.approx((3.4, 3.4))
+
+
+def test_create_plot_uses_preset_size():
+    assert tuple(cplt.create_plot()["fig"].get_size_inches()) == pytest.approx(default_figsize())
+    with style_context("talk"):
+        fig = cplt.create_plot()["fig"]
+    assert tuple(fig.get_size_inches()) == pytest.approx((6.0, 4.5))
+
+
+@pytest.mark.parametrize("make", [
+    lambda **k: cplt.create_plot(**k)["fig"],
+    lambda **k: cplt.create_multi_plot(1, 2, **k)["fig"],
+    lambda **k: cplt.create_map(**k)["fig"],
+    lambda **k: cplt.plot_2d(y=np.arange(4.0), **k)["fig"],
+], ids=["create_plot", "create_multi_plot", "create_map", "plot_2d"])
+def test_explicit_figsize_wins(make):
+    assert tuple(make(figsize=(9, 5)).get_size_inches()) == pytest.approx((9, 5))
+
+
+def test_every_default_figure_fits_a_double_column(latlon_da):
+    figs = [
+        cplt.plot_2d(y=np.arange(4.0))["fig"],
+        cplt.plot_map(latlon_da, label="K")["fig"],
+        cplt.create_map()["fig"],
+        cplt.create_multi_plot(2, 3, projection="PlateCarree")["fig"],
+        cplt.plot_hist(np.random.default_rng(0).normal(size=50))["fig"],
+    ]
+    assert all(f.get_size_inches()[0] <= 7.1 + 1e-9 for f in figs)

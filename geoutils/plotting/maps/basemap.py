@@ -332,7 +332,9 @@ def create_map(
                           central_longitude=central_longitude,
                           central_latitude=central_latitude,
                           dateline=dateline)
-    figsize = kwargs.pop("figsize", (6, 4))
+    figsize = kwargs.pop("figsize", None)
+    if figsize is None:
+        figsize = pst.default_figsize()
     # create figure
     if ax is None:
         # better working in cartopy and matplotlib=3.8.2

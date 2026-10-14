@@ -147,6 +147,17 @@ def set_style(preset=None):
     plt.rcParams.update(build_style(PRESETS[_active]))
 
 
+def default_figsize(nrows=1, ncols=1, aspect=None):
+    """Figure size (inches) for a grid of panels at the active preset.
+
+    Wide grids are capped at the preset's ``max_width``; ``aspect`` is the
+    height/width of one panel and defaults to the preset's.
+    """
+    p = get_preset()
+    width = min(ncols * p.panel_width, p.max_width)
+    return width, nrows * width / ncols * (p.aspect if aspect is None else aspect)
+
+
 @contextlib.contextmanager
 def style_context(preset=None):
     """Apply the geoutils look only inside a ``with`` block.

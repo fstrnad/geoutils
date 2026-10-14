@@ -106,7 +106,7 @@ def plot_wind_field(
     **kwargs,
 ):
     if ax is None:
-        figsize = kwargs.pop("figsize", (7, 5))
+        figsize = kwargs.pop("figsize", None) or pst.default_figsize()
         fig, ax = plt.subplots(figsize=figsize, layout="constrained")
 
     if x_vals is None:

@@ -4,6 +4,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import geoutils.plotting.style as pst
+from geoutils.plotting.style import default_figsize  # noqa: F401  (re-export)
 import geoutils.utils.general_utils as gut
 from geoutils.plotting.axes import plot_text, set_title
 from geoutils.plotting.result import PlotResult
@@ -43,7 +44,7 @@ def create_plot(nrows=1, ncols=1, **kwargs):
 
     figsize = kwargs.pop("figsize", None)
     if figsize is None:
-        figsize = (6 * ncols, 4 * nrows)
+        figsize = pst.default_figsize(nrows, ncols)
 
     if nrows > 1 or ncols > 1:
         fig, axs = plt.subplots(
@@ -111,7 +112,7 @@ def create_multi_plot(nrows, ncols, projection=None,
                       verbose=False, **kwargs):
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
-        figsize = (4*ncols, 3*nrows)
+        figsize = pst.default_figsize(nrows, ncols)
 
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx
