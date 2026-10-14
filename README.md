@@ -14,68 +14,71 @@ git clone https://github.com/fstrnad/geoutils.git
 This will create a local copy of the Geoutils repository in the current directory. Ensure you have the necessary permissions and SSH keys configured for accessing the repository.
 
 
-### 2. Installing Required Packages
+### 2. Installation
 
-The Geoutils package is compatible with Python version **3.12.8** or higher. It is strongly recommended to update your Python installation to the latest version to ensure compatibility and avoid potential issues, such as unexpected behavior caused by line break handling or deprecated features.
+Geoutils requires **Python 3.12 or higher**. Create an isolated virtual environment inside the repository and install the package in editable mode:
 
-#### Required Dependencies
+```bash
+cd geoutils
+python3.12 -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install --upgrade pip
+pip install -e .
+```
 
-The following Python packages are essential for running the Geoutils package and its core functionalities:
+Or, if you use [uv](https://docs.astral.sh/uv/):
 
-- `xarray`
-- `zarr`
-- `netcdf4`
-- `cftime`
-- `pandas`
-- `numpy`
-- `matplotlib`
-- `seaborn`
-- `cartopy`
-- `scipy`
-- `scikit-learn`
-- `statsmodels`
+```bash
+uv venv --python 3.12
+source .venv/bin/activate
+uv pip install -e .
+```
 
-#### Optional Dependencies
+All dependencies are declared in `pyproject.toml`. The core install pulls in `numpy`, `scipy`, `pandas`, `xarray`, `netcdf4`, `cftime`, `zarr`, `dask`, `matplotlib`, `cartopy`, `seaborn`, `scikit-learn`, `statsmodels`, `joblib`, `tqdm` and `palettable`.
 
-For extended functionality, the following optional packages can be installed:
+#### Optional dependencies
 
-- `metpy` (for meteorological calculations)
-- `windspharm` (for spherical harmonic wind analysis)
-- `palettable` (for additional color palettes)
-- `tqdm` (for progress bar visualization)
+Install extras as needed, e.g. `pip install -e ".[met,download]"`:
 
-#### Installation Instructions
+| Extra | Adds | For |
+|---|---|---|
+| `met` | `metpy`, `windspharm` | meteorological calculations, spherical-harmonic wind analysis |
+| `download` | `cdsapi`, `requests` | downloading ERA5 and other data (`geoutils.geodata.downloader`) |
+| `energy` | `atlite`, `geopandas`, `pgeocode` | countries, energy and cutouts subpackages |
+| `viz` | `cmocean`, `cmweather` | extra colormaps |
+| `video` | `imageio`, `opencv-python` | animations (`geoutils.plotting.videos`) |
+| `notebook` | `jupyter`, `ipython`, `ipywidgets` | running the tutorials |
+| `dev` | `pytest`, `ruff` | tests and linting |
 
-To ensure a clean and isolated environment, it is recommended to create a new Python environment using a tool such as `conda`. Follow these steps to set up the environment and install the required dependencies:
+To use the environment in Jupyter, install the `notebook` extra and register the kernel:
 
-1. Create and activate a new environment:
-    ```bash
-    conda create -n geoutils ipykernel netcdf4 xarray zarr cftime scikit-learn scipy statsmodels matplotlib seaborn cartopy -c conda-forge
-    conda activate geoutils
-    ```
+```bash
+pip install -e ".[notebook]"
+python -m ipykernel install --user --name geoutils
+```
 
-2. Install the Geoutils package in editable mode:
-    ```bash
-    pip install -e .
-    ```
+#### Verify the installation
 
-This setup ensures that all required dependencies are installed and that the Geoutils package is ready for use. For optional dependencies, you can install them as needed using `pip` or `conda`.
+```bash
+pip install -e ".[dev]"
+pytest
+```
 
 
 ### 3. Download climate data
 Download climate data, e.g. from [ERA5](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-pressure-levels?tab=overview) server and store the merged files in the data folder.
 To download the data, you will need to register for an account on the Copernicus Climate Data Store (CDS) and install the `cdsapi` package. Follow these steps:
 
-1. Install the `cdsapi` package:
+1. Install the `cdsapi` package (included in the `download` extra):
     ```bash
-    pip install cdsapi
+    pip install -e ".[download]"
     ```
 
 2. Configure the CDS API key:
-    After registering on the CDS website, you will receive an API key. Save this key in a file named `.cdsapirc` in your home directory with the following format:
+    After registering on the CDS website, you will find a personal access token on your CDS profile page. Save this key in a file named `.cdsapirc` in your home directory with the following format:
     ```
-    url: https://cds.climate.copernicus.eu/api/v2
-    key: <your-uid>:<your-api-key>
+    url: https://cds.climate.copernicus.eu/api
+    key: <your-personal-access-token>
     ```
 
 3. Use the following Python script to download ERA5 data:
@@ -88,7 +91,7 @@ To download the data, you will need to register for an account on the Copernicus
          'reanalysis-era5-pressure-levels',
          {
               'product_type': 'reanalysis',
-              'format': 'netcdf',
+              'data_format': 'netcdf',
               'variable': 'temperature',
               'pressure_level': '500',
               'year': '2022',
@@ -104,11 +107,13 @@ Replace the parameters in the script as needed to customize the data you want to
 
 ## Using the package
 
-A tutorial for reading, processing and plotting data can be found at this ![tutorial](tutorials/plotting_tutorial.ipynb).
+A tutorial for reading, processing and plotting data can be found in this [tutorial](tutorials/plotting_tutorial.ipynb).
 
-A tutorial for analyzing and processing data can be found ![here](tutorials/analysis_tutorial.ipynb).
+Scripts for the plotting API using ERA5 data are in [examples/](examples/README.md).
 
-An example how to use climate indices is presented in this ![tutorial](tutorials/climate_indices.ipynb).
+A tutorial for analyzing and processing data can be found [here](tutorials/analysis_tutorial.ipynb).
+
+An example how to use climate indices is presented in this [tutorial](tutorials/climate_indices.ipynb).
 
 
 
@@ -119,14 +124,14 @@ The following features are planned to be implemented:
 - Better documentation
 - Add further tutorials
 - Examples for statistical analysis.
-- Add tests for the package
+- Extend the test suite
 
 ## Contributing
 We highly encourage contributions to the Geoutils project. Whether you have identified a bug, have suggestions for new features, or want to improve the documentation, your input is invaluable.
 
 To contribute, please start by opening an issue on the GitHub repository to discuss your proposed changes or enhancements. This ensures alignment with the project's goals and avoids duplication of effort.
 
-If you wish to submit code changes, fork the repository, create a new branch for your feature or fix, and submit a pull request. Please ensure your code adheres to the project's coding standards and includes appropriate tests and documentation updates.
+If you wish to submit code changes, fork the repository, create a new branch for your feature or fix, and submit a pull request. Please ensure your code adheres to the project's coding standards and includes appropriate tests and documentation updates. Install the `dev` extra, then run `pytest` and `ruff check` on the files you changed before opening the pull request.
 
 We also welcome feedback on usability, feature requests, and ideas for extending the package's functionality. Your contributions help make Geoutils a better tool for the community.
 
