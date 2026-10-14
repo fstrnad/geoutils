@@ -387,7 +387,7 @@ def create_map(
         if plot_borders:
             ax.add_feature(ctp.feature.BORDERS,
                            linestyle="-",
-                           color=coast_color or "#666666",
+                           edgecolor=coast_color or "#666666",
                            lw=0.4 if lw_borders is None else lw_borders,
                            alpha=alpha)
         land_ocean = kwargs.pop("land_ocean", False)

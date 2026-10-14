@@ -46,7 +46,8 @@ def _finish_legend(ax, labels, kwargs):
 @pst.styled
 def plot_bar(values, labels=None, x=None, ax=None, series_labels=None,
              colors=None, hatch=None, edgecolor=None, width=None,
-             horizontal=False, value_fmt=None, alpha=1.0, **kwargs):
+             horizontal=False, stacked=False, value_fmt=None,
+             value_rotation=0, alpha=1.0, **kwargs):
     """Bars for one series, or grouped bars for several.
 
     Parameters
@@ -59,7 +60,10 @@ def plot_bar(values, labels=None, x=None, ax=None, series_labels=None,
     hatch : hatch per series, the last one is reused.
     width : width of one category slot in data units; grouped bars share it.
     horizontal : draw ``barh``.
-    value_fmt : ``%``-format; adds the bar value as a label, e.g. ``"%.2f"``.
+    stacked : pile the series on top of each other instead of side by side.
+    value_fmt : ``%``-format string or callable ``value -> str``; adds the bar
+        value as a label, e.g. ``"%.2f"``.
+    value_rotation : rotation of the value labels in degrees.
     """
     series = np.atleast_2d(np.asarray(values, dtype=float))
     n_series, n_cat = series.shape
@@ -67,7 +71,7 @@ def plot_bar(values, labels=None, x=None, ax=None, series_labels=None,
     if width is None:
         spacing = np.min(np.diff(np.sort(pos))) if n_cat > 1 else 1.0
         width = DEFAULT_BAR_SLOT * spacing
-    bar_width = width / n_series
+    bar_width = width if stacked else width / n_series
 
     colors = _as_list(colors)
     per_bar_colors = n_series == 1 and colors is not None and len(colors) == n_cat
@@ -79,15 +83,22 @@ def plot_bar(values, labels=None, x=None, ax=None, series_labels=None,
     ax, fig, kwargs = create_axis(ax, "bar", **kwargs)
     draw = ax.barh if horizontal else ax.bar
     containers = []
+    base = np.zeros(n_cat)
     for idx in range(n_series):
-        offset = (idx - (n_series - 1) / 2) * bar_width
+        offset = 0.0 if stacked else (idx - (n_series - 1) / 2) * bar_width
         color = colors if per_bar_colors else _pick(colors, idx)
+        start = {"left" if horizontal else "bottom": base.copy()} if stacked else {}
         container = draw(pos + offset, series[idx], bar_width, color=color,
                          alpha=alpha, hatch=_pick(hatch, idx), edgecolor=edgecolor,
-                         label=_pick(series_labels, idx) if idx < len(series_labels) else None)
+                         label=_pick(series_labels, idx) if idx < len(series_labels) else None,
+                         **start)
         if value_fmt is not None:
-            ax.bar_label(container, fmt=value_fmt, fontsize=pst.TINY_SIZE, padding=2)
+            labels_kw = ({"labels": [value_fmt(v) for v in series[idx]]}
+                         if callable(value_fmt) else {"fmt": value_fmt})
+            ax.bar_label(container, fontsize=pst.TINY_SIZE, padding=2,
+                         rotation=value_rotation, **labels_kw)
         containers.append(container)
+        base += np.nan_to_num(series[idx])
 
     if labels is not None:
         (ax.set_yticks if horizontal else ax.set_xticks)(pos, labels)

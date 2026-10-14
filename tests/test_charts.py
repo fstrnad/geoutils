@@ -74,3 +74,52 @@ def test_plot_histogram_bar_counts_sum_to_n():
     data = np.arange(100.0)
     res = gp.plot_histogram(data, bins=10)
     assert sum(p.get_height() for p in res["ax"].patches) == 100
+
+
+def test_plot_text_alignment_and_family():
+    res = gp.create_plot()
+    gp.plot_text(res["ax"], "1.23", xpos=1.0, ypos=0.5, transform=True,
+                 ha="right", va="center", family="monospace")
+    text = res["ax"].texts[0]
+    assert text.get_ha() == "right"
+    assert text.get_va() == "center"
+    assert text.get_family() == ["monospace"]
+
+
+def test_plot_bar_stacked_accumulates_along_the_bar():
+    res = gp.plot_bar([[1.0, 2.0], [3.0, 1.0]], labels=["a", "b"], stacked=True,
+                      series_labels=["s1", "s2"])
+    tops = [p.get_y() + p.get_height() for p in res["ax"].patches[2:]]
+    assert tops == [4.0, 3.0]
+    assert {round(p.get_width(), 6) for p in res["ax"].patches} == {0.8}
+
+
+def test_plot_bar_stacked_horizontal_starts_from_left():
+    res = gp.plot_bar([[1.0], [3.0]], stacked=True, horizontal=True)
+    assert res["ax"].patches[1].get_x() == 1.0
+
+
+def test_plot_bar_value_fmt_callable_and_rotation():
+    res = gp.plot_bar([1.0, 2.0], value_fmt=lambda v: f"x{v:g}", value_rotation=90)
+    texts = res["ax"].texts
+    assert [t.get_text() for t in texts] == ["x1", "x2"]
+    assert texts[0].get_rotation() == 90
+
+
+def test_map_borders_raise_no_warning():
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = gp.plot_map(np.array([[8.0, 50.0], [9.0, 51.0]]), plot_type="points",
+                          lon_range=(7, 10), lat_range=(49, 52), plot_borders=True)
+        res["fig"].canvas.draw()
+
+
+def test_scatter_map_accepts_a_normalize_instance():
+    from matplotlib.colors import TwoSlopeNorm
+    norm = TwoSlopeNorm(vmin=-2, vcenter=0, vmax=8)
+    res = gp.plot_map(np.array([[8.0, 50.0], [9.0, 51.0], [10.0, 52.0]]),
+                      z=np.array([-1.0, 0.0, 5.0]), plot_type="points",
+                      lon_range=(7, 11), lat_range=(49, 53), cmap="coolwarm",
+                      norm=norm, label="T")
+    assert res["im"].norm is norm

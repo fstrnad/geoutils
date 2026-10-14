@@ -313,9 +313,9 @@ class _DrawContext:
 
 
 def _draw_scatter(ax, c):
+    limits = {} if c.norm is not None else dict(vmin=c.vmin, vmax=c.vmax)
     return ax.scatter(
-        x=c.x, y=c.y, c=c.z,
-        vmin=c.vmin, vmax=c.vmax, cmap=c.cmap,
+        x=c.x, y=c.y, c=c.z, norm=c.norm, cmap=c.cmap, **limits,
         transform=c.projection, alpha=c.alpha,
         marker=mpl.markers.MarkerStyle(marker=c.marker, fillstyle=c.fillstyle),
         s=c.size,
@@ -531,7 +531,8 @@ def plot_array(
             projection = get_projection(projection='PlateCarree')
 
     set_norm = kwargs.pop('norm', None)
-    norm = None  # reassigned below when applicable; defined for all types
+    # a ready-made Normalize is used as is (e.g. TwoSlopeNorm for scatter maps)
+    norm = set_norm if isinstance(set_norm, mpl.colors.Normalize) else None
     if plot_type == 'contourf' and levels is None:
         levels = 8  # Default for contourf
 
@@ -543,7 +544,9 @@ def plot_array(
     vmin, vmax, levels, extend, sci = (
         scale.vmin, scale.vmax, scale.levels, scale.extend, scale.sci)
     if z is not None and plot_type != 'hatch':
-        if levels is not None and plot_type not in ('points', 'contour') and cmap is not None:
+        if norm is not None and isinstance(cmap, str):
+            cmap, _ = pcol.create_cmap(cmap)
+        elif levels is not None and plot_type not in ('points', 'contour') and cmap is not None:
             cmap, norm = pcol.create_cmap(cmap, levels,
                                           centercolor=centercolor,
                                           leftcolor=leftcolor,
