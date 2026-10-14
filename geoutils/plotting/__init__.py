@@ -51,6 +51,15 @@ from geoutils.plotting.xy import (
     plot_null_model,
 )
 
+# Bars, box plots, hexbin, heatmaps, histograms
+from geoutils.plotting.charts import (
+    plot_bar,
+    plot_box,
+    plot_heatmap,
+    plot_hexbin,
+    plot_histogram,
+)
+
 # Colorbars, colormaps, axis helpers, annotations
 from geoutils.plotting.colors import (
     add_colorbar,
@@ -90,6 +99,8 @@ __all__ = [
     "plot_edges", "plot_horizontal_line_at_latitude", "plot_map",
     "plot_rectangle", "plot_ring", "plot_trajectory", "plot_wind_field",
     "scale_bar", "set_extent", "set_grid",
+    # charts
+    "plot_bar", "plot_box", "plot_heatmap", "plot_hexbin", "plot_histogram",
     # xy
     "fill_between", "plot_2d", "plot_hist", "plot_null_model",
     # colorbars / cmaps / axes / annotations
