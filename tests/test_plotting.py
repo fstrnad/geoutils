@@ -308,8 +308,9 @@ def test_explicit_coast_options_still_win():
 
 def test_map_frame_is_thin_grey():
     import geoutils.plotting as cplt
+    import geoutils.plotting.style as style
     spine = cplt.create_map()["ax"].spines["geo"]
-    assert spine.get_linewidth() == 0.8 and spine.get_edgecolor()[0] < 0.5
+    assert spine.get_linewidth() == style.get_preset().axes_width and spine.get_edgecolor()[0] < 0.5
 
 
 def test_colorbar_is_slim_with_fine_outline(latlon_da):

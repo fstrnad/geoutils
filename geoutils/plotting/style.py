@@ -4,7 +4,9 @@ Importing this module changes nothing. Plotting functions draw inside
 ``style_context()``, so the look is applied without touching the user's global
 matplotlib state; call ``set_style()`` to adopt it for your own plots as well.
 """
+import contextlib
 import functools
+from dataclasses import dataclass
 
 import matplotlib.pyplot as plt
 from cycler import cycler
@@ -50,45 +52,115 @@ def _sizes(font, title, label, tick, figure_title):
     }
 
 
-_BASE_SIZES = _sizes(TICK_SIZE, TITLE_SIZE, LABEL_SIZE, TICK_SIZE,
-                     FIGURE_TITLE_SIZE)
+@dataclass(frozen=True)
+class Preset:
+    """Everything that scales between a paper figure and a slide."""
+    tick: float
+    label: float
+    title: float
+    figure_title: float
+    line_width: float
+    axes_width: float
+    tick_length: float
+    marker_size: float
+    panel_width: float  # inches
+    max_width: float  # inches; wide grids are capped here
+    aspect: float  # panel height / width
 
 
-STYLE = {
-    "font.family": "sans-serif",
-    "font.sans-serif": FONT_CHAIN,
-    **_BASE_SIZES,
-    "axes.titleweight": "bold",
-    "text.color": INK,
-    "axes.labelcolor": INK,
-    "axes.edgecolor": EDGE,
-    "axes.linewidth": 0.8,
-    "xtick.color": "#333333",
-    "ytick.color": "#333333",
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "axes.axisbelow": True,
-    "axes.spines.top": False,
-    "axes.spines.right": False,
-    "axes.prop_cycle": cycler(color=OKABE_ITO),
-    "grid.alpha": 0.3,
-    "grid.color": "0.5",
-    "xtick.direction": "out",
-    "ytick.direction": "out",
-    "pcolor.shading": "nearest",
-    "savefig.dpi": 300,
-    "savefig.bbox": "tight",
+PRESETS = {
+    "paper": Preset(tick=7, label=8, title=9, figure_title=10,
+                    line_width=1.2, axes_width=0.6, tick_length=3,
+                    marker_size=3, panel_width=3.4, max_width=7.1,
+                    aspect=0.75),
+    "talk": Preset(tick=14, label=16, title=18, figure_title=20,
+                   line_width=2.5, axes_width=1.2, tick_length=6,
+                   marker_size=7, panel_width=6.0, max_width=13.0,
+                   aspect=0.75),
 }
 
-
-def set_style():
-    """Apply the geoutils look to all subsequent matplotlib figures."""
-    plt.rcParams.update(STYLE)
+_active = "paper"
 
 
-def style_context():
-    """Context manager applying the geoutils look only inside its block."""
-    return plt.rc_context(STYLE)
+def _resolve(name):
+    if name not in PRESETS:
+        raise ValueError(
+            f"Unknown preset {name!r}; choose from {', '.join(PRESETS)}.")
+    return name
+
+
+def get_preset(name=None):
+    """The named preset, or the active one when ``name`` is None."""
+    return PRESETS[_active if name is None else _resolve(name)]
+
+
+def _preset_sizes(preset):
+    return _sizes(preset.tick, preset.title, preset.label, preset.tick,
+                  preset.figure_title)
+
+
+def build_style(preset):
+    """The rc dict of the geoutils look at the scale of ``preset``."""
+    return {
+        "font.family": "sans-serif",
+        "font.sans-serif": FONT_CHAIN,
+        **_preset_sizes(preset),
+        "axes.titleweight": "bold",
+        "text.color": INK,
+        "axes.labelcolor": INK,
+        "axes.edgecolor": EDGE,
+        "axes.linewidth": preset.axes_width,
+        "lines.linewidth": preset.line_width,
+        "lines.markersize": preset.marker_size,
+        "xtick.major.size": preset.tick_length,
+        "ytick.major.size": preset.tick_length,
+        "xtick.major.width": preset.axes_width,
+        "ytick.major.width": preset.axes_width,
+        "xtick.color": "#333333",
+        "ytick.color": "#333333",
+        "figure.facecolor": "white",
+        "axes.facecolor": "white",
+        "axes.axisbelow": True,
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+        "axes.prop_cycle": cycler(color=OKABE_ITO),
+        "grid.alpha": 0.3,
+        "grid.color": "0.5",
+        "xtick.direction": "out",
+        "ytick.direction": "out",
+        "pcolor.shading": "nearest",
+        "savefig.dpi": 300,
+        "savefig.bbox": "tight",
+    }
+
+
+STYLE = build_style(PRESETS["paper"])  # kept for code that read ``style.STYLE``
+
+
+def set_style(preset=None):
+    """Apply the geoutils look to all subsequent matplotlib figures.
+
+    ``preset`` is ``"paper"`` or ``"talk"``; None keeps the active one.
+    """
+    global _active
+    _active = _active if preset is None else _resolve(preset)
+    plt.rcParams.update(build_style(PRESETS[_active]))
+
+
+@contextlib.contextmanager
+def style_context(preset=None):
+    """Apply the geoutils look only inside a ``with`` block.
+
+    ``preset`` is ``"paper"`` or ``"talk"``; None uses the active one.
+    """
+    global _active
+    name = _active if preset is None else _resolve(preset)
+    previous, _active = _active, name
+    try:
+        with plt.rc_context(build_style(PRESETS[name])):
+            yield
+    finally:
+        _active = previous
 
 
 def styled(func):
@@ -117,4 +189,4 @@ def change_fsize(fsize):
 
 
 def reset_fsize():
-    plt.rcParams.update(_BASE_SIZES)
+    plt.rcParams.update(_preset_sizes(get_preset()))
