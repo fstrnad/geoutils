@@ -32,7 +32,7 @@ def set_legend(ax,
     ncol_legend = kwargs.pop('ncol_legend', 1)
     ncol_legend = 2 if ncol_legend == 1 and loc == 'under' else ncol_legend
     loc = 'upper left' if loc == 'outside' or loc == 'under' else loc  # loc is set above
-    fsize = kwargs.pop("fontsize", pst.TICK_SIZE)
+    fsize = kwargs.pop("fontsize", pst.get_preset().tick)
     order = kwargs.pop("order", None)
     if len(label_arr) == 0:
         legend_items, label_arr = ax.get_legend_handles_labels()
@@ -82,7 +82,7 @@ def set_title(title, ax=None, fig=None, **kwargs):
     if title is not None:
         if ax is not None:
             ax.set_title(title, loc=title_loc, color=title_color,
-                         fontweight=fw, size=fsize or pst.TITLE_SIZE,
+                         fontweight=fw, size=fsize or pst.get_preset().title,
                          y=y_title)
         elif fig is not None:
             left = title_loc == 'left'
@@ -92,9 +92,9 @@ def set_title(title, ax=None, fig=None, **kwargs):
                          color=title_color,
                          y=y_title,
                          fontweight=fw,
-                         fontsize=fsize or pst.FIGURE_TITLE_SIZE)
+                         fontsize=fsize or pst.get_preset().figure_title)
     if vertical_title is not None:
-        fsize = kwargs.pop('vertical_title_fsize', pst.LABEL_SIZE)
+        fsize = kwargs.pop('vertical_title_fsize', pst.get_preset().label)
         ax.text(x=x_title_offset, y=.5, s=vertical_title,
                 transform=ax.transAxes,
                 color=title_color, rotation='vertical',
@@ -220,7 +220,8 @@ def prepare_axis(ax, spec=None, **kwargs):
     ax.grid(spec.set_grid)
     ax.tick_params(
         direction="out",
-        length=pst.SMALL_SIZE / 2, width=1,
+        length=pst.get_preset().tick_length,
+        width=pst.get_preset().axes_width,
         colors=spec.ylabel_color, grid_alpha=0.5
     )
 
@@ -384,7 +385,7 @@ def plot_arrow(ax, x1, y1, x2, y2, **kwargs):
                                     lw=lw,
                                     linestyle=ls,
                                     ),
-                    fontsize=kwargs.pop('fontsize', pst.BIGGER_SIZE),
+                    fontsize=kwargs.pop('fontsize', pst.get_preset().title),
                     weight=kwargs.pop('weight', 'bold'),
                     color=color,
                     zorder=zorder,)
@@ -431,7 +432,7 @@ def plot_text(ax, text, xpos=0, ypos=0,
     color = kwargs.pop("color", pst.INK)
     zorder = kwargs.pop('zorder', 10)
     rot = kwargs.pop("rot", 0)
-    fsize = kwargs.pop('fsize', pst.LABEL_SIZE)
+    fsize = kwargs.pop('fsize', pst.get_preset().label)
     weight = kwargs.pop('weight', "normal")
     trafo_axis = kwargs.pop('transform', False)
     check_axis = kwargs.pop('check_axis', True)
@@ -471,9 +472,9 @@ def plot_text(ax, text, xpos=0, ypos=0,
     return ax
 
 
-def text_box(ax, text, pos="upper right", fsize=pst.LABEL_SIZE, **kwargs):
+def text_box(ax, text, pos="upper right", fsize=None, **kwargs):
     fw = kwargs.pop('fw', "normal")
-    fsize = kwargs.pop('fsize', pst.LABEL_SIZE)
+    fsize = pst.get_preset().label if fsize is None else fsize
     anchored_text = AnchoredText(text, loc=pos,
                                  prop=dict(size=fsize,
                                            fontweight=fw))

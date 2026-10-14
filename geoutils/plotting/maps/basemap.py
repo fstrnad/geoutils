@@ -147,10 +147,10 @@ def set_grid(ax, alpha=0.5,
     gl.right_labels = False
     # gl.right_labels=True
     gl.bottom_labels = True
-    gl.ylabel_style = {'rotation': -0,
-                       'color': pst.INK, 'size': pst.TICK_SIZE}
-    gl.xlabel_style = {'rotation': -0,
-                       'color': pst.INK, 'size': pst.TICK_SIZE}
+    label_style = {'rotation': -0,
+                   'color': pst.INK, 'size': pst.get_preset().tick}
+    gl.ylabel_style = dict(label_style)
+    gl.xlabel_style = dict(label_style)
     gl.top_labels = False
 
     return ax, kwargs

@@ -400,7 +400,7 @@ def _draw_contour(ax, c):
         )
         if clabel:
             clabel_dict = dict(
-                fontsize=c.kwargs.pop('clabel_fsize', pst.MINI_SIZE),
+                fontsize=c.kwargs.pop('clabel_fsize', pst.get_preset().tick),
                 fmt=c.kwargs.pop('clabel_fmt', None),
                 colors=color, inline=True, inline_spacing=8,
                 use_clabeltext=True, rightside_up=True,

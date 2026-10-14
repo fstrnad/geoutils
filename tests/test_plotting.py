@@ -249,7 +249,8 @@ def test_gridline_labels_have_one_size_on_every_map():
     wide = cplt.create_map(figsize=(9, 5))["ax"]
     narrow = cplt.create_multi_plot(2, 3, projection="PlateCarree", plot_grid=True,
                                     figsize=(9, 5))["ax"][0]
-    assert _label_size(narrow) == _label_size(wide) == 10
+    import geoutils.plotting.style as style
+    assert _label_size(narrow) == _label_size(wide) == style.get_preset().tick
 
 
 def test_vertical_colorbar_is_shorter_than_horizontal_is_wide(latlon_da):
@@ -337,4 +338,5 @@ def test_panel_letters_use_the_small_title_size():
     res = cplt.create_multi_plot(1, 2)
     letters = [t for ax in res["ax"] for t in ax.texts]
     assert {t.get_text() for t in letters} == {"a.", "b."}
-    assert all(t.get_fontsize() == 13 for t in letters)
+    import geoutils.plotting.style as style
+    assert all(t.get_fontsize() == style.get_preset().title for t in letters)

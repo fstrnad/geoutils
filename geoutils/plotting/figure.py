@@ -64,7 +64,7 @@ def create_plot(nrows=1, ncols=1, **kwargs):
 
 def enumerate_subplots(axs, pos_x=-0.12,
                        pos_y=1.1,
-                       fontsize=pst.TITLE_SIZE):
+                       fontsize=None):
     """Adds letters to subplots of a figure.
 
     Args:
@@ -76,6 +76,7 @@ def enumerate_subplots(axs, pos_x=-0.12,
     Returns:
         axs (list): List of plt.axes.
     """
+    fontsize = pst.get_preset().title if fontsize is None else fontsize
     axs = np.array(axs)
     if isinstance(pos_x, float) or isinstance(pos_x, int):
         pos_x = [pos_x] * len(axs.flatten())
