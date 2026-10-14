@@ -113,7 +113,11 @@ def create_multi_plot(nrows, ncols, projection=None,
                       verbose=False, **kwargs):
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
-        figsize = pst.default_figsize(nrows, ncols)
+        is_map = (projection is not None or kwargs.get('proj_arr') is not None
+                  or kwargs.get('projection_arr') is not None)
+        figsize = pst.default_figsize(
+            nrows, ncols,
+            aspect=pst.get_preset().map_aspect if is_map else None)
 
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx

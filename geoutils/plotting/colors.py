@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import copy
 import numpy as np
 import geoutils.utils.general_utils as gut
-from geoutils.plotting.style import styled
+from geoutils.plotting.style import get_preset, styled
 
 
 
@@ -454,7 +454,7 @@ def make_colorbar(ax, im, fig=None, spec=None, **kwargs):
         fmt = None
     cbar = fig.colorbar(im, label=spec.label, format=fmt, extend=spec.extend,
                         **placement, **kwargs_bar)
-    cbar.outline.set_linewidth(0.5)
+    cbar.outline.set_linewidth(get_preset().axes_width)
     if spec.sci is not None:
         place_colorbar_offset_text(cbar)
 

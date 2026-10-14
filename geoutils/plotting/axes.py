@@ -321,7 +321,7 @@ def check_geoaxis(ax, check_axis=True):
 
 
 def plot_line(ax, x_range, y_range, **kwargs):
-    lw = kwargs.pop("lw", 1)
+    lw = kwargs.pop("lw", pst.get_preset().line_width)
     color = kwargs.pop("color", "k")
     zorder = kwargs.pop('zorder', 1)
 
@@ -335,7 +335,7 @@ def plot_line(ax, x_range, y_range, **kwargs):
 
 
 def plot_vline(ax, x, **kwargs):
-    lw = kwargs.pop("lw", 1)
+    lw = kwargs.pop("lw", pst.get_preset().line_width)
     ls = kwargs.pop("ls", '--')
     color = kwargs.pop("color", "k")
     zorder = kwargs.pop('zorder', 10)
@@ -360,7 +360,7 @@ def plot_vline(ax, x, **kwargs):
 
 
 def plot_arrow(ax, x1, y1, x2, y2, **kwargs):
-    lw = kwargs.pop("lw", 1)
+    lw = kwargs.pop("lw", pst.get_preset().line_width)
     width = kwargs.pop("width", 0.02)
     ls = kwargs.pop("ls", '-')
     color = kwargs.pop("color", "k")
@@ -401,7 +401,7 @@ def plot_arrow(ax, x1, y1, x2, y2, **kwargs):
 
 
 def plot_hline(ax, y, transform=None, **kwargs):
-    lw = kwargs.pop("lw", 1)
+    lw = kwargs.pop("lw", pst.get_preset().line_width)
     ls = kwargs.pop("ls", '--')
     color = kwargs.pop("color", "k")
     zorder = kwargs.pop('zorder', 10)

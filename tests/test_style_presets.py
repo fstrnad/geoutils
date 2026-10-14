@@ -284,3 +284,71 @@ def test_plot_rectangle_label_uses_the_bundled_font():
     ax = cplt.create_map()["ax"]
     cplt.plot_rectangle(ax, lon_range=(0, 10), lat_range=(0, 10), text="roi")
     assert _inter(ax.texts[0])
+
+
+# --- review fixes: line widths, map aspect, real font fallback --------------
+
+from cartopy.mpl.feature_artist import FeatureArtist
+
+
+def _feature_widths(ax):
+    return [float(np.ravel(a.get_linewidth())[0])
+            for a in ax.get_children() if isinstance(a, FeatureArtist)]
+
+
+@pytest.mark.parametrize("name", ["paper", "talk"])
+def test_line_helpers_default_to_the_preset_line_width(name):
+    with style_context(name):
+        width = get_preset().line_width
+        for draw in (lambda ax: cplt.plot_hline(ax, 1),
+                     lambda ax: cplt.plot_vline(ax, 1),
+                     lambda ax: cplt.plot_line(ax, [0, 1], [0, 1])):
+            ax = _plain_axes()
+            draw(ax)
+            assert ax.lines[0].get_linewidth() == width
+
+
+@pytest.mark.parametrize("name", ["paper", "talk"])
+def test_map_furniture_widths_follow_the_preset(name):
+    with style_context(name):
+        thin = get_preset().axes_width
+        ax = cplt.create_map(plot_borders=True, plot_grid=True)["ax"]
+        coast, borders = _feature_widths(ax)
+        assert coast == pytest.approx(thin)
+        assert borders == pytest.approx(thin * 2 / 3)
+        (grid,) = ax.artists
+        assert grid.collection_kwargs["linewidth"] == pytest.approx(thin * 2 / 3)
+        cplt.plot_rectangle(ax, lon_range=(0, 10), lat_range=(0, 10))
+        assert _feature_widths(ax)[-1] == get_preset().line_width
+
+
+@pytest.mark.parametrize("name", ["paper", "talk"])
+def test_colorbar_outline_follows_the_preset(latlon_da, name):
+    with style_context(name):
+        res = cplt.plot_map(latlon_da, label="K")
+        assert res["colorbar"].outline.get_linewidth() == get_preset().axes_width
+
+
+def test_map_figures_use_the_map_aspect():
+    ratio = get_preset().map_aspect
+    assert tuple(cplt.create_map()["fig"].get_size_inches()) == pytest.approx(
+        default_figsize(aspect=ratio))
+    assert tuple(cplt.create_multi_plot(
+        1, 3, projection="PlateCarree")["fig"].get_size_inches()) == pytest.approx(
+        default_figsize(1, 3, aspect=ratio))
+    assert tuple(cplt.create_multi_plot(1, 2)["fig"].get_size_inches()) == pytest.approx(
+        default_figsize(1, 2))
+
+
+def test_fallback_when_inter_is_really_absent(monkeypatch, caplog):
+    without_inter = [f for f in font_manager.fontManager.ttflist if f.name != "Inter"]
+    monkeypatch.setattr(font_manager.fontManager, "ttflist", without_inter)
+    monkeypatch.setattr(style, "_FONT_DIR", Path("/nonexistent"))
+    monkeypatch.setattr(style, "_fonts_registered", None)
+    assert style.register_fonts() is False
+    assert build_style(PRESETS["paper"])["font.family"][0] != "Inter"
+    with caplog.at_level("WARNING"):
+        res = cplt.plot_2d(y=np.arange(4.0), title="t", xlabel="x")
+        res["fig"].canvas.draw()
+    assert [r.getMessage() for r in caplog.records
+            if "font" in r.name.lower()] == []

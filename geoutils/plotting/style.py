@@ -72,17 +72,18 @@ class Preset:
     panel_width: float  # inches
     max_width: float  # inches; wide grids are capped here
     aspect: float  # panel height / width
+    map_aspect: float  # the same for map panels, which need room for ticks
 
 
 PRESETS = {
     "paper": Preset(tick=7, label=8, title=9, figure_title=10,
                     line_width=1.2, axes_width=0.6, tick_length=3,
                     marker_size=3, panel_width=3.4, max_width=7.1,
-                    aspect=0.75),
+                    aspect=0.75, map_aspect=1.0),
     "talk": Preset(tick=14, label=16, title=18, figure_title=20,
                    line_width=2.5, axes_width=1.2, tick_length=6,
                    marker_size=7, panel_width=6.0, max_width=13.0,
-                   aspect=0.75),
+                   aspect=0.75, map_aspect=1.0),
 }
 
 _active = "paper"

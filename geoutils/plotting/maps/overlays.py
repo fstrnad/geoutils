@@ -49,7 +49,7 @@ def plot_edges(
     else:
         fig = ax.get_figure()
     counter = 0
-    lw = kwargs.pop("lw", 1)
+    lw = kwargs.pop("lw", pst.get_preset().line_width)
     alpha = kwargs.pop("alpha", 1)
     color = kwargs.pop("color", "gray")
 
@@ -315,7 +315,7 @@ def plot_rectangle(ax, lon_range, lat_range, text=None, **kwargs):
     lats = [min(lat_range), min(lat_range), max(lat_range), max(lat_range)]
 
     ring = LinearRing(list(zip(lons, lats)))
-    lw = kwargs.pop("lw", 1)
+    lw = kwargs.pop("lw", pst.get_preset().line_width)
     ls = kwargs.pop("ls", "-")
     color = kwargs.pop("color", "k")
     fill = kwargs.pop("fill", False)
@@ -355,7 +355,7 @@ def plot_ring(ax, xpos=0, ypos=0, **kwargs):
     Returns:
         geoaxis: axis with rectangle plotted
     """
-    lw = kwargs.pop("lw", 1)
+    lw = kwargs.pop("lw", pst.get_preset().line_width)
     color = kwargs.pop("color", "k")
     fill = kwargs.pop("fill", False)
     facecolor = color if fill else "none"

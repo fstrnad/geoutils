@@ -318,7 +318,8 @@ def test_colorbar_is_slim_with_fine_outline(latlon_da):
     res = mp.plot_map(latlon_da, label="K")
     box = _extent(_cbar_axes(res["fig"])[0], res["fig"])
     assert box.height < 0.04 * res["fig"].bbox.height
-    assert res["colorbar"].outline.get_linewidth() == 0.5
+    import geoutils.plotting.style as style
+    assert res["colorbar"].outline.get_linewidth() == style.get_preset().axes_width
 
 
 @pytest.mark.parametrize("levels", [4, 8, 12, 20])
