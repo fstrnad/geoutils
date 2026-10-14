@@ -172,3 +172,66 @@ def test_every_default_figure_fits_a_double_column(latlon_da):
         cplt.plot_hist(np.random.default_rng(0).normal(size=50))["fig"],
     ]
     assert all(f.get_size_inches()[0] <= 7.1 + 1e-9 for f in figs)
+
+
+# --- bundled font ------------------------------------------------------------
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+from matplotlib import font_manager
+
+
+def _inter_entries():
+    return [f for f in font_manager.fontManager.ttflist if f.name == "Inter"]
+
+
+def test_register_fonts_finds_inter():
+    assert style.register_fonts() is True
+    assert _inter_entries()
+    font_manager.findfont("Inter", fallback_to_default=False)
+
+
+def test_register_fonts_is_idempotent():
+    style.register_fonts()
+    count = len(_inter_entries())
+    style.register_fonts()
+    assert len(_inter_entries()) == count
+
+
+def test_register_fonts_survives_missing_files(monkeypatch, tmp_path):
+    monkeypatch.setattr(style, "_FONT_DIR", tmp_path)
+    monkeypatch.setattr(style, "_fonts_registered", None)
+    assert style.register_fonts() is False
+    with style_context():
+        assert cplt.plot_2d(y=np.arange(4.0))["ax"].lines
+
+
+def test_text_renders_in_inter():
+    with style_context():
+        path = font_manager.findfont(font_manager.FontProperties())
+    assert Path(path).name == "Inter-Regular.ttf"
+
+
+def test_pdf_embeds_truetype(tmp_path):
+    assert build_style(PRESETS["paper"])["pdf.fonttype"] == 42
+    with style_context():
+        fig = cplt.plot_2d(y=np.arange(4.0), title="t")["fig"]
+        fig.savefig(tmp_path / "f.pdf")
+    pdf = (tmp_path / "f.pdf").read_bytes()
+    assert b"/CIDFontType2" in pdf and b"Inter-Regular" in pdf
+    assert b"/Type3" not in pdf
+
+
+def test_import_does_not_register_fonts():
+    code = (
+        "import json\n"
+        "import geoutils.plotting\n"
+        "from matplotlib import font_manager\n"
+        "print(json.dumps(any(f.name == 'Inter' for f in font_manager.fontManager.ttflist)))\n"
+    )
+    out = subprocess.run([sys.executable, "-I", "-W", "ignore", "-c", code],
+                         capture_output=True, text=True, check=True).stdout
+    assert json.loads(out.strip().splitlines()[-1]) is False

@@ -7,8 +7,10 @@ matplotlib state; call ``set_style()`` to adopt it for your own plots as well.
 import contextlib
 import functools
 from dataclasses import dataclass
+from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 from cycler import cycler
 
 TINY_SIZE = 8
@@ -27,11 +29,15 @@ FIGURE_TITLE_SIZE = 14
 INK = "#222222"  # text colour
 EDGE = "#444444"  # axes frame colour
 
-# Uses the first installed font, so it also works where Lato is missing (e.g.
-# on a cluster) without bundling any font files. Liberation Sans is the
-# metric-compatible Linux twin of Arial; Helvetica Neue ranks below them
-# because matplotlib only registers its regular weight (no real bold).
-FONT_CHAIN = ["Lato", "Arial", "Liberation Sans", "Helvetica Neue", "DejaVu Sans"]
+# Inter ships with the package (``fonts/``) and is registered on first use.
+# Uses the first installed font, so the look degrades gracefully if the files
+# cannot be loaded. Liberation Sans is the metric-compatible Linux twin of
+# Arial; Helvetica Neue ranks below them because matplotlib only registers its
+# regular weight (no real bold).
+FONT_CHAIN = ["Inter", "Lato", "Arial", "Liberation Sans", "Helvetica Neue",
+              "DejaVu Sans"]
+_FONT_DIR = Path(__file__).parent / "fonts"
+_fonts_registered = None  # None until the first attempt
 
 # Okabe & Ito colour-blind safe categorical palette.
 # Ordered so that the first few series are the easiest to tell apart on white.
@@ -80,6 +86,20 @@ PRESETS = {
 }
 
 _active = "paper"
+
+
+def register_fonts():
+    """Register the bundled Inter files once; False if they are unavailable."""
+    global _fonts_registered
+    if _fonts_registered is None:
+        try:
+            files = sorted(_FONT_DIR.glob("*.ttf"))
+            for path in files:
+                font_manager.fontManager.addfont(str(path))
+            _fonts_registered = bool(files)
+        except Exception:
+            _fonts_registered = False
+    return _fonts_registered
 
 
 def _resolve(name):
@@ -131,6 +151,8 @@ def build_style(preset):
         "pcolor.shading": "nearest",
         "savefig.dpi": 300,
         "savefig.bbox": "tight",
+        "pdf.fonttype": 42,  # journals reject Type 3 fonts
+        "ps.fonttype": 42,
     }
 
 
@@ -144,6 +166,7 @@ def set_style(preset=None):
     """
     global _active
     _active = _active if preset is None else _resolve(preset)
+    register_fonts()
     plt.rcParams.update(build_style(PRESETS[_active]))
 
 
@@ -167,6 +190,7 @@ def style_context(preset=None):
     global _active
     name = _active if preset is None else _resolve(preset)
     previous, _active = _active, name
+    register_fonts()
     try:
         with plt.rc_context(build_style(PRESETS[name])):
             yield
