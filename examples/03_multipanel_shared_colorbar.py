@@ -5,7 +5,7 @@ Run:  python examples/03_multipanel_shared_colorbar.py
 import geoutils.plotting as gp
 from common import FIGURES, label, load
 
-res = gp.create_multi_plot(2, 2, projection="PlateCarree", figsize=(13, 9),
+res = gp.create_multi_plot(2, 2, projection="PlateCarree", figsize=(9.1, 6.3),
                            title="Monthly mean 2 m temperature, 2024")
 names = {1: "January", 4: "April", 7: "July", 10: "October"}
 for ax, (month, name) in zip(res["ax"], names.items()):

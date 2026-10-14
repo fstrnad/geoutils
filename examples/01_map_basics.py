@@ -10,7 +10,7 @@ from common import FIGURES, label, load
 
 t2m = load("t2m", 1).sel(time="2024-01-15T12:00").compute()
 
-res = gp.create_multi_plot(1, 3, projection="PlateCarree", figsize=(17, 4.4),
+res = gp.create_multi_plot(1, 3, projection="PlateCarree", figsize=(11.9, 3.1),
                            title="ERA5 2 m temperature, 2024-01-15 12 UTC")
 mesh, filled, lines = res["ax"]
 

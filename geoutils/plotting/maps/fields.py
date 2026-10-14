@@ -88,7 +88,7 @@ def plot_map(dmap: xr.DataArray,
     hatch_type = kwargs.pop('hatch_type', '..')
     inverse_mask = kwargs.pop('inverse_mask', False)
     set_map = kwargs.pop('set_map', True)
-    figsize = kwargs.pop("figsize", (9, 6))
+    figsize = kwargs.pop("figsize", None)
     alpha = kwargs.pop("alpha", 1.0)
     sig_plot_type = kwargs.pop('sig_plot_type', 'hatch')
     if plot_type != 'points' and not point_dims:
@@ -402,7 +402,7 @@ def _draw_contour(ax, c):
         )
         if clabel:
             clabel_dict = dict(
-                fontsize=c.kwargs.pop('clabel_fsize', pst.MINI_SIZE),
+                fontsize=c.kwargs.pop('clabel_fsize', pst.get_preset().tick),
                 fmt=c.kwargs.pop('clabel_fmt', None),
                 colors=color, inline=True, inline_spacing=8,
                 use_clabeltext=True, rightside_up=True,
@@ -522,7 +522,7 @@ def plot_array(
     zorder = kwargs.pop("zorder", 1)
     sci_x = kwargs.pop('sci_x', None)
     if ax is None:
-        figsize = kwargs.pop("figsize", (7, 5))
+        figsize = kwargs.pop("figsize", None) or pst.default_figsize()
         fig, ax = plt.subplots(figsize=figsize, layout='constrained')
         set_axis = True
     if projection is None and set_axis:

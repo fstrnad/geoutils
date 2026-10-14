@@ -10,6 +10,12 @@ matplotlib.use("Agg")
 
 
 @pytest.fixture(autouse=True)
+def _reset_active_preset(monkeypatch):
+    import geoutils.plotting.style as style
+    monkeypatch.setattr(style, "_active", "paper", raising=False)
+
+
+@pytest.fixture(autouse=True)
 def _close_figures():
     yield
     import matplotlib.pyplot as plt

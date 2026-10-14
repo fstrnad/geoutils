@@ -86,9 +86,9 @@ def test_palette_leads_with_high_contrast_colors():
          "#0072B2", "#D55E00", "#CC79A7", "#000000"])
 
 
-def test_plot_2d_default_line_width_is_readable():
+def test_plot_2d_default_line_width_follows_the_preset():
     res = cplt.plot_2d(y=np.arange(4.0))
-    assert res["ax"].lines[0].get_linewidth() == 1.5
+    assert res["ax"].lines[0].get_linewidth() == style.PRESETS["paper"].line_width
 
 
 def test_legend_avoids_data_by_default():
@@ -98,14 +98,14 @@ def test_legend_avoids_data_by_default():
 
 def test_font_chain_prefers_designed_fonts_and_ends_in_dejavu():
     chain = style.STYLE["font.sans-serif"]
-    assert style.STYLE["font.family"] == "sans-serif"
-    assert chain[:3] == ["Lato", "Arial", "Liberation Sans"] and chain[-1] == "DejaVu Sans"
+    assert style.STYLE["font.family"][-1] == "DejaVu Sans"
+    assert chain[:4] == ["Inter", "Lato", "Arial", "Liberation Sans"] and chain[-1] == "DejaVu Sans"
 
 
 def test_type_scale_is_compact():
     s = style.STYLE
-    assert (s["xtick.labelsize"], s["axes.labelsize"], s["axes.titlesize"]) == (10, 11, 13)
-    assert s["axes.titleweight"] == "bold" and s["legend.fontsize"] == 10
+    assert (s["xtick.labelsize"], s["axes.labelsize"], s["axes.titlesize"]) == (7, 8, 9)
+    assert s["axes.titleweight"] == "bold" and s["legend.fontsize"] == 7
 
 
 def test_plot_text_uses_dark_grey_not_black():
@@ -116,4 +116,4 @@ def test_plot_text_uses_dark_grey_not_black():
 def test_map_annotations_use_the_label_size():
     ax = cplt.create_map()["ax"]
     cplt.plot_rectangle(ax, lon_range=(0, 10), lat_range=(0, 10), text="roi")
-    assert [t.get_fontsize() for t in ax.texts] == [style.LABEL_SIZE]
+    assert [t.get_fontsize() for t in ax.texts] == [style.get_preset().label]

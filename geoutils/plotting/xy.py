@@ -309,7 +309,7 @@ def plot_2d(
     if plot_type in ('xy', 'scatter'):
         spec = _XYSpec(
             z_arr=[] if z_arr is None else z_arr,
-            lw_arr=[1.5] if lw_arr is None else lw_arr,
+            lw_arr=[None] if lw_arr is None else lw_arr,
             mk_arr=[""] if mk_arr is None else mk_arr,
             ls_arr=['-'] if ls_arr is None else ls_arr,
             alpha_arr=alpha_arr, color_arr=color_arr, color=color,
@@ -354,8 +354,7 @@ def plot_2d(
 
 def create_axis(ax, plot_type, **kwargs):
     if ax is None:
-        figsize = kwargs.pop("figsize",
-                             (8, 5))
+        figsize = kwargs.pop("figsize", None) or pst.default_figsize()
         fig, ax = plt.subplots(figsize=figsize, nrows=1, ncols=1,
                                layout="constrained")
 
@@ -451,7 +450,7 @@ def plot_hist(data, ax=None, fig=None,
 def plot_null_model(
     arr, title="Null Model for Event Synchronization",
 ):
-    fig, ax = plt.subplots(figsize=(8, 8))
+    fig, ax = plt.subplots(figsize=pst.default_figsize(aspect=1.0))
     ax, kwargs = pax.prepare_axis(ax)
     ax.set_title(title)
     im = ax.imshow(arr, interpolation="None", cmap="coolwarm", origin="lower")

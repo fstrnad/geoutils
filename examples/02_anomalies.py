@@ -7,7 +7,7 @@ Run:  python examples/02_anomalies.py
 import geoutils.plotting as gp
 from common import FIGURES, load
 
-res = gp.create_multi_plot(1, 2, projection="PlateCarree", figsize=(13, 5.2),
+res = gp.create_multi_plot(1, 2, projection="PlateCarree", figsize=(9.1, 3.6),
                            title="Daily-mean 2 m temperature anomaly from the monthly mean")
 for ax, (month, day) in zip(res["ax"], [(1, "2024-01-15"), (7, "2024-07-15")]):
     t2m = load("t2m", month)

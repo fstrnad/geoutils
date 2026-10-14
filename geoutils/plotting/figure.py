@@ -4,6 +4,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import geoutils.plotting.style as pst
+from geoutils.plotting.style import default_figsize  # noqa: F401  (re-export)
 import geoutils.utils.general_utils as gut
 from geoutils.plotting.axes import plot_text, set_title
 from geoutils.plotting.result import PlotResult
@@ -43,7 +44,7 @@ def create_plot(nrows=1, ncols=1, **kwargs):
 
     figsize = kwargs.pop("figsize", None)
     if figsize is None:
-        figsize = (6 * ncols, 4 * nrows)
+        figsize = pst.default_figsize(nrows, ncols)
 
     if nrows > 1 or ncols > 1:
         fig, axs = plt.subplots(
@@ -62,9 +63,10 @@ def create_plot(nrows=1, ncols=1, **kwargs):
     return PlotResult(ax=axs, fig=fig)
 
 
+@pst.styled
 def enumerate_subplots(axs, pos_x=-0.12,
                        pos_y=1.1,
-                       fontsize=pst.TITLE_SIZE):
+                       fontsize=None):
     """Adds letters to subplots of a figure.
 
     Args:
@@ -76,6 +78,7 @@ def enumerate_subplots(axs, pos_x=-0.12,
     Returns:
         axs (list): List of plt.axes.
     """
+    fontsize = pst.get_preset().title if fontsize is None else fontsize
     axs = np.array(axs)
     if isinstance(pos_x, float) or isinstance(pos_x, int):
         pos_x = [pos_x] * len(axs.flatten())
@@ -110,7 +113,11 @@ def create_multi_plot(nrows, ncols, projection=None,
                       verbose=False, **kwargs):
     figsize = kwargs.pop('figsize', None)
     if figsize is None:
-        figsize = (4*ncols, 3*nrows)
+        is_map = (projection is not None or kwargs.get('proj_arr') is not None
+                  or kwargs.get('projection_arr') is not None)
+        figsize = pst.default_figsize(
+            nrows, ncols,
+            aspect=pst.get_preset().map_aspect if is_map else None)
 
     end_idx = kwargs.pop('end_idx', None)
     end_idx = int(nrows*ncols) if end_idx is None else end_idx

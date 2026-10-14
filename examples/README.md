@@ -18,6 +18,10 @@ Set `ERA5_DATA` to use another copy. Run from anywhere, e.g.
 | `07_resolution_comparison.py` | 0.25° against 0.5° over the Alps, and what interpolation loses |
 | `08_distribution_and_range.py` | `plot_hist` of hourly values, `plot_2d` with a shaded min-max band |
 
+The figures use the default `paper` look (about 7 pt text), so their explicit
+`figsize` values are wide canvases scaled to that type size. For slides, call
+`set_style("talk")` at the top of a script and enlarge `figsize` to match.
+
 `common.py` finds and loads the files lazily (renaming the coordinates to the
 `time`/`lat`/`lon` that geoutils expects, converting to °C and mm). When no month is
 given, only months whose `.sig.json` marker exists are loaded, so a download

@@ -249,7 +249,8 @@ def test_gridline_labels_have_one_size_on_every_map():
     wide = cplt.create_map(figsize=(9, 5))["ax"]
     narrow = cplt.create_multi_plot(2, 3, projection="PlateCarree", plot_grid=True,
                                     figsize=(9, 5))["ax"][0]
-    assert _label_size(narrow) == _label_size(wide) == 10
+    import geoutils.plotting.style as style
+    assert _label_size(narrow) == _label_size(wide) == style.get_preset().tick
 
 
 def test_vertical_colorbar_is_shorter_than_horizontal_is_wide(latlon_da):
@@ -308,15 +309,17 @@ def test_explicit_coast_options_still_win():
 
 def test_map_frame_is_thin_grey():
     import geoutils.plotting as cplt
+    import geoutils.plotting.style as style
     spine = cplt.create_map()["ax"].spines["geo"]
-    assert spine.get_linewidth() == 0.8 and spine.get_edgecolor()[0] < 0.5
+    assert spine.get_linewidth() == style.get_preset().axes_width and spine.get_edgecolor()[0] < 0.5
 
 
 def test_colorbar_is_slim_with_fine_outline(latlon_da):
     res = mp.plot_map(latlon_da, label="K")
     box = _extent(_cbar_axes(res["fig"])[0], res["fig"])
     assert box.height < 0.04 * res["fig"].bbox.height
-    assert res["colorbar"].outline.get_linewidth() == 0.5
+    import geoutils.plotting.style as style
+    assert res["colorbar"].outline.get_linewidth() == style.get_preset().axes_width
 
 
 @pytest.mark.parametrize("levels", [4, 8, 12, 20])
@@ -336,4 +339,5 @@ def test_panel_letters_use_the_small_title_size():
     res = cplt.create_multi_plot(1, 2)
     letters = [t for ax in res["ax"] for t in ax.texts]
     assert {t.get_text() for t in letters} == {"a.", "b."}
-    assert all(t.get_fontsize() == 13 for t in letters)
+    import geoutils.plotting.style as style
+    assert all(t.get_fontsize() == style.get_preset().title for t in letters)

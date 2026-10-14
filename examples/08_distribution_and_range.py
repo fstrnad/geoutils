@@ -9,7 +9,7 @@ from common import FIGURES, at_city, load
 july = load("t2m", 7)
 cities = ["Oslo", "Madrid"]
 
-res = gp.create_plot(1, 2, figsize=(12, 4.6))
+res = gp.create_plot(1, 2, figsize=(8.4, 3.2))
 ax_hist, ax_band = res["ax"]
 
 # distribution of all hourly values in July

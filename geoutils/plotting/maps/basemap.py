@@ -146,7 +146,7 @@ def set_grid(ax, alpha=0.5,
         x_inline=False,
         y_inline=False,
         alpha=alpha,
-        linewidth=0.4,
+        linewidth=pst.get_preset().axes_width * 2 / 3,
         linestyle=":",
         color="0.35",
     )
@@ -157,10 +157,10 @@ def set_grid(ax, alpha=0.5,
     gl.right_labels = False
     # gl.right_labels=True
     gl.bottom_labels = True
-    gl.ylabel_style = {'rotation': -0,
-                       'color': pst.INK, 'size': pst.TICK_SIZE}
-    gl.xlabel_style = {'rotation': -0,
-                       'color': pst.INK, 'size': pst.TICK_SIZE}
+    label_style = {'rotation': -0,
+                   'color': pst.INK, 'size': pst.get_preset().tick}
+    gl.ylabel_style = dict(label_style)
+    gl.xlabel_style = dict(label_style)
     gl.top_labels = False
 
     return ax, kwargs
@@ -342,7 +342,9 @@ def create_map(
                           central_longitude=central_longitude,
                           central_latitude=central_latitude,
                           dateline=dateline)
-    figsize = kwargs.pop("figsize", (6, 4))
+    figsize = kwargs.pop("figsize", None)
+    if figsize is None:
+        figsize = pst.default_figsize(aspect=pst.get_preset().map_aspect)
     # create figure
     if ax is None:
         # better working in cartopy and matplotlib=3.8.2
@@ -382,13 +384,13 @@ def create_map(
         # fine dark-grey coastlines; borders one step lighter and thinner
         ax.coastlines(alpha=alpha,
                       color=coast_color or "#333333",
-                      lw=0.6 if lw_borders is None else lw_borders
+                      lw=pst.get_preset().axes_width if lw_borders is None else lw_borders
                       )
         if plot_borders:
             ax.add_feature(ctp.feature.BORDERS,
                            linestyle="-",
                            edgecolor=coast_color or "#666666",
-                           lw=0.4 if lw_borders is None else lw_borders,
+                           lw=pst.get_preset().axes_width * 2 / 3 if lw_borders is None else lw_borders,
                            alpha=alpha)
         land_ocean = kwargs.pop("land_ocean", False)
         if land_ocean:

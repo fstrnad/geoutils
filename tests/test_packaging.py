@@ -21,3 +21,16 @@ def test_core_subpackages_importable():
         "geoutils.geodata.base_dataset",
     ):
         assert importlib.import_module(mod) is not None
+
+
+def test_inter_font_is_shipped():
+    import tomllib
+    from pathlib import Path
+
+    fonts = Path(geoutils.__file__).parent / "plotting" / "fonts"
+    for name in ("Inter-Regular.ttf", "Inter-Italic.ttf", "Inter-SemiBold.ttf",
+                 "Inter-Bold.ttf", "OFL.txt"):
+        assert (fonts / name).is_file()
+    root = Path(geoutils.__file__).parent.parent
+    cfg = tomllib.loads((root / "pyproject.toml").read_text())
+    assert cfg["tool"]["setuptools"]["package-data"]["geoutils.plotting"] == ["fonts/*"]

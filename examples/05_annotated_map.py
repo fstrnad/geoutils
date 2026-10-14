@@ -10,7 +10,7 @@ t2m = load("t2m", 7).mean("time").compute()
 res = gp.plot_map(
     t2m, plot_type="contourf", levels=12, cmap="Spectral_r", label=label(t2m),
     title="July 2024 mean 2 m temperature", plot_borders=True,
-    color_bounds="minmax", figsize=(10, 7.5))
+    color_bounds="minmax", figsize=(7, 5.2))
 ax = res["ax"]
 
 gp.plot_rectangle(ax, lon_range=(5, 16), lat_range=(44, 48),

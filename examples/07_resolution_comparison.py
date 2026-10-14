@@ -16,7 +16,7 @@ fine = load("t2m", 7, "0.25deg").sel(time=when).compute()
 coarse = load("t2m", 7, "0.5deg").sel(time=when).compute()
 lost = coarse.interp(lat=fine.lat, lon=fine.lon) - fine
 
-res = gp.create_multi_plot(1, 3, projection="PlateCarree", figsize=(17, 3.9),
+res = gp.create_multi_plot(1, 3, projection="PlateCarree", figsize=(11.9, 2.7),
                            title=f"2 m temperature, {when.replace('T', ' ')} UTC")
 shown = fine.sel(**area)
 for ax, data, name in [(res["ax"][0], fine, "0.25°"), (res["ax"][1], coarse, "0.5°")]:
