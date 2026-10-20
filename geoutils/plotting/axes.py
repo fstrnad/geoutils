@@ -439,6 +439,9 @@ def plot_text(ax, text, xpos=0, ypos=0,
     trafo_axis = kwargs.pop('transform', False)
     check_axis = kwargs.pop('check_axis', True)
     box = kwargs.pop('box', False)
+    ha = kwargs.pop('ha', None)
+    va = kwargs.pop('va', 'baseline')
+    family = kwargs.pop('family', None)
     plot_box = dict(facecolor='white', edgecolor='black',
                     pad=10.0) if box else None
     if check_geoaxis(ax, check_axis):
@@ -448,7 +451,9 @@ def plot_text(ax, text, xpos=0, ypos=0,
             lon_pos,
             lat_pos,
             text,
-            horizontalalignment="center",
+            horizontalalignment=ha or "center",
+            verticalalignment=va,
+            family=family,
             color=color,
             zorder=zorder,
             rotation=rot,
@@ -463,6 +468,9 @@ def plot_text(ax, text, xpos=0, ypos=0,
             x=xpos,
             y=ypos,
             s=text,
+            horizontalalignment=ha or "left",
+            verticalalignment=va,
+            family=family,
             color=color,
             zorder=zorder,
             rotation=rot,

@@ -1,6 +1,7 @@
 import cartopy.crs as ccrs
 import pytest
 
+from geoutils.plotting.maps.basemap import central_longitude_of
 from geoutils.plotting.maps.projections import get_projection
 
 
@@ -16,7 +17,7 @@ def test_known_projections(name, crs):
 
 def test_dateline_sets_central_longitude_180():
     proj = get_projection("PlateCarree", dateline=True)
-    assert proj.proj4_params["lon_0"] == 180
+    assert central_longitude_of(proj) == 180
 
 
 def test_nearside_uses_central_latitude():

@@ -21,6 +21,16 @@ BASEMAP_OPTIONS = frozenset({
 
 
 
+def central_longitude_of(projection):
+    """Central longitude of a cartopy CRS.
+
+    PlateCarree reports it as the prime meridian ``pm`` instead of ``lon_0``
+    from cartopy 0.26 on.
+    """
+    params = projection.proj4_params
+    return params.get('lon_0', params.get('pm', 0))
+
+
 def estimate_distance(minimum_value, maximum_value, min_dist_val=1,
                       multiple=2):
     if maximum_value - minimum_value > 20:
@@ -168,7 +178,7 @@ def set_extent(da, ax,
     verbose = kwargs.get('verbose', False)
     min_ext_lon, max_ext_lon, min_ext_lat, max_ext_lat = ax.get_extent()
     if dateline:
-        if ax.projection.proj4_params['lon_0'] != 180:
+        if central_longitude_of(ax.projection) != 180:
             raise ValueError(
                 f'Axis is not set to dateline, but central_longitude not to 180!')
         projection = ccrs.PlateCarree(central_longitude=0)
@@ -343,7 +353,7 @@ def create_map(
         unset_grid = kwargs.pop('unset_grid', False)
         plot_grid = True if not unset_grid else False
     else:
-        ax_central_longitude = ax.projection.proj4_params['lon_0']
+        ax_central_longitude = central_longitude_of(ax.projection)
         if ax_central_longitude == 180:
             dateline = True
 
@@ -379,7 +389,7 @@ def create_map(
         if plot_borders:
             ax.add_feature(ctp.feature.BORDERS,
                            linestyle="-",
-                           color=coast_color or "#666666",
+                           edgecolor=coast_color or "#666666",
                            lw=pst.get_preset().axes_width * 2 / 3 if lw_borders is None else lw_borders,
                            alpha=alpha)
         land_ocean = kwargs.pop("land_ocean", False)
