@@ -30,3 +30,4 @@ __pycache__
 # Virtual environments
 .venv/
 examples/figures/
+yes 
